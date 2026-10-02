@@ -13,11 +13,20 @@ server not written by the team.
 
 The version is pinned so judges reproduce the same tool schemas and annotations.
 
-On Windows the integration launches the upstream server as:
+Install the pinned borrowed dependency once at repository root:
+
+```powershell
+npm install
+```
+
+MwalimuLens then launches the installed upstream JavaScript entrypoint directly with Node:
 
 ```text
-cmd /c npx -y @modelcontextprotocol/server-filesystem@2026.8.31 <reference-dir>
+node node_modules/@modelcontextprotocol/server-filesystem/dist/index.js <reference-dir>
 ```
+
+The direct Node launch is intentional on Windows: it avoids the `npx.cmd` / `cmd /c` wrapper
+between the MCP client and the server's stdin/stdout pipes.
 
 ## Why reuse this server
 
@@ -82,9 +91,11 @@ external.
 
 ## Real smoke run
 
-Run the upstream server through the MwalimuLens smoke harness:
+Install the pinned npm dependency, then run the upstream server through the MwalimuLens smoke
+harness:
 
 ```powershell
+npm install
 .\.venv\Scripts\python.exe -m mwalimulens.agent.borrowed_mcp_run
 $LASTEXITCODE
 Get-Content runtime\borrowed_mcp_run.json
@@ -94,7 +105,9 @@ The smoke runner uses a deterministic local FunctionModel so no cloud model/API 
 must start the official npm server, expose exactly the read-only allowlist, execute
 `read_text_file` against the synthetic fraction reference, and verify that the call was audited.
 
-A successful run returns exit code `0` and `"status": "pass"`.
+A successful run returns exit code `0` and `"status": "pass"`. The report also records the
+installed package version and the tail of the upstream server stderr log so initialization
+failures remain inspectable.
 
 Promote only a passing report:
 
