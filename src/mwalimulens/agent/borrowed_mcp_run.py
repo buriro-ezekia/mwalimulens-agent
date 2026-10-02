@@ -22,8 +22,8 @@ from mwalimulens.agent.borrowed_filesystem import (
     DEFAULT_FILESYSTEM_ENTRYPOINT,
     DEFAULT_FILESYSTEM_PACKAGE_JSON,
     DEFAULT_REFERENCE_DIR,
-    installed_filesystem_version,
     build_borrowed_filesystem_toolset,
+    installed_filesystem_version,
 )
 from mwalimulens.mcp_server.server import PROJECT_ROOT
 from mwalimulens.mcp_server.state import JsonStateStore
