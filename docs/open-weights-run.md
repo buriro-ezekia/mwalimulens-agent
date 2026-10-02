@@ -137,13 +137,15 @@ cloning the repository.
 
 ## 7. Preserved genuine failures
 
-Two real pre-recovery runs are preserved under `evidence/failures/`:
+Three real failures are preserved under `evidence/failures/`:
 
 - Qwen2.5 1.5B retrieved the correct evidence but stopped at prose instead of submitting;
-- Qwen2.5 3B reproduced the same failure and explicitly asked whether it should flag the candidate.
+- Qwen2.5 3B reproduced the same failure and explicitly asked whether it should flag the candidate;
+- after MCP lifecycle recovery was fixed, Qwen2.5 3B reached the recovery turn but incorrectly
+  abstained because it conflated a provisional review candidate with a permanent learner label.
 
-These failures motivated the single bounded recovery turn. They are retained as evaluation
-evidence rather than overwritten.
+These failures motivated the bounded recovery and candidate-semantics fixes. They are retained as
+evaluation evidence rather than overwritten.
 
 ## 8. Optional model override
 
