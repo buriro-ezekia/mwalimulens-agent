@@ -47,19 +47,33 @@ def test_borrowed_filesystem_package_and_allowlist_are_pinned() -> None:
     )
 
 
-def test_filesystem_stdio_spec_supports_windows_and_posix(tmp_path) -> None:
+def test_filesystem_stdio_spec_uses_direct_node_entrypoint(tmp_path) -> None:
+    reference_dir = tmp_path / "reference"
+    reference_dir.mkdir()
+    entrypoint = tmp_path / "index.js"
+    entrypoint.write_text("// fake server", encoding="utf-8")
+
+    command, args = filesystem_stdio_spec(
+        reference_dir,
+        entrypoint=entrypoint,
+    )
+
+    assert command == "node"
+    assert args == [
+        str(entrypoint.resolve()),
+        str(reference_dir.resolve()),
+    ]
+
+
+def test_filesystem_stdio_spec_requires_local_install(tmp_path) -> None:
     reference_dir = tmp_path / "reference"
     reference_dir.mkdir()
 
-    command, args = filesystem_stdio_spec(reference_dir, windows=True)
-    assert command == "cmd"
-    assert args[:4] == ["/c", "npx", "-y", BORROWED_FILESYSTEM_PACKAGE]
-    assert args[-1] == str(reference_dir.resolve())
-
-    command, args = filesystem_stdio_spec(reference_dir, windows=False)
-    assert command == "npx"
-    assert args[:2] == ["-y", BORROWED_FILESYSTEM_PACKAGE]
-    assert args[-1] == str(reference_dir.resolve())
+    with pytest.raises(ValueError, match="run npm install"):
+        filesystem_stdio_spec(
+            reference_dir,
+            entrypoint=tmp_path / "missing.js",
+        )
 
 
 def test_borrowed_filter_requires_allowlist_and_read_only_annotation() -> None:
