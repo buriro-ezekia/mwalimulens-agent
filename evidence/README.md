@@ -22,6 +22,6 @@ hidden chain-of-thought.
 
 ## Genuine failures
 
-The `failures/` directory preserves real local-Qwen workflow failures observed before bounded
-completion recovery was added. These files are intentionally retained as challenge evaluation
-evidence and include the next attempted remediation.
+The `failures/` directory preserves real local-Qwen failures across the workflow-completion,
+MCP-lifecycle and candidate-semantics debugging sequence. These files are intentionally retained
+as challenge evaluation evidence and include the next attempted remediation.
