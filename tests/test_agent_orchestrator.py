@@ -42,6 +42,10 @@ def test_agent_instructions_preserve_evidence_and_human_boundaries() -> None:
     assert "uncertainty" in lowered
     assert "single score is not enough" in lowered
     assert "teacher decides" in lowered
+    assert "provisional pending candidate" in lowered
+    assert "not a permanent learner label" in lowered
+    assert "mixed evidence is expected" in lowered
+    assert "do not ask for permission again" in lowered
     assert "no authority to perform the human review" in lowered
 
 
