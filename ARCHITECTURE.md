@@ -83,8 +83,9 @@ records concerning minors, are not required for demonstrating the workflow.
 
 ## Current status
 
-The evidence-first domain, synthetic longitudinal fixtures and all four custom Education MCP
-tools are implemented. The workflow now includes two evidence reads, a bounded
-`flag_pattern_for_review` action and an explicit approve/edit/reject teacher gate with reviewer
-identity, atomic audit persistence and human-gated profile updates. Agent orchestration, model
-integration, borrowed MCP integration and the interface remain planned.
+The evidence-first domain, synthetic longitudinal fixtures, all four custom Education MCP tools
+and the PydanticAI orchestration layer are implemented. The underlying MCP server exposes four
+tools, while the agent-visible filtered toolset exposes only `get_learner_timeline`,
+`get_competency_evidence` and `flag_pattern_for_review`. `record_teacher_review` remains
+outside model visibility. Local Qwen/Ollama integration, borrowed MCP integration and the
+interface remain planned.
