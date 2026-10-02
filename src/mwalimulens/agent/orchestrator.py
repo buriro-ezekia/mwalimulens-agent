@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from fastmcp.client.transports import StdioTransport
 from pydantic_ai import Agent
@@ -83,6 +85,7 @@ def build_agent(
     *,
     data_dir: Path = DEFAULT_DATA_DIR,
     state_path: Path = DEFAULT_STATE_PATH,
+    additional_toolsets: Sequence[Any] = (),
 ) -> Agent:
     """Build a model-independent MwalimuLens agent with the strict MCP allowlist."""
 
@@ -93,6 +96,7 @@ def build_agent(
             build_agent_mcp_toolset(
                 data_dir=data_dir,
                 state_path=state_path,
-            )
+            ),
+            *additional_toolsets,
         ],
     )
