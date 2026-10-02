@@ -243,7 +243,6 @@ def test_open_weights_report_with_runtime_error_cannot_pass(tmp_path) -> None:
     assert report["error"]["type"] == "ConnectionError"
 
 
-
 def test_open_weights_report_requires_counter_evidence(tmp_path) -> None:
     store = JsonStateStore(tmp_path / "state.json")
     store.record_tool_call(
@@ -284,7 +283,6 @@ def test_open_weights_report_requires_counter_evidence(tmp_path) -> None:
 
     assert report["status"] == "fail"
     assert report["checks"]["candidate_cites_support_and_counter"] is False
-
 
 
 def test_incomplete_passing_report_cannot_be_promoted(tmp_path) -> None:
