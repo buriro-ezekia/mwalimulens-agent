@@ -48,9 +48,9 @@ Implemented in the current codebase:
 - a local Qwen/Ollama provider plus an executable open-weights challenge task and JSON evidence
   report.
 
-The **real local Qwen run is still pending verification**. The borrowed MCP server and user
-interface are also not implemented yet. This README does not mark the open-weights requirement
-complete until a passing local report is promoted into `evidence/open_weights_run.json`.
+A real local Qwen2.5 3B run has now passed all open-weights evidence and safety checks and is
+committed at `evidence/open_weights_run.json`. The borrowed MCP server and user interface remain
+unfinished.
 
 ## Run the custom Education MCP server
 
