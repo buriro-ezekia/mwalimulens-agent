@@ -151,8 +151,6 @@ async def test_agent_can_retrieve_evidence_and_submit_but_not_review(tmp_path) -
         "flag_pattern_for_review",
     ]
 
-
-
 class _AttemptForbiddenTeacherReview:
     def __init__(self) -> None:
         self.step = 0
