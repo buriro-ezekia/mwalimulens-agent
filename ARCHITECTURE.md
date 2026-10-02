@@ -81,6 +81,8 @@ records concerning minors, are not required for demonstrating the workflow.
 
 ## Current status
 
-The evidence-first domain and synthetic longitudinal fixtures are implemented. MCP,
-orchestration, model integration, human-review persistence and the interface remain planned
-until their corresponding implementation slices and tests are completed.
+The evidence-first domain, synthetic longitudinal fixtures and the first custom Education MCP
+server are implemented. The MCP slice exposes two evidence reads plus the bounded
+`flag_pattern_for_review` action with an audit trail. Agent orchestration, model integration,
+borrowed MCP integration, teacher approve/edit/reject persistence and the interface remain
+planned until their corresponding implementation slices and tests are completed.
