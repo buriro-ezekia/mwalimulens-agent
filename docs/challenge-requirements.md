@@ -20,13 +20,13 @@ or subject pathway.
 
 | Requirement | MwalimuLens evidence | Status |
 |---|---|---|
-| Own MCP server with at least 3 different tools | Education MCP: 3 implemented tools | Present |
+| Own MCP server with at least 3 different tools | Education MCP: 4 implemented tools | Present |
 | At least 1 custom MCP tool performs an action | `flag_pattern_for_review` | Present |
 | Use 1 MCP server not written by the team | Borrowed MCP integration + rationale | Planned |
 | Open-source orchestration | Python orchestration layer | Planned |
 | One complete task on an open-weights model | Local Qwen via Ollama | Planned |
 | Log every tool action | Tool-call audit records for success/failure with inputs, outputs/errors and timestamps | Present |
-| Gate consequential/irreversible actions | Explicit named-teacher approval | Planned |
+| Gate consequential/irreversible actions | Named approve/edit/reject teacher gate; profile update only after approve/edit | Present |
 | Public repository with OSI-approved licence | Public GitHub repository + Apache-2.0 | Present |
 | README supports reproducible execution | One-command run path | Planned |
 | `ARCHITECTURE.md` | One-page agent/MCP boundary | Present in this slice |
@@ -50,7 +50,7 @@ These are product invariants, not prompt-only preferences:
 
 ## Initial custom MCP boundary
 
-The challenge implementation will begin with four deliberately narrow tools:
+The challenge implementation uses four deliberately narrow tools:
 
 | Tool | Type | Responsibility |
 |---|---|---|

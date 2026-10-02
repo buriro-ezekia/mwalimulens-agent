@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server import MCPServer
 
@@ -70,6 +70,24 @@ def build_server(
             counter_evidence_ids=counter_evidence_ids,
             uncertainty=uncertainty,
             suggested_teacher_question=suggested_teacher_question,
+        )
+
+    @mcp.tool()
+    def record_teacher_review(
+        review_id: str,
+        reviewer_id: str,
+        decision: Literal["approve", "edit", "reject"],
+        reason: str,
+        edited_claim: str | None = None,
+    ) -> dict[str, Any]:
+        """Record the named teacher decision and apply only human-approved consequences."""
+
+        return service.record_teacher_review(
+            review_id=review_id,
+            reviewer_id=reviewer_id,
+            decision=decision,
+            reason=reason,
+            edited_claim=edited_claim,
         )
 
     return mcp

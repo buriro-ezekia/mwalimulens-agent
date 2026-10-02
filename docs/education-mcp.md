@@ -2,13 +2,14 @@
 
 MwalimuLens uses the official Python MCP SDK v2 and targets the MCP 2026-07-28 protocol revision.
 
-The server is intentionally small. In this slice it exposes exactly three tools:
+The server is intentionally small. It exposes exactly four custom tools:
 
 | Tool | Type | Behaviour |
 |---|---|---|
 | `get_learner_timeline` | Read | Returns one learner's evidence in event chronology |
 | `get_competency_evidence` | Read | Returns evidence for one learner competency |
 | `flag_pattern_for_review` | Action | Persists a candidate as `pending_teacher_review` |
+| `record_teacher_review` | Human action | Records approve/edit/reject with reviewer identity |
 
 ## Human boundary
 
@@ -16,7 +17,17 @@ The server is intentionally small. In this slice it exposes exactly three tools:
 deliberately reversible and non-consequential. It does **not** approve a claim, alter a learner
 profile, assign a learner label or choose a pathway.
 
-Teacher approve/edit/reject behaviour is a separate implementation slice.
+`record_teacher_review` is the human decision gate. Approve preserves the candidate claim,
+edit requires teacher-authored replacement wording, and reject creates no profile update.
+
+There is no separate profile-update MCP tool. A profile update can only be created internally by
+a successful approve/edit teacher review, making the no-bypass persistence rule structural rather
+than prompt-only.
+
+This challenge slice requires an explicit `reviewer_id` but does not implement school
+authentication or role management. The later orchestrator/UI boundary must exclude
+`record_teacher_review` from the agent-callable tool allowlist and invoke it only from the
+human review path.
 
 ## Audit trail
 
@@ -35,7 +46,9 @@ Each service-level audit record contains:
 - timestamp.
 
 The successful `flag_pattern_for_review` action writes its pending-review record and audit event
-to the same local JSON state document in one atomic replacement.
+to the same local JSON state document in one atomic replacement. Teacher review resolution,
+the named review record, any approved/edited profile update and the review tool audit are also
+persisted together atomically.
 
 By default runtime state is written to:
 

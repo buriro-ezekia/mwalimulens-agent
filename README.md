@@ -39,11 +39,13 @@ Implemented in the current codebase:
 - deterministic chronology and competency retrieval;
 - synthetic multi-term fixtures containing late entry, missing records, conflicting evidence,
   a one-off anomaly and an insufficient-history case; and
-- a custom Education MCP server with three tools, structured outputs, tool-call auditing and a
-  bounded `pending_teacher_review` action.
+- a custom Education MCP server with four tools, structured outputs and tool-call auditing;
+- a bounded `pending_teacher_review` action; and
+- an explicit teacher approve/edit/reject gate that records reviewer identity and permits profile
+  updates only after approve/edit decisions.
 
-Agent orchestration, Ollama/Qwen integration, the borrowed MCP server, teacher approve/edit/reject
-persistence and the user interface are **not implemented yet**. This README will not claim those
+Agent orchestration, Ollama/Qwen integration, the borrowed MCP server and the user interface are
+**not implemented yet**. This README will not claim those
 capabilities until corresponding code and tests exist.
 
 ## Run the custom Education MCP server

@@ -16,7 +16,7 @@ Custom Education MCP
   - get_learner_timeline
   - get_competency_evidence
   - flag_pattern_for_review
-  - record_teacher_review (planned human-review tool)
+  - record_teacher_review
         |
         v
 Open-source agent orchestrator
@@ -60,9 +60,10 @@ pending-review state before any consequential record can be created.
 
 ### MCP tool boundaries are small
 
-The target Education MCP boundary contains four tools rather than a broad API. The current
-server exposes the first three; `record_teacher_review` remains planned for the dedicated human
-review slice. This keeps agent behaviour inspectable and makes individual tool contracts reusable.
+The Education MCP boundary contains four tools rather than a broad API. All four are implemented.
+`record_teacher_review` is the only path that can produce an audited profile update, and only
+approve/edit decisions create one. This keeps agent behaviour inspectable and makes the human
+decision gate enforceable in code.
 
 ### Real learner data is out of scope
 
@@ -82,8 +83,8 @@ records concerning minors, are not required for demonstrating the workflow.
 
 ## Current status
 
-The evidence-first domain, synthetic longitudinal fixtures and the first custom Education MCP
-server are implemented. The MCP slice exposes two evidence reads plus the bounded
-`flag_pattern_for_review` action with an audit trail. Agent orchestration, model integration,
-borrowed MCP integration, teacher approve/edit/reject persistence and the interface remain
-planned until their corresponding implementation slices and tests are completed.
+The evidence-first domain, synthetic longitudinal fixtures and all four custom Education MCP
+tools are implemented. The workflow now includes two evidence reads, a bounded
+`flag_pattern_for_review` action and an explicit approve/edit/reject teacher gate with reviewer
+identity, atomic audit persistence and human-gated profile updates. Agent orchestration, model
+integration, borrowed MCP integration and the interface remain planned.
