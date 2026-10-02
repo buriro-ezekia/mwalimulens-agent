@@ -188,12 +188,16 @@ def test_open_weights_report_fails_for_non_local_endpoint(tmp_path) -> None:
 def test_passing_open_weights_report_can_be_promoted(tmp_path) -> None:
     source = tmp_path / "runtime.json"
     destination = tmp_path / "evidence.json"
+    from mwalimulens.agent.promote_open_weights_evidence import (
+        REQUIRED_OPEN_WEIGHTS_CHECKS,
+    )
+
     report = {
         "status": "pass",
         "provider": "ollama",
         "open_weights": True,
         "model": "qwen2.5:1.5b",
-        "checks": {"safe": True, "complete": True},
+        "checks": {name: True for name in REQUIRED_OPEN_WEIGHTS_CHECKS},
     }
     source.write_text(json.dumps(report), encoding="utf-8")
 
@@ -280,3 +284,21 @@ def test_open_weights_report_requires_counter_evidence(tmp_path) -> None:
 
     assert report["status"] == "fail"
     assert report["checks"]["candidate_cites_support_and_counter"] is False
+
+
+
+def test_incomplete_passing_report_cannot_be_promoted(tmp_path) -> None:
+    source = tmp_path / "runtime.json"
+    report = {
+        "status": "pass",
+        "provider": "ollama",
+        "open_weights": True,
+        "checks": {"local_ollama_endpoint": True},
+    }
+    source.write_text(json.dumps(report), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="missing required checks"):
+        promote_open_weights_report(
+            source=source,
+            destination=tmp_path / "evidence.json",
+        )
