@@ -42,11 +42,12 @@ Implemented in the current codebase:
 - a custom Education MCP server with four tools, structured outputs and tool-call auditing;
 - a bounded `pending_teacher_review` action; and
 - an explicit teacher approve/edit/reject gate that records reviewer identity and permits profile
-  updates only after approve/edit decisions.
+  updates only after approve/edit decisions; and
+- a PydanticAI orchestrator whose MCP toolset exposes only evidence retrieval and
+  `flag_pattern_for_review` to the model.
 
-Agent orchestration, Ollama/Qwen integration, the borrowed MCP server and the user interface are
-**not implemented yet**. This README will not claim those
-capabilities until corresponding code and tests exist.
+Ollama/Qwen integration, the borrowed MCP server and the user interface are **not implemented
+yet**. This README will not claim those capabilities until corresponding code and tests exist.
 
 ## Run the custom Education MCP server
 
@@ -63,7 +64,8 @@ python -m mwalimulens.mcp_server.server
 The server uses stdio by default and writes runtime audit/review state to
 `runtime/education_mcp_state.json`.
 
-See `docs/education-mcp.md` for the tool contract and MCP Inspector command.
+See `docs/education-mcp.md` for the tool contract and MCP Inspector command, and
+`docs/agent-orchestrator.md` for the model-facing allowlist boundary.
 
 ## Development workflow
 
