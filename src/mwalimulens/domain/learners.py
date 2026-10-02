@@ -22,3 +22,6 @@ class Learner:
             value = getattr(self, field_name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} must be a non-empty string")
+
+        if not isinstance(self.synthetic, bool):
+            raise TypeError("synthetic must be a bool")
