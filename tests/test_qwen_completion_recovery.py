@@ -116,6 +116,18 @@ def test_recovery_is_needed_after_evidence_only(tmp_path) -> None:
     assert _should_attempt_completion_recovery(store) is True
 
 
+def test_recovery_is_not_allowed_after_failed_tool_call(tmp_path) -> None:
+    store = JsonStateStore(tmp_path / "state.json")
+    store.record_tool_call(
+        {
+            "tool_name": "get_competency_evidence",
+            "status": "error",
+        }
+    )
+
+    assert _should_attempt_completion_recovery(store) is False
+
+
 def test_recovery_is_not_needed_after_candidate_submission(tmp_path) -> None:
     store = JsonStateStore(tmp_path / "state.json")
     store.record_tool_call(
