@@ -2,6 +2,10 @@
 
 MwalimuLens uses PydanticAI 2.51.x as its open-source orchestration layer.
 
+The MCP client dependency is constrained to `fastmcp-slim[client]>=4,<5`. FastMCP 4 is the
+line compatible with the MCP SDK v2 generation used by MwalimuLens; an older full FastMCP 3.x
+installation should not be mixed into the project environment.
+
 ## Tool boundary
 
 The Education MCP server itself exposes four tools:
