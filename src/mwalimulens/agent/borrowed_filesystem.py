@@ -21,14 +21,14 @@ BORROWED_FILESYSTEM_PACKAGE = (
 )
 BORROWED_FILESYSTEM_TOOLSET_ID = "borrowed-official-filesystem-mcp"
 DEFAULT_REFERENCE_DIR = PROJECT_ROOT / "data" / "reference"
-DEFAULT_FILESYSTEM_ENTRYPOINT = (
+DEFAULT_FILESYSTEM_PACKAGE_DIR = (
     PROJECT_ROOT
     / "node_modules"
     / "@modelcontextprotocol"
     / "server-filesystem"
-    / "dist"
-    / "index.js"
 )
+DEFAULT_FILESYSTEM_ENTRYPOINT = DEFAULT_FILESYSTEM_PACKAGE_DIR / "dist" / "index.js"
+DEFAULT_FILESYSTEM_PACKAGE_JSON = DEFAULT_FILESYSTEM_PACKAGE_DIR / "package.json"
 DEFAULT_BORROWED_MCP_STDERR = PROJECT_ROOT / "runtime" / "borrowed_mcp_stderr.log"
 
 BORROWED_FILESYSTEM_TOOL_ALLOWLIST = frozenset(
@@ -52,10 +52,25 @@ BORROWED_FILESYSTEM_WRITE_TOOLS = frozenset(
 )
 
 
+def installed_filesystem_version(
+    package_json_path: Path = DEFAULT_FILESYSTEM_PACKAGE_JSON,
+) -> str | None:
+    """Return the locally installed borrowed-server version, if available."""
+
+    package_json_path = package_json_path.resolve()
+    if not package_json_path.is_file():
+        return None
+
+    payload = json.loads(package_json_path.read_text(encoding="utf-8"))
+    version = payload.get("version")
+    return version if isinstance(version, str) else None
+
+
 def filesystem_stdio_spec(
     reference_dir: Path = DEFAULT_REFERENCE_DIR,
     *,
     entrypoint: Path = DEFAULT_FILESYSTEM_ENTRYPOINT,
+    package_json_path: Path = DEFAULT_FILESYSTEM_PACKAGE_JSON,
 ) -> tuple[str, list[str]]:
     """Return a direct Node launch for the locally installed pinned server."""
 
@@ -67,6 +82,13 @@ def filesystem_stdio_spec(
         raise ValueError(
             "borrowed Filesystem MCP entrypoint is missing; run npm install "
             f"before the smoke test: {entrypoint}"
+        )
+
+    installed_version = installed_filesystem_version(package_json_path)
+    if installed_version != BORROWED_FILESYSTEM_VERSION:
+        raise ValueError(
+            "borrowed Filesystem MCP version mismatch: "
+            f"expected {BORROWED_FILESYSTEM_VERSION}, found {installed_version!r}"
         )
 
     return "node", [str(entrypoint), str(reference_dir)]
@@ -141,6 +163,7 @@ def build_borrowed_filesystem_toolset(
     reference_dir: Path = DEFAULT_REFERENCE_DIR,
     state_path: Path = DEFAULT_STATE_PATH,
     entrypoint: Path = DEFAULT_FILESYSTEM_ENTRYPOINT,
+    package_json_path: Path = DEFAULT_FILESYSTEM_PACKAGE_JSON,
     stderr_path: Path = DEFAULT_BORROWED_MCP_STDERR,
 ):
     """Build the official filesystem MCP, sandboxed and filtered to read-only tools."""
@@ -148,6 +171,7 @@ def build_borrowed_filesystem_toolset(
     command, args = filesystem_stdio_spec(
         reference_dir,
         entrypoint=entrypoint,
+        package_json_path=package_json_path,
     )
     audit_tool_call = build_borrowed_audit_callback(state_path)
 
