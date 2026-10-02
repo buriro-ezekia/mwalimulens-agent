@@ -11,27 +11,38 @@ from typing import Any
 from urllib.parse import urlparse
 
 from mwalimulens.agent.ollama import OllamaSettings, build_ollama_agent
-from mwalimulens.agent.orchestrator import AGENT_MCP_TOOL_ALLOWLIST
+from mwalimulens.agent.orchestrator import (
+    AGENT_MCP_TOOL_ALLOWLIST,
+    CANDIDATE_REVIEW_POLICY,
+)
 from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR, PROJECT_ROOT
 from mwalimulens.mcp_server.state import JsonStateStore
 
 DEFAULT_OPEN_WEIGHTS_STATE_PATH = PROJECT_ROOT / "runtime" / "open_weights_state.json"
 DEFAULT_OPEN_WEIGHTS_REPORT_PATH = PROJECT_ROOT / "runtime" / "open_weights_run.json"
 
-COMPLETION_RECOVERY_PROMPT = """
+COMPLETION_RECOVERY_PROMPT = f"""
 You have already retrieved evidence for the original learner task, but you did not complete the
 workflow action.
 
-Complete the task now without asking the user for permission. Choose exactly one outcome:
+{CANDIDATE_REVIEW_POLICY}
 
-1. If the retrieved evidence supports a cautious candidate pattern, call
-   flag_pattern_for_review now using only concrete evidence IDs already returned by the MCP
-   evidence tool. Include supporting evidence, counter-evidence, explicit uncertainty, and a
-   useful teacher question.
-2. If the evidence is not sufficient for a defensible longitudinal candidate, do not call the
-   action tool. Instead return a final response beginning with "ABSTAIN:" and explain why.
+For this recovery turn, do not use "strong enough for a permanent label" as the threshold. A
+permanent label is prohibited and is not what flag_pattern_for_review does. A qualified candidate
+such as "scores improved across terms while independent explanation remained inconsistent" is
+appropriate when the retrieved evidence supports it.
 
-Do not call or attempt any teacher-review action. Do not invent evidence IDs.
+Choose exactly one outcome:
+
+1. If you can support a bounded cross-term pattern with at least two concrete supporting evidence
+   IDs from the retrieved evidence and at least one relevant counter-evidence ID, call
+   flag_pattern_for_review now. Include the qualified claim, those evidence IDs, explicit
+   uncertainty, and a useful teacher question.
+2. If those conditions are not met, do not call the action tool. Return a final response beginning
+   with "ABSTAIN:" and identify the missing evidence condition.
+
+Do not ask the user for permission again. Do not call or attempt any teacher-review action. Do not
+invent evidence IDs.
 """.strip()
 
 DEFAULT_OPEN_WEIGHTS_TASK = """
