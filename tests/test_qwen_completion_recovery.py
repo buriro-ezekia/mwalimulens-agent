@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -67,7 +66,10 @@ class _RecoveringAgent:
                 "status": "pending_teacher_review",
                 "learner_id": "L001",
                 "competency_code": "MATH-FRACTIONS",
-                "claim": "Fraction performance is repeatedly strong with mixed explanation evidence.",
+                "claim": (
+                    "Fraction performance is repeatedly strong "
+                    "with mixed explanation evidence."
+                ),
                 "supporting_evidence_ids": ["EV-004", "EV-007", "EV-009"],
                 "counter_evidence_ids": ["EV-008"],
                 "uncertainty": "Independent explanation evidence is mixed.",
