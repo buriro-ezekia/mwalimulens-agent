@@ -73,14 +73,9 @@ def borrowed_tool_is_read_only(_ctx: Any, tool_def: Any) -> bool:
     )
 
 
-def build_borrowed_filesystem_toolset(
-    *,
-    reference_dir: Path = DEFAULT_REFERENCE_DIR,
-    state_path: Path = DEFAULT_STATE_PATH,
-):
-    """Build the official filesystem MCP, sandboxed and filtered to read-only tools."""
+def build_borrowed_audit_callback(state_path: Path):
+    """Build an audit wrapper for calls made through the borrowed MCP server."""
 
-    command, args = filesystem_stdio_spec(reference_dir)
     state_store = JsonStateStore(state_path)
 
     async def audit_tool_call(
@@ -128,6 +123,19 @@ def build_borrowed_filesystem_toolset(
             }
         )
         return result
+
+    return audit_tool_call
+
+
+def build_borrowed_filesystem_toolset(
+    *,
+    reference_dir: Path = DEFAULT_REFERENCE_DIR,
+    state_path: Path = DEFAULT_STATE_PATH,
+):
+    """Build the official filesystem MCP, sandboxed and filtered to read-only tools."""
+
+    command, args = filesystem_stdio_spec(reference_dir)
+    audit_tool_call = build_borrowed_audit_callback(state_path)
 
     transport = StdioTransport(
         command=command,
