@@ -196,6 +196,8 @@ def build_open_weights_report(
         "final_output": final_output,
         "completion_recovery": {
             "attempted": recovery_attempted,
+            "succeeded": recovery_attempted
+            and "flag_pattern_for_review" in tool_names,
             "prompt": COMPLETION_RECOVERY_PROMPT if recovery_attempted else None,
             "output": recovery_output,
         },
