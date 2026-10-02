@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 from pydantic_ai.models.ollama import OllamaModel
@@ -65,6 +67,7 @@ def build_ollama_agent(
     settings: OllamaSettings | None = None,
     data_dir: Path = DEFAULT_DATA_DIR,
     state_path: Path = DEFAULT_STATE_PATH,
+    additional_toolsets: Sequence[Any] = (),
 ):
     """Build the safe MwalimuLens agent backed by local Qwen/Ollama."""
 
@@ -72,4 +75,5 @@ def build_ollama_agent(
         build_ollama_model(settings),
         data_dir=data_dir,
         state_path=state_path,
+        additional_toolsets=additional_toolsets,
     )
