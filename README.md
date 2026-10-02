@@ -48,9 +48,12 @@ capabilities until corresponding code and tests exist.
 
 ## Run the custom Education MCP server
 
-After installing the project with development dependencies:
+For a clean Windows setup, use the repository-local virtual environment so CLI executables stay
+on the active environment PATH:
 
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
 python -m mwalimulens.mcp_server.server
 ```
