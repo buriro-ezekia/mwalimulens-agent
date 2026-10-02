@@ -50,10 +50,10 @@ Implemented in the current codebase:
 - an official borrowed Filesystem MCP integration restricted to read-only classroom-reference
   access, with borrowed calls written to the same audit stream.
 
-A real local Qwen2.5 3B run has now passed all open-weights evidence and safety checks and is
-committed at `evidence/open_weights_run.json`. The borrowed Filesystem MCP integration is
-implemented but still requires its real local smoke run before that challenge requirement is
-marked complete. The user interface remains unfinished.
+A real local Qwen2.5 3B run has passed all open-weights evidence and safety checks and is
+committed at `evidence/open_weights_run.json`. The official borrowed Filesystem MCP has also
+passed its real read-only smoke run, with promoted evidence committed at
+`evidence/borrowed_mcp_run.json`. The user interface remains unfinished.
 
 ## Run the custom Education MCP server
 
