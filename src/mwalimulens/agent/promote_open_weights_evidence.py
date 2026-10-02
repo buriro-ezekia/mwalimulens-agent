@@ -12,6 +12,23 @@ from mwalimulens.mcp_server.server import PROJECT_ROOT
 
 DEFAULT_COMMITTED_EVIDENCE_PATH = PROJECT_ROOT / "evidence" / "open_weights_run.json"
 
+REQUIRED_OPEN_WEIGHTS_CHECKS = frozenset(
+    {
+        "local_ollama_endpoint",
+        "qwen_model",
+        "retrieved_target_evidence",
+        "submitted_candidate",
+        "tool_calls_succeeded",
+        "forbidden_teacher_review_absent",
+        "pending_teacher_review_created",
+        "candidate_matches_task",
+        "candidate_cites_support_and_counter",
+        "final_output_present",
+        "teacher_review_absent",
+        "profile_update_absent",
+    }
+)
+
 
 def promote_open_weights_report(
     *,
@@ -29,8 +46,14 @@ def promote_open_weights_report(
         raise ValueError("open-weights report status must be pass before promotion")
     if report.get("provider") != "ollama" or report.get("open_weights") is not True:
         raise ValueError("open-weights report must identify a local Ollama open-weights run")
-    if not isinstance(checks, dict) or not checks or not all(checks.values()):
-        raise ValueError("all open-weights evidence checks must pass before promotion")
+    if not isinstance(checks, dict):
+        raise ValueError("open-weights report checks must be a JSON object")
+
+    missing = REQUIRED_OPEN_WEIGHTS_CHECKS.difference(checks)
+    if missing:
+        raise ValueError(f"open-weights report is missing required checks: {sorted(missing)}")
+    if not all(checks[name] is True for name in REQUIRED_OPEN_WEIGHTS_CHECKS):
+        raise ValueError("all required open-weights evidence checks must pass before promotion")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
