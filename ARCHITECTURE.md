@@ -89,10 +89,11 @@ The evidence-first domain, synthetic longitudinal fixtures, all four custom Educ
 PydanticAI orchestration, and local Qwen/Ollama execution are implemented. The custom Education
 server exposes four tools, while the model-visible Education toolset exposes only
 `get_learner_timeline`, `get_competency_evidence` and `flag_pattern_for_review`.
-`record_teacher_review` remains outside model visibility.
+`record_teacher_review` remains outside model visibility. A passing local Qwen2.5 3B run is
+committed at `evidence/open_weights_run.json`.
 
-The official borrowed Filesystem MCP integration is also implemented for generic local classroom
+The official borrowed Filesystem MCP integration is implemented for generic local classroom
 reference access. It is sandboxed to `data/reference/`, filtered to an explicit read-only
-allowlist, and audited through the same runtime state. Its challenge requirement remains pending
-until the real local borrowed-server smoke run passes and is promoted into repository evidence.
-The interface remains planned.
+allowlist, audited through the same runtime state, and pinned to the legacy initialize handshake
+required by the upstream JS MCP SDK. A passing real smoke report is committed at
+`evidence/borrowed_mcp_run.json`. The interface remains planned.
