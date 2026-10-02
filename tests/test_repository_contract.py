@@ -9,13 +9,17 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
+def normalise_whitespace(value: str) -> str:
+    return " ".join(value.split())
+
+
 def test_required_contract_files_exist() -> None:
     for path in ("README.md", "ARCHITECTURE.md", "docs/challenge-requirements.md", "LICENSE"):
         assert (ROOT / path).is_file(), f"missing required contract file: {path}"
 
 
 def test_readme_states_product_boundary_and_theme() -> None:
-    content = read("README.md").lower()
+    content = normalise_whitespace(read("README.md").lower())
     assert "longitudinal strength tracking" in content
     assert "teacher decides" in content
     assert "not implemented yet" in content
@@ -41,6 +45,6 @@ def test_challenge_contract_names_four_initial_tools() -> None:
 
 
 def test_challenge_contract_preserves_required_eval_failure() -> None:
-    content = read("docs/challenge-requirements.md").lower()
+    content = normalise_whitespace(read("docs/challenge-requirements.md").lower())
     assert "one genuine unfixed failure" in content
     assert "at least 8" in content
