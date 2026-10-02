@@ -80,6 +80,10 @@ If Qwen retrieves the target evidence but returns prose without calling
 `flag_pattern_for_review`, MwalimuLens performs exactly one recovery turn using the same
 conversation history and the same three-tool model allowlist.
 
+The initial and recovery turns run inside one entered PydanticAI agent context so the stdio MCP
+connection remains open across both turns. This avoids tearing down and reinitialising the MCP
+server between the two model calls.
+
 The recovery prompt requires Qwen to choose one outcome:
 
 1. call `flag_pattern_for_review` immediately if the retrieved evidence supports a cautious
