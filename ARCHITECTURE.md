@@ -28,7 +28,9 @@ Open-source agent orchestrator
         |
         +----> Open-weights model (local Qwen / Ollama)
         |
-        +----> Borrowed MCP server (to be integrated and justified)
+        +----> Official Filesystem MCP
+               - read-only classroom references
+               - sandboxed reference directory
         |
         v
 Candidate pattern
@@ -77,17 +79,21 @@ records concerning minors, are not required for demonstrating the workflow.
 3. Tool-call audit log and pending-review persistence.
 4. Agent orchestration with deterministic provider first.
 5. Local Qwen/Ollama provider.
-6. Borrowed MCP integration.
+6. Borrowed Filesystem MCP integration.
 7. Evaluation suite and failure cases.
 8. Compact judge-facing interface and demo workflow.
 
 ## Current status
 
 The evidence-first domain, synthetic longitudinal fixtures, all four custom Education MCP tools,
-PydanticAI orchestration, and the local Qwen/Ollama provider are implemented. The underlying MCP
-server exposes four tools, while the agent-visible filtered toolset exposes only
+PydanticAI orchestration, and local Qwen/Ollama execution are implemented. The custom Education
+server exposes four tools, while the model-visible Education toolset exposes only
 `get_learner_timeline`, `get_competency_evidence` and `flag_pattern_for_review`.
-`record_teacher_review` remains outside model visibility. The executable open-weights task writes
-an auditable JSON report, but the challenge requirement remains pending until a real local Qwen
-run passes and is promoted into repository evidence. Borrowed MCP integration and the interface
-remain planned.
+`record_teacher_review` remains outside model visibility. A passing local Qwen2.5 3B run is
+committed at `evidence/open_weights_run.json`.
+
+The official borrowed Filesystem MCP integration is implemented for generic local classroom
+reference access. It is sandboxed to `data/reference/`, filtered to an explicit read-only
+allowlist, audited through the same runtime state, and pinned to the legacy initialize handshake
+required by the upstream JS MCP SDK. A passing real smoke report is committed at
+`evidence/borrowed_mcp_run.json`. The interface remains planned.

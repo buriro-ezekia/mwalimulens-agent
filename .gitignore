@@ -28,3 +28,6 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Node.js borrowed MCP dependency
+node_modules/

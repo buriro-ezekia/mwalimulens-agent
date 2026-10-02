@@ -24,7 +24,7 @@ The challenge build is designed so that:
 ## Planned challenge stack
 
 - **Custom MCP server:** longitudinal learner evidence and bounded review actions
-- **Borrowed MCP server:** an external/official MCP capability, documented before integration
+- **Borrowed MCP server:** official Model Context Protocol Filesystem MCP, read-only and sandboxed
 - **Orchestration:** open-source Python orchestration
 - **Open-weights model:** local Qwen through Ollama
 - **Data:** synthetic learner records only
@@ -46,11 +46,14 @@ Implemented in the current codebase:
 - a PydanticAI orchestrator whose MCP toolset exposes only evidence retrieval and
   `flag_pattern_for_review` to the model; and
 - a local Qwen/Ollama provider plus an executable open-weights challenge task and JSON evidence
-  report.
+  report; and
+- an official borrowed Filesystem MCP integration restricted to read-only classroom-reference
+  access, with borrowed calls written to the same audit stream.
 
-A real local Qwen2.5 3B run has now passed all open-weights evidence and safety checks and is
-committed at `evidence/open_weights_run.json`. The borrowed MCP server and user interface remain
-unfinished.
+A real local Qwen2.5 3B run has passed all open-weights evidence and safety checks and is
+committed at `evidence/open_weights_run.json`. The official borrowed Filesystem MCP has also
+passed its real read-only smoke run, with promoted evidence committed at
+`evidence/borrowed_mcp_run.json`. The user interface remains unfinished.
 
 ## Run the custom Education MCP server
 
@@ -68,8 +71,8 @@ The server uses stdio by default and writes runtime audit/review state to
 `runtime/education_mcp_state.json`.
 
 See `docs/education-mcp.md` for the tool contract, `docs/agent-orchestrator.md` for the
-model-facing allowlist boundary, and `docs/open-weights-run.md` for the local Qwen validation
-workflow.
+model-facing allowlist boundary, `docs/open-weights-run.md` for the local Qwen validation
+workflow, and `docs/borrowed-filesystem-mcp.md` for the borrowed-server boundary and rationale.
 
 ## Development workflow
 

@@ -80,3 +80,31 @@ The orchestration layer is model-independent. Tests use PydanticAI's local `Test
 Local Qwen/Ollama integration is now implemented in the model layer. The challenge requirement is
 still not claimed complete until the real task produces a passing report and that report is
 promoted into `evidence/open_weights_run.json`.
+
+
+## Borrowed toolsets
+
+The agent builder accepts additional toolsets without changing the custom Education MCP boundary.
+
+The challenge integration uses the official
+`@modelcontextprotocol/server-filesystem@2026.8.31` server for generic local classroom-reference
+access. The borrowed server is sandboxed to `data/reference/` and filtered before model
+visibility.
+
+Only these upstream read-only tools are eligible:
+
+```text
+read_text_file
+read_multiple_files
+list_directory
+search_files
+get_file_info
+list_allowed_directories
+```
+
+Write-capable filesystem tools are not model-visible. The filter also requires the upstream MCP
+tool annotation `readOnlyHint=true`, so an allowed name without the read-only annotation is
+still excluded.
+
+Borrowed tool calls are wrapped and recorded in the same JSON audit state with
+`source=borrowed_mcp` and a distinct toolset ID.

@@ -25,3 +25,10 @@ hidden chain-of-thought.
 The `failures/` directory preserves real local-Qwen failures across the workflow-completion,
 MCP-lifecycle and candidate-semantics debugging sequence. These files are intentionally retained
 as challenge evaluation evidence and include the next attempted remediation.
+
+
+## Borrowed MCP run
+
+The committed `borrowed_mcp_run.json` is the promoted real smoke report for the official
+Filesystem MCP. It passed the read-only allowlist, write-tool exclusion, sandbox, installed-version,
+legacy-handshake and borrowed-call audit checks.

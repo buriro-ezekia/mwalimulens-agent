@@ -1,0 +1,53 @@
+{
+  "audited_tool_calls": [
+    {
+      "call_id": "borrowed-b9e0652b-68ef-4e10-bedb-e22831c07ef9",
+      "error": null,
+      "inputs": {
+        "path": "D:\\DESKTOP\\Buriro\\HACKSON\\The African Agentic AI Design Challenge\\MwalimuLens Agent\\Main Project\\mwalimulens-agent\\data\\reference\\math_fractions_reference.md"
+      },
+      "output": {
+        "content": "# Synthetic classroom reference — MATH-FRACTIONS\r\n\r\nThis file is synthetic classroom reference material for the MwalimuLens challenge demo.\r\nIt is **not learner evidence** and must never override the Education MCP evidence record.\r\n\r\n## Competency focus\r\n\r\nFor MATH-FRACTIONS, classroom review may consider whether a learner can:\r\n\r\n- recognise and compare equivalent fractions;\r\n- solve fraction tasks across assessment and practical contexts;\r\n- explain or justify the method used; and\r\n- transfer fraction understanding to unfamiliar or open-ended problems.\r\n\r\n## Interpretation guidance\r\n\r\nA candidate longitudinal pattern should remain cautious when evidence types disagree.\r\n\r\n- Repeated results across terms can support a bounded pattern.\r\n- Teacher observations can provide important counter-evidence.\r\n- Difficulty explaining a method should not be silently discarded because numerical scores rise.\r\n- Mixed evidence should be represented as uncertainty and counter-evidence for teacher review.\r\n- A pending candidate is not a permanent learner label or profile decision.\r\n\r\nThe teacher remains responsible for approving, editing or rejecting any candidate interpretation.\r\n"
+      },
+      "source": "borrowed_mcp",
+      "status": "success",
+      "timestamp": "2026-10-02T13:36:19.776662+00:00",
+      "tool_name": "read_text_file",
+      "toolset_id": "borrowed-official-filesystem-mcp"
+    }
+  ],
+  "borrowed_mcp": true,
+  "checks": {
+    "borrowed_call_audited": true,
+    "final_output_present": true,
+    "installed_package_version_matches": true,
+    "legacy_handshake_mode": true,
+    "local_package_entrypoint": true,
+    "official_package_pinned": true,
+    "read_only_allowlist_visible": true,
+    "read_text_file_succeeded": true,
+    "reference_content_returned": true,
+    "reference_directory_is_sandbox": true,
+    "write_tools_hidden": true
+  },
+  "client_mode": "legacy",
+  "entrypoint": "D:\\DESKTOP\\Buriro\\HACKSON\\The African Agentic AI Design Challenge\\MwalimuLens Agent\\Main Project\\mwalimulens-agent\\node_modules\\@modelcontextprotocol\\server-filesystem\\dist\\index.js",
+  "error": null,
+  "final_output": "Borrowed Filesystem MCP read completed.",
+  "installed_package_version": "2026.8.31",
+  "package": "@modelcontextprotocol/server-filesystem@2026.8.31",
+  "reference_dir": "D:\\DESKTOP\\Buriro\\HACKSON\\The African Agentic AI Design Challenge\\MwalimuLens Agent\\Main Project\\mwalimulens-agent\\data\\reference",
+  "reference_file": "D:\\DESKTOP\\Buriro\\HACKSON\\The African Agentic AI Design Challenge\\MwalimuLens Agent\\Main Project\\mwalimulens-agent\\data\\reference\\math_fractions_reference.md",
+  "server": "@modelcontextprotocol/server-filesystem",
+  "server_stderr_tail": "Secure MCP Filesystem Server running on stdio\nClient does not support MCP Roots, using allowed directories set from server args: [\n  'D:\\\\DESKTOP\\\\Buriro\\\\HACKSON\\\\The African Agentic AI Design Challenge\\\\MwalimuLens Agent\\\\Main Project\\\\mwalimulens-agent\\\\data\\\\reference'\n]\n",
+  "status": "pass",
+  "toolset_id": "borrowed-official-filesystem-mcp",
+  "visible_tools": [
+    "get_file_info",
+    "list_allowed_directories",
+    "list_directory",
+    "read_multiple_files",
+    "read_text_file",
+    "search_files"
+  ]
+}
