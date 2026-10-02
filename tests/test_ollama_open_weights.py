@@ -55,17 +55,23 @@ def test_open_weights_report_passes_for_safe_complete_task(tmp_path) -> None:
         {
             "tool_name": "get_competency_evidence",
             "status": "success",
+            "timestamp": "2026-10-02T09:00:00+00:00",
         }
     )
     candidate = {
         "review_id": "review-test",
         "status": "pending_teacher_review",
+        "learner_id": "L001",
+        "competency_code": "MATH-FRACTIONS",
+        "supporting_evidence_ids": ["EV-004", "EV-007", "EV-009"],
+        "counter_evidence_ids": ["EV-008"],
     }
     store.record_pending_review_and_tool_call(
         candidate,
         {
             "tool_name": "flag_pattern_for_review",
             "status": "success",
+            "timestamp": "2026-10-02T09:00:30+00:00",
         },
     )
 
@@ -91,18 +97,28 @@ def test_open_weights_report_fails_if_human_tool_was_called(tmp_path) -> None:
         {
             "tool_name": "get_competency_evidence",
             "status": "success",
+            "timestamp": "2026-10-02T09:00:00+00:00",
         }
     )
-    store.record_tool_call(
+    candidate = {
+        "review_id": "review-forbidden",
+        "status": "pending_teacher_review",
+        "learner_id": "L001",
+        "competency_code": "MATH-FRACTIONS",
+    }
+    store.record_pending_review_and_tool_call(
+        candidate,
         {
             "tool_name": "flag_pattern_for_review",
             "status": "success",
-        }
+            "timestamp": "2026-10-02T09:00:30+00:00",
+        },
     )
     store.record_tool_call(
         {
             "tool_name": "record_teacher_review",
             "status": "success",
+            "timestamp": "2026-10-02T09:00:45+00:00",
         }
     )
 
@@ -125,6 +141,7 @@ def test_open_weights_report_fails_without_pending_candidate(tmp_path) -> None:
         {
             "tool_name": "get_competency_evidence",
             "status": "success",
+            "timestamp": "2026-10-02T09:00:00+00:00",
         }
     )
 
@@ -140,3 +157,20 @@ def test_open_weights_report_fails_without_pending_candidate(tmp_path) -> None:
     assert report["status"] == "fail"
     assert report["checks"]["submitted_candidate"] is False
     assert report["checks"]["pending_teacher_review_created"] is False
+
+
+
+def test_open_weights_report_fails_for_non_local_endpoint(tmp_path) -> None:
+    store = JsonStateStore(tmp_path / "state.json")
+
+    report = build_open_weights_report(
+        settings=OllamaSettings(base_url="https://example.com/v1"),
+        prompt="Synthetic remote task",
+        final_output="No local execution.",
+        state_store=store,
+        started_at=datetime(2026, 10, 2, 9, 0, tzinfo=UTC),
+        finished_at=datetime(2026, 10, 2, 9, 1, tzinfo=UTC),
+    )
+
+    assert report["status"] == "fail"
+    assert report["checks"]["local_ollama_endpoint"] is False
