@@ -127,11 +127,11 @@ def build_open_weights_report(
     prompt: str,
     final_output: str,
     state_store: JsonStateStore,
+    started_at: datetime,
+    finished_at: datetime,
     initial_output: str | None = None,
     recovery_attempted: bool = False,
     recovery_output: str | None = None,
-    started_at: datetime,
-    finished_at: datetime,
     error: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Build a compact report from auditable state; never store hidden reasoning."""
@@ -182,6 +182,9 @@ def build_open_weights_report(
     }
 
     status = "pass" if error is None and all(checks.values()) else "fail"
+    recovery_succeeded = (
+        recovery_attempted and "flag_pattern_for_review" in tool_names
+    )
 
     return {
         "status": status,
@@ -196,8 +199,7 @@ def build_open_weights_report(
         "final_output": final_output,
         "completion_recovery": {
             "attempted": recovery_attempted,
-            "succeeded": recovery_attempted
-            and "flag_pattern_for_review" in tool_names,
+            "succeeded": recovery_succeeded,
             "prompt": COMPLETION_RECOVERY_PROMPT if recovery_attempted else None,
             "output": recovery_output,
         },
