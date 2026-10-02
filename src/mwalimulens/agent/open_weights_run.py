@@ -18,6 +18,22 @@ from mwalimulens.mcp_server.state import JsonStateStore
 DEFAULT_OPEN_WEIGHTS_STATE_PATH = PROJECT_ROOT / "runtime" / "open_weights_state.json"
 DEFAULT_OPEN_WEIGHTS_REPORT_PATH = PROJECT_ROOT / "runtime" / "open_weights_run.json"
 
+COMPLETION_RECOVERY_PROMPT = """
+You have already retrieved evidence for the original learner task, but you did not complete the
+workflow action.
+
+Complete the task now without asking the user for permission. Choose exactly one outcome:
+
+1. If the retrieved evidence supports a cautious candidate pattern, call
+   flag_pattern_for_review now using only concrete evidence IDs already returned by the MCP
+   evidence tool. Include supporting evidence, counter-evidence, explicit uncertainty, and a
+   useful teacher question.
+2. If the evidence is not sufficient for a defensible longitudinal candidate, do not call the
+   action tool. Instead return a final response beginning with "ABSTAIN:" and explain why.
+
+Do not call or attempt any teacher-review action. Do not invent evidence IDs.
+""".strip()
+
 DEFAULT_OPEN_WEIGHTS_TASK = """
 Assess learner L001's longitudinal MATH-FRACTIONS evidence.
 
@@ -49,8 +65,12 @@ async def run_open_weights_task(
     state_path.unlink(missing_ok=True)
 
     started_at = datetime.now(UTC)
+    initial_output = ""
     final_output = ""
+    recovery_attempted = False
+    recovery_output: str | None = None
     error: dict[str, str] | None = None
+    state_store = JsonStateStore(state_path)
 
     try:
         agent = build_ollama_agent(
@@ -62,7 +82,18 @@ async def run_open_weights_task(
             prompt,
             model_settings={"temperature": 0},
         )
-        final_output = str(result.output)
+        initial_output = str(result.output)
+        final_output = initial_output
+
+        if _should_attempt_completion_recovery(state_store):
+            recovery_attempted = True
+            recovery_result = await agent.run(
+                COMPLETION_RECOVERY_PROMPT,
+                message_history=result.all_messages(),
+                model_settings={"temperature": 0},
+            )
+            recovery_output = str(recovery_result.output)
+            final_output = recovery_output
     except Exception as exc:
         error = {
             "type": type(exc).__name__,
@@ -73,8 +104,11 @@ async def run_open_weights_task(
     report = build_open_weights_report(
         settings=settings,
         prompt=prompt,
+        initial_output=initial_output,
         final_output=final_output,
-        state_store=JsonStateStore(state_path),
+        recovery_attempted=recovery_attempted,
+        recovery_output=recovery_output,
+        state_store=state_store,
         started_at=started_at,
         finished_at=finished_at,
         error=error,
@@ -93,6 +127,9 @@ def build_open_weights_report(
     prompt: str,
     final_output: str,
     state_store: JsonStateStore,
+    initial_output: str | None = None,
+    recovery_attempted: bool = False,
+    recovery_output: str | None = None,
     started_at: datetime,
     finished_at: datetime,
     error: dict[str, str] | None = None,
@@ -155,7 +192,13 @@ def build_open_weights_report(
         "started_at": _iso_timestamp(started_at),
         "finished_at": _iso_timestamp(finished_at),
         "prompt": prompt,
+        "initial_output": initial_output if initial_output is not None else final_output,
         "final_output": final_output,
+        "completion_recovery": {
+            "attempted": recovery_attempted,
+            "prompt": COMPLETION_RECOVERY_PROMPT if recovery_attempted else None,
+            "output": recovery_output,
+        },
         "agent_tool_allowlist": sorted(AGENT_MCP_TOOL_ALLOWLIST),
         "audited_tool_names": tool_names,
         "tool_call_summary": [
@@ -174,6 +217,17 @@ def build_open_weights_report(
         "error": error,
         "note": "No chain-of-thought is stored in this run report.",
     }
+
+
+def _should_attempt_completion_recovery(state_store: JsonStateStore) -> bool:
+    tool_names = [item.get("tool_name") for item in state_store.tool_calls()]
+    retrieved_evidence = any(
+        name in {"get_learner_timeline", "get_competency_evidence"}
+        for name in tool_names
+    )
+    submitted_candidate = "flag_pattern_for_review" in tool_names
+    forbidden_action = "record_teacher_review" in tool_names
+    return retrieved_evidence and not submitted_candidate and not forbidden_action
 
 
 def _is_local_endpoint(base_url: str) -> bool:
