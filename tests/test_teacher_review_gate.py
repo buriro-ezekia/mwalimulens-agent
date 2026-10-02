@@ -251,9 +251,33 @@ def test_old_runtime_state_is_backward_compatible(tmp_path) -> None:
     assert store.teacher_reviews() == ()
     assert store.profile_updates() == ()
 
+    store.record_tool_call({"tool_name": "legacy-check", "status": "success"})
+    rewritten = json.loads(path.read_text(encoding="utf-8"))
+    assert rewritten["teacher_reviews"] == []
+    assert rewritten["profile_updates"] == []
+
 
 
 def test_state_store_exposes_no_direct_profile_update_writer(tmp_path) -> None:
     store = JsonStateStore(tmp_path / "state.json")
 
     assert not hasattr(store, "record_profile_update")
+
+
+
+def test_invalid_review_decision_is_rejected_and_audited(tmp_path) -> None:
+    service = _service(tmp_path)
+    candidate = _candidate(service)
+
+    with pytest.raises(ValueError, match="decision must be one of"):
+        service.record_teacher_review(
+            review_id=candidate["review_id"],
+            reviewer_id="teacher-010",
+            decision="defer",
+            reason="Unsupported decision.",
+        )
+
+    assert len(service.state_store.pending_reviews()) == 1
+    assert service.state_store.teacher_reviews() == ()
+    assert service.state_store.profile_updates() == ()
+    assert service.state_store.tool_calls()[-1]["status"] == "error"
