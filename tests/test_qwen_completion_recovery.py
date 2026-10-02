@@ -114,6 +114,16 @@ def anyio_backend():
     return "asyncio"
 
 
+def test_recovery_prompt_distinguishes_candidate_from_label() -> None:
+    lowered = " ".join(COMPLETION_RECOVERY_PROMPT.lower().split())
+
+    assert "do not use \"strong enough for a permanent label\" as the threshold" in lowered
+    assert "provisional pending candidate" in lowered
+    assert "at least two concrete supporting evidence ids" in lowered
+    assert "at least one relevant counter-evidence id" in lowered
+    assert "do not ask the user for permission again" in lowered
+
+
 def test_recovery_is_needed_after_evidence_only(tmp_path) -> None:
     store = JsonStateStore(tmp_path / "state.json")
     store.record_tool_call(
