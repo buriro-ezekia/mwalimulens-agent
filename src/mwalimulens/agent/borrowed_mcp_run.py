@@ -16,7 +16,10 @@ from mwalimulens.agent.borrowed_filesystem import (
     BORROWED_FILESYSTEM_PACKAGE,
     BORROWED_FILESYSTEM_TOOL_ALLOWLIST,
     BORROWED_FILESYSTEM_TOOLSET_ID,
+    BORROWED_FILESYSTEM_VERSION,
     BORROWED_FILESYSTEM_WRITE_TOOLS,
+    DEFAULT_BORROWED_MCP_STDERR,
+    DEFAULT_FILESYSTEM_ENTRYPOINT,
     DEFAULT_REFERENCE_DIR,
     build_borrowed_filesystem_toolset,
 )
@@ -72,6 +75,8 @@ async def run_borrowed_mcp_smoke(
     reference_file: Path = DEFAULT_REFERENCE_FILE,
     state_path: Path = DEFAULT_BORROWED_STATE_PATH,
     report_path: Path = DEFAULT_BORROWED_REPORT_PATH,
+    entrypoint: Path = DEFAULT_FILESYSTEM_ENTRYPOINT,
+    stderr_path: Path = DEFAULT_BORROWED_MCP_STDERR,
 ) -> dict[str, Any]:
     """Start the upstream server, execute one read, and persist inspectable evidence."""
 
@@ -79,7 +84,10 @@ async def run_borrowed_mcp_smoke(
     reference_file = reference_file.resolve()
     state_path = state_path.resolve()
     report_path = report_path.resolve()
+    entrypoint = entrypoint.resolve()
+    stderr_path = stderr_path.resolve()
     state_path.unlink(missing_ok=True)
+    stderr_path.unlink(missing_ok=True)
 
     error: dict[str, str] | None = None
     model = _BorrowedFilesystemSmokeModel(reference_file)
@@ -88,6 +96,8 @@ async def run_borrowed_mcp_smoke(
         toolset = build_borrowed_filesystem_toolset(
             reference_dir=reference_dir,
             state_path=state_path,
+            entrypoint=entrypoint,
+            stderr_path=stderr_path,
         )
         agent = Agent(
             FunctionModel(model),
@@ -114,8 +124,11 @@ async def run_borrowed_mcp_smoke(
     ]
     visible_tools = sorted(set().union(*model.visible_tools)) if model.visible_tools else []
 
+    stderr_tail = _read_stderr_tail(stderr_path)
+
     checks = {
-        "official_package_pinned": BORROWED_FILESYSTEM_PACKAGE.endswith("@2026.8.31"),
+        "official_package_pinned": BORROWED_FILESYSTEM_VERSION == "2026.8.31",
+        "local_package_entrypoint": entrypoint.is_file(),
         "reference_directory_is_sandbox": reference_file.is_relative_to(reference_dir),
         "read_only_allowlist_visible": set(visible_tools)
         == BORROWED_FILESYSTEM_TOOL_ALLOWLIST,
@@ -140,6 +153,8 @@ async def run_borrowed_mcp_smoke(
         "toolset_id": BORROWED_FILESYSTEM_TOOLSET_ID,
         "reference_dir": str(reference_dir),
         "reference_file": str(reference_file),
+        "entrypoint": str(entrypoint),
+        "server_stderr_tail": stderr_tail,
         "visible_tools": visible_tools,
         "audited_tool_calls": audited,
         "checks": checks,
@@ -153,6 +168,13 @@ async def run_borrowed_mcp_smoke(
         encoding="utf-8",
     )
     return report
+
+
+def _read_stderr_tail(path: Path, *, max_chars: int = 4000) -> str:
+    if not path.is_file():
+        return ""
+    content = path.read_text(encoding="utf-8", errors="replace")
+    return content[-max_chars:]
 
 
 def main() -> int:
