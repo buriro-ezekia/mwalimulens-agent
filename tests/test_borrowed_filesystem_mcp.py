@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -21,6 +22,10 @@ from mwalimulens.agent.borrowed_filesystem import (
 from mwalimulens.agent.orchestrator import (
     AGENT_MCP_TOOL_ALLOWLIST,
     build_agent,
+)
+from mwalimulens.agent.promote_borrowed_mcp_evidence import (
+    REQUIRED_BORROWED_CHECKS,
+    promote_borrowed_mcp_report,
 )
 from mwalimulens.mcp_server.state import JsonStateStore
 
@@ -159,3 +164,42 @@ async def test_agent_can_compose_custom_and_additional_toolsets(tmp_path) -> Non
     assert AGENT_MCP_TOOL_ALLOWLIST.issubset(visible)
     assert "reference_stub" in visible
     assert "record_teacher_review" not in visible
+
+
+
+def test_passing_borrowed_report_can_be_promoted(tmp_path) -> None:
+    source = tmp_path / "runtime.json"
+    destination = tmp_path / "evidence.json"
+    report = {
+        "status": "pass",
+        "borrowed_mcp": True,
+        "server": "@modelcontextprotocol/server-filesystem",
+        "package": BORROWED_FILESYSTEM_PACKAGE,
+        "checks": {name: True for name in REQUIRED_BORROWED_CHECKS},
+    }
+    source.write_text(json.dumps(report), encoding="utf-8")
+
+    promoted = promote_borrowed_mcp_report(
+        source=source,
+        destination=destination,
+    )
+
+    assert promoted == report
+    assert destination.is_file()
+
+
+def test_failed_borrowed_report_cannot_be_promoted(tmp_path) -> None:
+    source = tmp_path / "runtime.json"
+    report = {
+        "status": "fail",
+        "borrowed_mcp": True,
+        "server": "@modelcontextprotocol/server-filesystem",
+        "checks": {name: False for name in REQUIRED_BORROWED_CHECKS},
+    }
+    source.write_text(json.dumps(report), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="status must be pass"):
+        promote_borrowed_mcp_report(
+            source=source,
+            destination=tmp_path / "evidence.json",
+        )
