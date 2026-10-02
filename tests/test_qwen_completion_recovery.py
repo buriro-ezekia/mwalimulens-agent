@@ -171,6 +171,7 @@ async def test_bounded_recovery_can_complete_pending_review(monkeypatch, tmp_pat
     assert report["initial_output"].endswith("flag it for review?")
     assert report["final_output"] == "Candidate submitted for teacher review."
     assert report["completion_recovery"]["attempted"] is True
+    assert report["completion_recovery"]["succeeded"] is True
     assert report["completion_recovery"]["output"] == report["final_output"]
     assert len(fake_agent.calls) == 2
     assert report["pending_review_count"] == 1
@@ -195,6 +196,7 @@ async def test_bounded_recovery_still_fails_if_model_abstains(monkeypatch, tmp_p
 
     assert report["status"] == "fail"
     assert report["completion_recovery"]["attempted"] is True
+    assert report["completion_recovery"]["succeeded"] is False
     assert report["final_output"].startswith("ABSTAIN:")
     assert report["checks"]["submitted_candidate"] is False
     assert len(fake_agent.calls) == 2
