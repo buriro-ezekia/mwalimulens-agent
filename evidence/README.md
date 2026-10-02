@@ -29,6 +29,6 @@ as challenge evaluation evidence and include the next attempted remediation.
 
 ## Borrowed MCP run
 
-A passing real smoke report for the official Filesystem MCP is promoted from
-`runtime/borrowed_mcp_run.json` to `evidence/borrowed_mcp_run.json` only after all read-only,
-sandbox and audit checks pass.
+The committed `borrowed_mcp_run.json` is the promoted real smoke report for the official
+Filesystem MCP. It passed the read-only allowlist, write-tool exclusion, sandbox, installed-version,
+legacy-handshake and borrowed-call audit checks.
