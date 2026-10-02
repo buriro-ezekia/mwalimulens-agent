@@ -127,7 +127,7 @@
     "recorded_at": "2026-03-27T15:30:00+03:00",
     "source_ref": "synthetic://assessment/2026-T1/measurement-quiz",
     "score": 0.29,
-    "observation": "One-off low result retained as evidence rather than treated as a permanent weakness."
+    "observation": null
   },
   {
     "evidence_id": "EV-011",
@@ -166,7 +166,7 @@
     "recorded_at": "2025-11-18T15:20:00+03:00",
     "source_ref": "synthetic://assessment/2025-T3/science-data",
     "score": 0.75,
-    "observation": "No 2025-T2 evidence is available for this competency."
+    "observation": null
   },
   {
     "evidence_id": "EV-014",
@@ -192,6 +192,6 @@
     "recorded_at": "2026-07-17T16:00:00+03:00",
     "source_ref": "synthetic://assessment/2026-T2/reading-inference",
     "score": 0.91,
-    "observation": "Single high score only; there is not enough longitudinal history for a persistent-strength claim."
+    "observation": null
   }
 ]
