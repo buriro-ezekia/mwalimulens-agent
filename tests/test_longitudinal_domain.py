@@ -62,6 +62,19 @@ def test_single_high_score_remains_insufficient_history_fixture(dataset) -> None
     items = dataset.competency_evidence("L003", "ENG-INFERENCE")
     assert len(items) == 1
     assert items[0].score == 0.91
+    assert items[0].observation is None
+
+
+def test_fixture_does_not_prelabel_cases_the_agent_must_infer(dataset) -> None:
+    by_id = {item.evidence_id: item for item in dataset.evidence}
+    assert by_id["EV-010"].observation is None
+    assert by_id["EV-013"].observation is None
+    assert by_id["EV-015"].observation is None
+
+
+def test_missing_attendance_remains_an_absence_not_a_fabricated_record(dataset) -> None:
+    terms = {item.term_id for item in dataset.competency_evidence("L001", "ATTENDANCE")}
+    assert terms == {"2025-T1", "2025-T2"}
 
 
 def test_unknown_learner_fails_explicitly(dataset) -> None:
