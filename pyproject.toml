@@ -16,6 +16,7 @@ authors = [
 dependencies = [
   "mcp[cli]>=2,<3",
   "pydantic-ai-slim[mcp]>=2.51,<2.52",
+  "fastmcp-slim[client]>=4,<5",
 ]
 
 [project.optional-dependencies]
