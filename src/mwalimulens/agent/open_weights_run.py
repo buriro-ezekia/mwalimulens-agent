@@ -78,22 +78,23 @@ async def run_open_weights_task(
             data_dir=data_dir,
             state_path=state_path,
         )
-        result = await agent.run(
-            prompt,
-            model_settings={"temperature": 0},
-        )
-        initial_output = str(result.output)
-        final_output = initial_output
-
-        if _should_attempt_completion_recovery(state_store):
-            recovery_attempted = True
-            recovery_result = await agent.run(
-                COMPLETION_RECOVERY_PROMPT,
-                message_history=result.all_messages(),
+        async with agent:
+            result = await agent.run(
+                prompt,
                 model_settings={"temperature": 0},
             )
-            recovery_output = str(recovery_result.output)
-            final_output = recovery_output
+            initial_output = str(result.output)
+            final_output = initial_output
+
+            if _should_attempt_completion_recovery(state_store):
+                recovery_attempted = True
+                recovery_result = await agent.run(
+                    COMPLETION_RECOVERY_PROMPT,
+                    message_history=result.all_messages(),
+                    model_settings={"temperature": 0},
+                )
+                recovery_output = str(recovery_result.output)
+                final_output = recovery_output
     except Exception as exc:
         error = {
             "type": type(exc).__name__,
