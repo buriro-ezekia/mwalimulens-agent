@@ -23,7 +23,7 @@ or subject pathway.
 | Own MCP server with at least 3 different tools | Education MCP: 4 implemented tools | Present |
 | At least 1 custom MCP tool performs an action | `flag_pattern_for_review` | Present |
 | Use 1 MCP server not written by the team | Borrowed MCP integration + rationale | Planned |
-| Open-source orchestration | Python orchestration layer | Planned |
+| Open-source orchestration | PydanticAI 2.51.x + filtered MCP toolset | Present |
 | One complete task on an open-weights model | Local Qwen via Ollama | Planned |
 | Log every tool action | Tool-call audit records for success/failure with inputs, outputs/errors and timestamps | Present |
 | Gate consequential/irreversible actions | Named approve/edit/reject teacher gate; profile update only after approve/edit | Present |
