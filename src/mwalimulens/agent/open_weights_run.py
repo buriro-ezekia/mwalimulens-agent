@@ -54,6 +54,10 @@ and state uncertainty explicitly. A single result is not enough for a durable cl
 
 If the longitudinal evidence supports a cautious candidate pattern, call flag_pattern_for_review
 with concrete evidence IDs, counter-evidence IDs, uncertainty, and a useful teacher question.
+This creates only a provisional pending candidate, not a permanent label or profile update. Mixed
+evidence should be represented as counter-evidence and uncertainty rather than used as an automatic
+reason to abstain. Do not ask for permission again before this bounded action.
+
 Do not attempt to approve, edit or reject the candidate: that is reserved for the human teacher.
 """.strip()
 
