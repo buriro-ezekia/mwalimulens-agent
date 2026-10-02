@@ -1,0 +1,9 @@
+{
+  "name": "mwalimulens-agent-borrowed-mcp",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Pinned third-party MCP runtime dependency for MwalimuLens challenge validation",
+  "dependencies": {
+    "@modelcontextprotocol/server-filesystem": "2026.8.31"
+  }
+}
