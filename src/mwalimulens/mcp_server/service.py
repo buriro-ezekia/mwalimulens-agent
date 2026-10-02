@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -27,7 +27,7 @@ class EducationToolService:
     ) -> None:
         self.dataset = dataset
         self.state_store = state_store
-        self._clock = clock or (lambda: datetime.now(timezone.utc))
+        self._clock = clock or (lambda: datetime.now(UTC))
         self._id_factory = id_factory or (lambda prefix: f"{prefix}-{uuid4()}")
 
     def get_learner_timeline(self, learner_id: str) -> dict[str, Any]:
