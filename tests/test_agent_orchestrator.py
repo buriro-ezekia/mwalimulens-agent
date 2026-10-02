@@ -35,7 +35,7 @@ def test_agent_allowlist_is_exact_and_excludes_human_review() -> None:
 
 
 def test_agent_instructions_preserve_evidence_and_human_boundaries() -> None:
-    lowered = AGENT_INSTRUCTIONS.lower()
+    lowered = " ".join(AGENT_INSTRUCTIONS.lower().split())
 
     assert "evidence ids" in lowered
     assert "counter-evidence" in lowered
