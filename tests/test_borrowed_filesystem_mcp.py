@@ -166,7 +166,6 @@ async def test_agent_can_compose_custom_and_additional_toolsets(tmp_path) -> Non
     assert "record_teacher_review" not in visible
 
 
-
 def test_passing_borrowed_report_can_be_promoted(tmp_path) -> None:
     source = tmp_path / "runtime.json"
     destination = tmp_path / "evidence.json"
