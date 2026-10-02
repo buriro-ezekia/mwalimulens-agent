@@ -74,7 +74,29 @@ runtime/open_weights_run.json
 
 A failed run is still written to that path with `"status": "fail"` and an error/check summary.
 
-## 4. Required passing checks
+## 4. Bounded workflow-completion recovery
+
+If Qwen retrieves the target evidence but returns prose without calling
+`flag_pattern_for_review`, MwalimuLens performs exactly one recovery turn using the same
+conversation history and the same three-tool model allowlist.
+
+The initial and recovery turns run inside one entered PydanticAI agent context so the stdio MCP
+connection remains open across both turns. This avoids tearing down and reinitialising the MCP
+server between the two model calls.
+
+The recovery prompt requires Qwen to choose one outcome:
+
+1. call `flag_pattern_for_review` immediately if the retrieved evidence supports a cautious
+   candidate; or
+2. return an explicit `ABSTAIN:` response if the evidence is not defensible.
+
+The recovery does **not** create a candidate itself, does not expose `record_teacher_review`,
+and does not relax any report checks. A second failure remains a failed run.
+
+The JSON report preserves both `initial_output` and `completion_recovery` metadata so the
+first-turn failure remains inspectable even when the recovery succeeds.
+
+## 5. Required passing checks
 
 The report can only have `"status": "pass"` when all of these are true:
 
@@ -92,7 +114,7 @@ The report can only have `"status": "pass"` when all of these are true:
 
 The report stores no hidden chain-of-thought.
 
-## 5. Promote only passing evidence
+## 6. Promote only passing evidence
 
 After inspecting the runtime report:
 
@@ -113,7 +135,19 @@ evidence/open_weights_run.json
 That file is intended to be committed so challenge reviewers can inspect the real run after
 cloning the repository.
 
-## Optional model override
+## 7. Preserved genuine failures
+
+Three real failures are preserved under `evidence/failures/`:
+
+- Qwen2.5 1.5B retrieved the correct evidence but stopped at prose instead of submitting;
+- Qwen2.5 3B reproduced the same failure and explicitly asked whether it should flag the candidate;
+- after MCP lifecycle recovery was fixed, Qwen2.5 3B reached the recovery turn but incorrectly
+  abstained because it conflated a provisional review candidate with a permanent learner label.
+
+These failures motivated the bounded recovery and candidate-semantics fixes. They are retained as
+evaluation evidence rather than overwritten.
+
+## 8. Optional model override
 
 For a different local Qwen model:
 

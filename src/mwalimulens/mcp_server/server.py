@@ -64,7 +64,12 @@ def build_server(
         uncertainty: str,
         suggested_teacher_question: str,
     ) -> dict[str, Any]:
-        """Persist a candidate pattern for later teacher review; do not approve it."""
+        """Persist a provisional evidence-grounded candidate for teacher review.
+
+        This action does not label, classify, approve, or update the learner profile.
+        Mixed evidence is expected: include counter-evidence and uncertainty rather than
+        withholding a bounded candidate solely because a permanent trait is not justified.
+        """
 
         return service.flag_pattern_for_review(
             learner_id=learner_id,

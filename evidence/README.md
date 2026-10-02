@@ -17,5 +17,11 @@ Workflow:
 
 Promotion is blocked unless every open-weights safety/evidence check is true.
 
-The report stores the prompt, final output and auditable tool metadata. It does not store hidden
-chain-of-thought.
+The report stores the prompt, initial/final output and auditable tool metadata. It does not store
+hidden chain-of-thought.
+
+## Genuine failures
+
+The `failures/` directory preserves real local-Qwen failures across the workflow-completion,
+MCP-lifecycle and candidate-semantics debugging sequence. These files are intentionally retained
+as challenge evaluation evidence and include the next attempted remediation.

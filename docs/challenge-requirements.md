@@ -24,14 +24,14 @@ or subject pathway.
 | At least 1 custom MCP tool performs an action | `flag_pattern_for_review` | Present |
 | Use 1 MCP server not written by the team | Borrowed MCP integration + rationale | Planned |
 | Open-source orchestration | PydanticAI 2.51.x + filtered MCP toolset | Present |
-| One complete task on an open-weights model | Local Qwen/Ollama runner + evidence gate implemented | Pending real local run |
+| One complete task on an open-weights model | Passing local Qwen2.5 3B run in `evidence/open_weights_run.json` | Present |
 | Log every tool action | Tool-call audit records for success/failure with inputs, outputs/errors and timestamps | Present |
 | Gate consequential/irreversible actions | Named approve/edit/reject teacher gate; profile update only after approve/edit | Present |
 | Public repository with OSI-approved licence | Public GitHub repository + Apache-2.0 | Present |
 | README supports reproducible execution | One-command run path | Planned |
 | `ARCHITECTURE.md` | One-page agent/MCP boundary | Present in this slice |
 | `EVALS.md` with at least 8 tasks | Honest pass/fail evaluation set | Planned |
-| Include one genuine unfixed failure | Document failure and next attempt | Planned |
+| Include one genuine unfixed failure | Real Qwen 1.5B/3B workflow failures preserved under `evidence/failures/` with next attempt | Present |
 | Demo under 3 minutes | Unedited real run with visible tool calls | Planned |
 
 ## Safety and human-decision invariants
