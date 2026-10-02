@@ -115,10 +115,14 @@ class JsonStateStore:
             ):
                 raise ValueError(f"review_id already resolved: {review_id}")
 
+            resolution_status = {
+                "approve": "approved_by_teacher",
+                "edit": "edited_by_teacher",
+                "reject": "rejected_by_teacher",
+            }[teacher_review["decision"]]
+
             resolved_candidate = dict(candidate)
-            resolved_candidate["status"] = (
-                f"{teacher_review['decision']}_by_teacher"
-            )
+            resolved_candidate["status"] = resolution_status
             resolved_candidate["resolved_at"] = teacher_review["reviewed_at"]
             resolved_candidate["teacher_review_id"] = teacher_review["teacher_review_id"]
             state["pending_reviews"][candidate_index] = resolved_candidate
