@@ -18,6 +18,7 @@ from mwalimulens.agent.borrowed_filesystem import (
     borrowed_tool_is_read_only,
     build_borrowed_audit_callback,
     filesystem_stdio_spec,
+    installed_filesystem_version,
 )
 from mwalimulens.agent.orchestrator import (
     AGENT_MCP_TOOL_ALLOWLIST,
@@ -52,10 +53,16 @@ def test_filesystem_stdio_spec_uses_direct_node_entrypoint(tmp_path) -> None:
     reference_dir.mkdir()
     entrypoint = tmp_path / "index.js"
     entrypoint.write_text("// fake server", encoding="utf-8")
+    package_json = tmp_path / "package.json"
+    package_json.write_text(
+        json.dumps({"version": "2026.8.31"}),
+        encoding="utf-8",
+    )
 
     command, args = filesystem_stdio_spec(
         reference_dir,
         entrypoint=entrypoint,
+        package_json_path=package_json,
     )
 
     assert command == "node"
@@ -73,6 +80,7 @@ def test_filesystem_stdio_spec_requires_local_install(tmp_path) -> None:
         filesystem_stdio_spec(
             reference_dir,
             entrypoint=tmp_path / "missing.js",
+            package_json_path=tmp_path / "package.json",
         )
 
 
@@ -215,4 +223,34 @@ def test_failed_borrowed_report_cannot_be_promoted(tmp_path) -> None:
         promote_borrowed_mcp_report(
             source=source,
             destination=tmp_path / "evidence.json",
+        )
+
+
+
+def test_installed_filesystem_version_reads_local_package_metadata(tmp_path) -> None:
+    package_json = tmp_path / "package.json"
+    package_json.write_text(
+        json.dumps({"version": "2026.8.31"}),
+        encoding="utf-8",
+    )
+
+    assert installed_filesystem_version(package_json) == "2026.8.31"
+
+
+def test_filesystem_stdio_spec_rejects_version_mismatch(tmp_path) -> None:
+    reference_dir = tmp_path / "reference"
+    reference_dir.mkdir()
+    entrypoint = tmp_path / "index.js"
+    entrypoint.write_text("// fake server", encoding="utf-8")
+    package_json = tmp_path / "package.json"
+    package_json.write_text(
+        json.dumps({"version": "wrong-version"}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="version mismatch"):
+        filesystem_stdio_spec(
+            reference_dir,
+            entrypoint=entrypoint,
+            package_json_path=package_json,
         )
