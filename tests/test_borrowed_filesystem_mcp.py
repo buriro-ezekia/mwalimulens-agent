@@ -11,12 +11,14 @@ from pydantic_ai.models.test import TestModel
 from pydantic_ai.toolsets import FunctionToolset
 
 from mwalimulens.agent.borrowed_filesystem import (
+    BORROWED_FILESYSTEM_CLIENT_MODE,
     BORROWED_FILESYSTEM_PACKAGE,
     BORROWED_FILESYSTEM_TOOL_ALLOWLIST,
     BORROWED_FILESYSTEM_WRITE_TOOLS,
     DEFAULT_REFERENCE_DIR,
     borrowed_tool_is_read_only,
     build_borrowed_audit_callback,
+    build_borrowed_filesystem_client,
     filesystem_stdio_spec,
     installed_filesystem_version,
 )
@@ -253,3 +255,26 @@ def test_filesystem_stdio_spec_rejects_version_mismatch(tmp_path) -> None:
             entrypoint=entrypoint,
             package_json_path=package_json,
         )
+
+
+
+def test_borrowed_client_is_pinned_to_legacy_handshake_mode(tmp_path) -> None:
+    reference_dir = tmp_path / "reference"
+    reference_dir.mkdir()
+    entrypoint = tmp_path / "index.js"
+    entrypoint.write_text("// fake server", encoding="utf-8")
+    package_json = tmp_path / "package.json"
+    package_json.write_text(
+        json.dumps({"version": "2026.8.31"}),
+        encoding="utf-8",
+    )
+
+    client = build_borrowed_filesystem_client(
+        reference_dir=reference_dir,
+        entrypoint=entrypoint,
+        package_json_path=package_json,
+        stderr_path=tmp_path / "stderr.log",
+    )
+
+    assert BORROWED_FILESYSTEM_CLIENT_MODE == "legacy"
+    assert client.mode == "legacy"
