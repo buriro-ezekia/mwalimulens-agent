@@ -57,8 +57,8 @@ class LongitudinalDataset:
     ) -> tuple[LearningEvidence, ...]:
         """Return chronologically ordered evidence for one learner competency."""
 
-        if not competency_code.strip():
-            raise ValueError("competency_code must be non-empty")
+        if not isinstance(competency_code, str) or not competency_code.strip():
+            raise ValueError("competency_code must be a non-empty string")
         return tuple(
             item
             for item in self.timeline(learner_id)
