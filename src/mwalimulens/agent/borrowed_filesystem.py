@@ -15,9 +15,21 @@ from pydantic_ai.mcp import MCPToolset
 from mwalimulens.mcp_server.server import DEFAULT_STATE_PATH, PROJECT_ROOT
 from mwalimulens.mcp_server.state import JsonStateStore
 
-BORROWED_FILESYSTEM_PACKAGE = "@modelcontextprotocol/server-filesystem@2026.8.31"
+BORROWED_FILESYSTEM_VERSION = "2026.8.31"
+BORROWED_FILESYSTEM_PACKAGE = (
+    f"@modelcontextprotocol/server-filesystem@{BORROWED_FILESYSTEM_VERSION}"
+)
 BORROWED_FILESYSTEM_TOOLSET_ID = "borrowed-official-filesystem-mcp"
 DEFAULT_REFERENCE_DIR = PROJECT_ROOT / "data" / "reference"
+DEFAULT_FILESYSTEM_ENTRYPOINT = (
+    PROJECT_ROOT
+    / "node_modules"
+    / "@modelcontextprotocol"
+    / "server-filesystem"
+    / "dist"
+    / "index.js"
+)
+DEFAULT_BORROWED_MCP_STDERR = PROJECT_ROOT / "runtime" / "borrowed_mcp_stderr.log"
 
 BORROWED_FILESYSTEM_TOOL_ALLOWLIST = frozenset(
     {
@@ -43,24 +55,21 @@ BORROWED_FILESYSTEM_WRITE_TOOLS = frozenset(
 def filesystem_stdio_spec(
     reference_dir: Path = DEFAULT_REFERENCE_DIR,
     *,
-    windows: bool | None = None,
+    entrypoint: Path = DEFAULT_FILESYSTEM_ENTRYPOINT,
 ) -> tuple[str, list[str]]:
-    """Return the pinned upstream filesystem-server stdio command."""
+    """Return a direct Node launch for the locally installed pinned server."""
 
     reference_dir = reference_dir.resolve()
+    entrypoint = entrypoint.resolve()
     if not reference_dir.is_dir():
         raise ValueError(f"reference directory does not exist: {reference_dir}")
+    if not entrypoint.is_file():
+        raise ValueError(
+            "borrowed Filesystem MCP entrypoint is missing; run npm install "
+            f"before the smoke test: {entrypoint}"
+        )
 
-    windows = os.name == "nt" if windows is None else windows
-    package_args = [
-        "npx",
-        "-y",
-        BORROWED_FILESYSTEM_PACKAGE,
-        str(reference_dir),
-    ]
-    if windows:
-        return "cmd", ["/c", *package_args]
-    return "npx", package_args[1:]
+    return "node", [str(entrypoint), str(reference_dir)]
 
 
 def borrowed_tool_is_read_only(_ctx: Any, tool_def: Any) -> bool:
@@ -131,11 +140,20 @@ def build_borrowed_filesystem_toolset(
     *,
     reference_dir: Path = DEFAULT_REFERENCE_DIR,
     state_path: Path = DEFAULT_STATE_PATH,
+    entrypoint: Path = DEFAULT_FILESYSTEM_ENTRYPOINT,
+    stderr_path: Path = DEFAULT_BORROWED_MCP_STDERR,
 ):
     """Build the official filesystem MCP, sandboxed and filtered to read-only tools."""
 
-    command, args = filesystem_stdio_spec(reference_dir)
+    command, args = filesystem_stdio_spec(
+        reference_dir,
+        entrypoint=entrypoint,
+    )
     audit_tool_call = build_borrowed_audit_callback(state_path)
+
+    stderr_path = stderr_path.resolve()
+    stderr_path.parent.mkdir(parents=True, exist_ok=True)
+    stderr_path.unlink(missing_ok=True)
 
     transport = StdioTransport(
         command=command,
@@ -143,6 +161,7 @@ def build_borrowed_filesystem_toolset(
         env=dict(os.environ),
         cwd=str(PROJECT_ROOT),
         keep_alive=False,
+        log_file=stderr_path,
     )
     raw_toolset = MCPToolset(
         transport,
