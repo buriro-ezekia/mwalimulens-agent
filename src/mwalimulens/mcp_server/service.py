@@ -12,10 +12,11 @@ from mwalimulens.mcp_server.state import JsonStateStore
 
 Clock = Callable[[], datetime]
 IdFactory = Callable[[str], str]
+REVIEW_DECISIONS = frozenset({"approve", "edit", "reject"})
 
 
 class EducationToolService:
-    """Deterministic evidence tools plus a bounded pending-review action."""
+    """Deterministic evidence tools plus human-bounded workflow actions."""
 
     def __init__(
         self,
@@ -158,6 +159,97 @@ class EducationToolService:
 
         return review
 
+    def record_teacher_review(
+        self,
+        review_id: str,
+        reviewer_id: str,
+        decision: str,
+        reason: str,
+        edited_claim: str | None = None,
+    ) -> dict[str, Any]:
+        """Resolve one pending candidate through an explicit named teacher decision."""
+
+        inputs = {
+            "review_id": review_id,
+            "reviewer_id": reviewer_id,
+            "decision": decision,
+            "reason": reason,
+            "edited_claim": edited_claim,
+        }
+
+        try:
+            review_id = _require_text(review_id, "review_id")
+            reviewer_id = _require_text(reviewer_id, "reviewer_id")
+            reason = _require_text(reason, "reason")
+            decision = _normalise_decision(decision)
+            candidate = self.state_store.review_candidate(review_id)
+
+            if candidate.get("status") != "pending_teacher_review":
+                raise ValueError(f"review_id already resolved: {review_id}")
+
+            original_claim = _require_text(candidate.get("claim"), "candidate claim")
+            final_claim = _resolve_final_claim(
+                decision=decision,
+                original_claim=original_claim,
+                edited_claim=edited_claim,
+            )
+
+            reviewed_at = self._timestamp()
+            teacher_review = {
+                "teacher_review_id": self._id_factory("teacher-review"),
+                "review_id": review_id,
+                "reviewer_id": reviewer_id,
+                "decision": decision,
+                "reason": reason,
+                "original_claim": original_claim,
+                "final_claim": final_claim,
+                "learner_id": candidate["learner_id"],
+                "competency_code": candidate["competency_code"],
+                "supporting_evidence_ids": list(candidate["supporting_evidence_ids"]),
+                "counter_evidence_ids": list(candidate["counter_evidence_ids"]),
+                "reviewed_at": reviewed_at,
+            }
+
+            profile_update = None
+            if decision in {"approve", "edit"}:
+                profile_update = {
+                    "profile_update_id": self._id_factory("profile-update"),
+                    "teacher_review_id": teacher_review["teacher_review_id"],
+                    "review_id": review_id,
+                    "learner_id": candidate["learner_id"],
+                    "competency_code": candidate["competency_code"],
+                    "claim": final_claim,
+                    "supporting_evidence_ids": list(
+                        candidate["supporting_evidence_ids"]
+                    ),
+                    "counter_evidence_ids": list(candidate["counter_evidence_ids"]),
+                    "reviewer_id": reviewer_id,
+                    "decision": decision,
+                    "recorded_at": reviewed_at,
+                }
+
+            output = {
+                "teacher_review": teacher_review,
+                "profile_update": profile_update,
+            }
+            event = self._success_event(
+                tool_name="record_teacher_review",
+                inputs=inputs,
+                output=output,
+                timestamp=reviewed_at,
+            )
+            self.state_store.record_teacher_review_action(
+                review_id=review_id,
+                teacher_review=teacher_review,
+                profile_update=profile_update,
+                event=event,
+            )
+        except Exception as exc:
+            self._audit_error("record_teacher_review", inputs, exc)
+            raise
+
+        return output
+
     def _validate_candidate_evidence(
         self,
         *,
@@ -257,10 +349,32 @@ def _evidence_payload(item: LearningEvidence) -> dict[str, Any]:
     }
 
 
-def _require_text(value: str, field_name: str) -> str:
+def _require_text(value: Any, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} must be a non-empty string")
     return value.strip()
+
+
+def _normalise_decision(value: str) -> str:
+    decision = _require_text(value, "decision").lower()
+    if decision not in REVIEW_DECISIONS:
+        raise ValueError("decision must be one of: approve, edit, reject")
+    return decision
+
+
+def _resolve_final_claim(
+    *,
+    decision: str,
+    original_claim: str,
+    edited_claim: str | None,
+) -> str | None:
+    if decision == "edit":
+        return _require_text(edited_claim, "edited_claim")
+    if edited_claim is not None:
+        raise ValueError("edited_claim is only allowed when decision is edit")
+    if decision == "approve":
+        return original_claim
+    return None
 
 
 def _normalise_evidence_ids(
