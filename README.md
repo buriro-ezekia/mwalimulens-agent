@@ -32,7 +32,7 @@ The challenge build is designed so that:
 
 ## Repository status
 
-Implemented and tested in the current codebase:
+Implemented in the current codebase:
 
 - the challenge contract and human-decision boundary;
 - a typed longitudinal learner/evidence domain;
