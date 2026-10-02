@@ -22,7 +22,7 @@ or subject pathway.
 |---|---|---|
 | Own MCP server with at least 3 different tools | Education MCP: 4 implemented tools | Present |
 | At least 1 custom MCP tool performs an action | `flag_pattern_for_review` | Present |
-| Use 1 MCP server not written by the team | Borrowed MCP integration + rationale | Planned |
+| Use 1 MCP server not written by the team | Official Filesystem MCP integration + read-only rationale | Pending real smoke |
 | Open-source orchestration | PydanticAI 2.51.x + filtered MCP toolset | Present |
 | One complete task on an open-weights model | Passing local Qwen2.5 3B run in `evidence/open_weights_run.json` | Present |
 | Log every tool action | Tool-call audit records for success/failure with inputs, outputs/errors and timestamps | Present |
