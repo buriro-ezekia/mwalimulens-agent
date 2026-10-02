@@ -226,7 +226,6 @@ def test_failed_borrowed_report_cannot_be_promoted(tmp_path) -> None:
         )
 
 
-
 def test_installed_filesystem_version_reads_local_package_metadata(tmp_path) -> None:
     package_json = tmp_path / "package.json"
     package_json.write_text(
