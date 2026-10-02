@@ -13,6 +13,7 @@ from pydantic_ai.messages import ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from mwalimulens.agent.borrowed_filesystem import (
+    BORROWED_FILESYSTEM_CLIENT_MODE,
     BORROWED_FILESYSTEM_PACKAGE,
     BORROWED_FILESYSTEM_TOOL_ALLOWLIST,
     BORROWED_FILESYSTEM_TOOLSET_ID,
@@ -134,6 +135,7 @@ async def run_borrowed_mcp_smoke(
 
     checks = {
         "official_package_pinned": BORROWED_FILESYSTEM_VERSION == "2026.8.31",
+        "legacy_handshake_mode": BORROWED_FILESYSTEM_CLIENT_MODE == "legacy",
         "local_package_entrypoint": entrypoint.is_file(),
         "installed_package_version_matches": (
             installed_version == BORROWED_FILESYSTEM_VERSION
@@ -158,6 +160,7 @@ async def run_borrowed_mcp_smoke(
         "status": "pass" if error is None and all(checks.values()) else "fail",
         "borrowed_mcp": True,
         "server": "@modelcontextprotocol/server-filesystem",
+        "client_mode": BORROWED_FILESYSTEM_CLIENT_MODE,
         "package": BORROWED_FILESYSTEM_PACKAGE,
         "toolset_id": BORROWED_FILESYSTEM_TOOLSET_ID,
         "reference_dir": str(reference_dir),
