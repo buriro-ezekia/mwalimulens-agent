@@ -81,5 +81,6 @@ records concerning minors, are not required for demonstrating the workflow.
 
 ## Current status
 
-This file describes the locked architecture boundary. At this scaffold stage, MCP, orchestration
-and model integrations are planned rather than implemented.
+The evidence-first domain and synthetic longitudinal fixtures are implemented. MCP,
+orchestration, model integration, human-review persistence and the interface remain planned
+until their corresponding implementation slices and tests are completed.
