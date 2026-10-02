@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 import pytest
@@ -14,6 +15,7 @@ from mwalimulens.agent.ollama import (
     build_ollama_model,
 )
 from mwalimulens.agent.open_weights_run import build_open_weights_report
+from mwalimulens.agent.promote_open_weights_evidence import promote_open_weights_report
 from mwalimulens.mcp_server.state import JsonStateStore
 
 
@@ -174,13 +176,7 @@ def test_open_weights_report_fails_for_non_local_endpoint(tmp_path) -> None:
     assert report["status"] == "fail"
     assert report["checks"]["local_ollama_endpoint"] is False
 
-
-
 def test_passing_open_weights_report_can_be_promoted(tmp_path) -> None:
-    from mwalimulens.agent.promote_open_weights_evidence import (
-        promote_open_weights_report,
-    )
-
     source = tmp_path / "runtime.json"
     destination = tmp_path / "evidence.json"
     report = {
@@ -190,7 +186,7 @@ def test_passing_open_weights_report_can_be_promoted(tmp_path) -> None:
         "model": "qwen2.5:1.5b",
         "checks": {"safe": True, "complete": True},
     }
-    source.write_text(__import__("json").dumps(report), encoding="utf-8")
+    source.write_text(json.dumps(report), encoding="utf-8")
 
     promoted = promote_open_weights_report(
         source=source,
@@ -202,10 +198,6 @@ def test_passing_open_weights_report_can_be_promoted(tmp_path) -> None:
 
 
 def test_failed_open_weights_report_cannot_be_promoted(tmp_path) -> None:
-    from mwalimulens.agent.promote_open_weights_evidence import (
-        promote_open_weights_report,
-    )
-
     source = tmp_path / "runtime.json"
     report = {
         "status": "fail",
@@ -213,10 +205,28 @@ def test_failed_open_weights_report_cannot_be_promoted(tmp_path) -> None:
         "open_weights": True,
         "checks": {"safe": False},
     }
-    source.write_text(__import__("json").dumps(report), encoding="utf-8")
+    source.write_text(json.dumps(report), encoding="utf-8")
 
     with pytest.raises(ValueError, match="status must be pass"):
         promote_open_weights_report(
             source=source,
             destination=tmp_path / "evidence.json",
         )
+
+
+
+def test_open_weights_report_with_runtime_error_cannot_pass(tmp_path) -> None:
+    store = JsonStateStore(tmp_path / "state.json")
+
+    report = build_open_weights_report(
+        settings=OllamaSettings(),
+        prompt="Synthetic failed model request",
+        final_output="",
+        state_store=store,
+        started_at=datetime(2026, 10, 2, 9, 0, tzinfo=UTC),
+        finished_at=datetime(2026, 10, 2, 9, 1, tzinfo=UTC),
+        error={"type": "ConnectionError", "message": "Ollama unavailable"},
+    )
+
+    assert report["status"] == "fail"
+    assert report["error"]["type"] == "ConnectionError"
