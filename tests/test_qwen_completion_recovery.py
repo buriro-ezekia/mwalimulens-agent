@@ -32,6 +32,16 @@ class _RecoveringAgent:
         self.state_store = state_store
         self.recover = recover
         self.calls: list[dict] = []
+        self.enter_count = 0
+        self.exit_count = 0
+
+    async def __aenter__(self):
+        self.enter_count += 1
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self.exit_count += 1
+        return False
 
     async def run(self, prompt, **kwargs):
         self.calls.append({"prompt": prompt, **kwargs})
@@ -188,6 +198,8 @@ async def test_bounded_recovery_can_complete_pending_review(monkeypatch, tmp_pat
     assert report["completion_recovery"]["succeeded"] is True
     assert report["completion_recovery"]["output"] == report["final_output"]
     assert len(fake_agent.calls) == 2
+    assert fake_agent.enter_count == 1
+    assert fake_agent.exit_count == 1
     assert report["pending_review_count"] == 1
 
 
@@ -214,3 +226,5 @@ async def test_bounded_recovery_still_fails_if_model_abstains(monkeypatch, tmp_p
     assert report["final_output"].startswith("ABSTAIN:")
     assert report["checks"]["submitted_candidate"] is False
     assert len(fake_agent.calls) == 2
+    assert fake_agent.enter_count == 1
+    assert fake_agent.exit_count == 1
