@@ -63,6 +63,10 @@ def test_open_weights_report_passes_for_safe_complete_task(tmp_path) -> None:
             "tool_name": "get_competency_evidence",
             "status": "success",
             "timestamp": "2026-10-02T09:00:00+00:00",
+            "inputs": {
+                "learner_id": "L001",
+                "competency_code": "MATH-FRACTIONS",
+            },
         }
     )
     candidate = {
@@ -233,3 +237,46 @@ def test_open_weights_report_with_runtime_error_cannot_pass(tmp_path) -> None:
 
     assert report["status"] == "fail"
     assert report["error"]["type"] == "ConnectionError"
+
+
+
+def test_open_weights_report_requires_counter_evidence(tmp_path) -> None:
+    store = JsonStateStore(tmp_path / "state.json")
+    store.record_tool_call(
+        {
+            "tool_name": "get_competency_evidence",
+            "status": "success",
+            "timestamp": "2026-10-02T09:00:00+00:00",
+            "inputs": {
+                "learner_id": "L001",
+                "competency_code": "MATH-FRACTIONS",
+            },
+        }
+    )
+    store.record_pending_review_and_tool_call(
+        {
+            "review_id": "review-no-counter",
+            "status": "pending_teacher_review",
+            "learner_id": "L001",
+            "competency_code": "MATH-FRACTIONS",
+            "supporting_evidence_ids": ["EV-004", "EV-007"],
+            "counter_evidence_ids": [],
+        },
+        {
+            "tool_name": "flag_pattern_for_review",
+            "status": "success",
+            "timestamp": "2026-10-02T09:00:30+00:00",
+        },
+    )
+
+    report = build_open_weights_report(
+        settings=OllamaSettings(),
+        prompt="Synthetic no-counter task",
+        final_output="Candidate submitted.",
+        state_store=store,
+        started_at=datetime(2026, 10, 2, 9, 0, tzinfo=UTC),
+        finished_at=datetime(2026, 10, 2, 9, 1, tzinfo=UTC),
+    )
+
+    assert report["status"] == "fail"
+    assert report["checks"]["candidate_cites_support_and_counter"] is False
