@@ -122,5 +122,6 @@ Promote only a passing report:
 
 That creates `evidence/borrowed_mcp_run.json` for judge inspection.
 
-The challenge requirement remains Pending until this real smoke run succeeds and the promoted
-report is committed.
+The real local smoke run passed with all sandbox, read-only, audit and protocol checks true. The
+promoted report is committed at `evidence/borrowed_mcp_run.json`, so the borrowed-MCP challenge
+requirement is Present.
