@@ -1,0 +1,23 @@
+[
+  {
+    "learner_id": "L001",
+    "display_name": "Amani (synthetic)",
+    "year_group": "Lower secondary",
+    "school_context": "Synthetic Tanzanian day-school context",
+    "synthetic": true
+  },
+  {
+    "learner_id": "L002",
+    "display_name": "Nuru (synthetic)",
+    "year_group": "Lower secondary",
+    "school_context": "Synthetic Tanzanian day-school context",
+    "synthetic": true
+  },
+  {
+    "learner_id": "L003",
+    "display_name": "Tumaini (synthetic)",
+    "year_group": "Lower secondary",
+    "school_context": "Synthetic Tanzanian day-school context",
+    "synthetic": true
+  }
+]

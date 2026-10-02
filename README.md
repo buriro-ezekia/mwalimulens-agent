@@ -32,10 +32,17 @@ The challenge build is designed so that:
 
 ## Repository status
 
-**Current implementation slice:** challenge contract and repository scaffold.
+Implemented and tested in the current codebase:
 
-The MCP server, agent orchestration, synthetic dataset and user interface are **not implemented
-yet**. This README will not claim those capabilities until corresponding code and tests exist.
+- the challenge contract and human-decision boundary;
+- a typed longitudinal learner/evidence domain;
+- deterministic chronology and competency retrieval; and
+- synthetic multi-term fixtures containing late entry, missing records, conflicting evidence,
+  a one-off anomaly and an insufficient-history case.
+
+The MCP server, agent orchestration, Ollama/Qwen integration, borrowed MCP integration and user
+interface are **not implemented yet**. This README will not claim those capabilities until
+corresponding code and tests exist.
 
 ## Development workflow
 
