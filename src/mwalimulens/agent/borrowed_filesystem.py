@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from fastmcp import Client
 from fastmcp.client.transports import StdioTransport
 from pydantic_ai.mcp import MCPToolset
 
@@ -20,6 +21,7 @@ BORROWED_FILESYSTEM_PACKAGE = (
     f"@modelcontextprotocol/server-filesystem@{BORROWED_FILESYSTEM_VERSION}"
 )
 BORROWED_FILESYSTEM_TOOLSET_ID = "borrowed-official-filesystem-mcp"
+BORROWED_FILESYSTEM_CLIENT_MODE = "legacy"
 DEFAULT_REFERENCE_DIR = PROJECT_ROOT / "data" / "reference"
 DEFAULT_FILESYSTEM_PACKAGE_DIR = (
     PROJECT_ROOT
@@ -158,22 +160,20 @@ def build_borrowed_audit_callback(state_path: Path):
     return audit_tool_call
 
 
-def build_borrowed_filesystem_toolset(
+def build_borrowed_filesystem_client(
     *,
     reference_dir: Path = DEFAULT_REFERENCE_DIR,
-    state_path: Path = DEFAULT_STATE_PATH,
     entrypoint: Path = DEFAULT_FILESYSTEM_ENTRYPOINT,
     package_json_path: Path = DEFAULT_FILESYSTEM_PACKAGE_JSON,
     stderr_path: Path = DEFAULT_BORROWED_MCP_STDERR,
-):
-    """Build the official filesystem MCP, sandboxed and filtered to read-only tools."""
+) -> Client:
+    """Build the upstream stdio client pinned to the handshake-era MCP protocol."""
 
     command, args = filesystem_stdio_spec(
         reference_dir,
         entrypoint=entrypoint,
         package_json_path=package_json_path,
     )
-    audit_tool_call = build_borrowed_audit_callback(state_path)
 
     stderr_path = stderr_path.resolve()
     stderr_path.parent.mkdir(parents=True, exist_ok=True)
@@ -187,8 +187,32 @@ def build_borrowed_filesystem_toolset(
         keep_alive=False,
         log_file=stderr_path,
     )
-    raw_toolset = MCPToolset(
+    return Client(
         transport,
+        mode=BORROWED_FILESYSTEM_CLIENT_MODE,
+    )
+
+
+def build_borrowed_filesystem_toolset(
+    *,
+    reference_dir: Path = DEFAULT_REFERENCE_DIR,
+    state_path: Path = DEFAULT_STATE_PATH,
+    entrypoint: Path = DEFAULT_FILESYSTEM_ENTRYPOINT,
+    package_json_path: Path = DEFAULT_FILESYSTEM_PACKAGE_JSON,
+    stderr_path: Path = DEFAULT_BORROWED_MCP_STDERR,
+):
+    """Build the official filesystem MCP, sandboxed and filtered to read-only tools."""
+
+    client = build_borrowed_filesystem_client(
+        reference_dir=reference_dir,
+        entrypoint=entrypoint,
+        package_json_path=package_json_path,
+        stderr_path=stderr_path,
+    )
+    audit_tool_call = build_borrowed_audit_callback(state_path)
+
+    raw_toolset = MCPToolset(
+        client,
         id=BORROWED_FILESYSTEM_TOOLSET_ID,
         process_tool_call=audit_tool_call,
         tool_error_behavior="error",
