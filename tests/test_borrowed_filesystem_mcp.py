@@ -257,7 +257,6 @@ def test_filesystem_stdio_spec_rejects_version_mismatch(tmp_path) -> None:
         )
 
 
-
 def test_borrowed_client_is_pinned_to_legacy_handshake_mode(tmp_path) -> None:
     reference_dir = tmp_path / "reference"
     reference_dir.mkdir()
