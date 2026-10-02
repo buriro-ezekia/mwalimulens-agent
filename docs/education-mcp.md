@@ -20,7 +20,11 @@ Teacher approve/edit/reject behaviour is a separate implementation slice.
 
 ## Audit trail
 
-Every successful and failed tool call records:
+Every tool invocation that reaches the MwalimuLens service is audited. This includes successful
+calls and domain-validation failures. MCP protocol/schema rejection that occurs before the tool
+function starts is handled by the SDK rather than this application audit layer.
+
+Each service-level audit record contains:
 
 - call ID;
 - tool name;
