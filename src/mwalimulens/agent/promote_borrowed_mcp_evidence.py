@@ -15,6 +15,7 @@ DEFAULT_BORROWED_EVIDENCE_PATH = PROJECT_ROOT / "evidence" / "borrowed_mcp_run.j
 REQUIRED_BORROWED_CHECKS = frozenset(
     {
         "official_package_pinned",
+        "legacy_handshake_mode",
         "reference_directory_is_sandbox",
         "read_only_allowlist_visible",
         "write_tools_hidden",
