@@ -20,12 +20,12 @@ or subject pathway.
 
 | Requirement | MwalimuLens evidence | Status |
 |---|---|---|
-| Own MCP server with at least 3 different tools | Education MCP | Planned |
-| At least 1 custom MCP tool performs an action | `flag_pattern_for_review` | Planned |
+| Own MCP server with at least 3 different tools | Education MCP: 3 implemented tools | Present |
+| At least 1 custom MCP tool performs an action | `flag_pattern_for_review` | Present |
 | Use 1 MCP server not written by the team | Borrowed MCP integration + rationale | Planned |
 | Open-source orchestration | Python orchestration layer | Planned |
 | One complete task on an open-weights model | Local Qwen via Ollama | Planned |
-| Log every tool action | Tool-call audit records with inputs, outputs and timestamps | Planned |
+| Log every tool action | Tool-call audit records for success/failure with inputs, outputs/errors and timestamps | Present |
 | Gate consequential/irreversible actions | Explicit named-teacher approval | Planned |
 | Public repository with OSI-approved licence | Public GitHub repository + Apache-2.0 | Present |
 | README supports reproducible execution | One-command run path | Planned |
