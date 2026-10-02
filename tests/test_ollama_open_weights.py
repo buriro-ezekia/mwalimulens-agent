@@ -44,6 +44,11 @@ def test_ollama_settings_reject_invalid_base_url() -> None:
         OllamaSettings(base_url="localhost:11434/v1")
 
 
+def test_ollama_settings_require_openai_compatible_v1_path() -> None:
+    with pytest.raises(ValueError, match="/v1 endpoint"):
+        OllamaSettings(base_url="http://localhost:11434/api")
+
+
 def test_ollama_model_builds_without_network_request() -> None:
     model = build_ollama_model(OllamaSettings())
 
@@ -212,8 +217,6 @@ def test_failed_open_weights_report_cannot_be_promoted(tmp_path) -> None:
             source=source,
             destination=tmp_path / "evidence.json",
         )
-
-
 
 def test_open_weights_report_with_runtime_error_cannot_pass(tmp_path) -> None:
     store = JsonStateStore(tmp_path / "state.json")
