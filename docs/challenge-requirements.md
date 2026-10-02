@@ -30,7 +30,7 @@ or subject pathway.
 | Public repository with OSI-approved licence | Public GitHub repository + Apache-2.0 | Present |
 | README supports reproducible execution | One-command run path | Planned |
 | `ARCHITECTURE.md` | One-page agent/MCP boundary | Present in this slice |
-| `EVALS.md` with at least 8 tasks | Honest pass/fail evaluation set | Planned |
+| `EVALS.md` with at least 8 tasks | 13-case reproducible suite; real promotion pending | Pending real eval |
 | Include one genuine unfixed failure | Real Qwen 1.5B/3B workflow failures preserved under `evidence/failures/` with next attempt | Present |
 | Demo under 3 minutes | Unedited real run with visible tool calls | Planned |
 
