@@ -28,6 +28,11 @@ node node_modules/@modelcontextprotocol/server-filesystem/dist/index.js <referen
 The direct Node launch is intentional on Windows: it avoids the `npx.cmd` / `cmd /c` wrapper
 between the MCP client and the server's stdin/stdout pipes.
 
+The official Filesystem server is built on the handshake-era JavaScript MCP SDK. FastMCP 4 clients
+default to `mode="auto"`, which probes the newer `server/discover` protocol before falling back.
+For this borrowed stdio server, MwalimuLens therefore constructs a dedicated FastMCP client with
+`mode="legacy"` so the connection begins directly with the standard `initialize` handshake.
+
 ## Why reuse this server
 
 Generic filesystem access is not education-domain logic. Reimplementing file reading, directory
@@ -106,8 +111,8 @@ must start the official npm server, expose exactly the read-only allowlist, exec
 `read_text_file` against the synthetic fraction reference, and verify that the call was audited.
 
 A successful run returns exit code `0` and `"status": "pass"`. The report also records the
-installed package version and the tail of the upstream server stderr log so initialization
-failures remain inspectable.
+installed package version, the explicit legacy client mode and the tail of the upstream server
+stderr log so initialization failures remain inspectable.
 
 Promote only a passing report:
 
