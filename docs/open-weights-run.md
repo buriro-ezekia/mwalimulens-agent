@@ -15,9 +15,9 @@ The model never receives `record_teacher_review`.
 
 ## Why Qwen2.5 1.5B
 
-The project uses the small local model already available in the development environment.
-Ollama lists Qwen2.5 1.5B as a tool-capable Qwen2.5 variant, so it can exercise the real MCP
-workflow without requiring a larger model download.
+The default uses Qwen2.5 1.5B to keep local resource requirements modest. Ollama lists the
+Qwen2.5 family, including the 1.5B variant, as tool-capable, so it can exercise the real MCP
+workflow without requiring a larger model by default.
 
 The model name remains configurable. If the 1.5B model produces an honest tool-calling failure,
 preserve that result for later evaluation and retry with a stronger local Qwen model rather than
