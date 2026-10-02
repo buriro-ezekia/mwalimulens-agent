@@ -150,3 +150,59 @@ async def test_agent_can_retrieve_evidence_and_submit_but_not_review(tmp_path) -
         "get_competency_evidence",
         "flag_pattern_for_review",
     ]
+
+
+
+class _AttemptForbiddenTeacherReview:
+    def __init__(self) -> None:
+        self.step = 0
+
+    async def __call__(
+        self,
+        messages: list[ModelMessage],
+        info: AgentInfo,
+    ) -> ModelResponse:
+        del messages
+        assert "record_teacher_review" not in {
+            tool.name for tool in info.function_tools
+        }
+
+        if self.step == 0:
+            self.step += 1
+            return ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        "record_teacher_review",
+                        {
+                            "review_id": "review-invented",
+                            "reviewer_id": "agent-must-not-decide",
+                            "decision": "approve",
+                            "reason": "This call must never be dispatched.",
+                        },
+                    )
+                ]
+            )
+
+        return ModelResponse(parts=[TextPart("Human review tool is unavailable to the agent.")])
+
+
+@pytest.mark.anyio
+async def test_invented_human_review_call_is_not_dispatched(tmp_path) -> None:
+    state_path = tmp_path / "state.json"
+    agent = build_agent(
+        FunctionModel(_AttemptForbiddenTeacherReview()),
+        data_dir=FIXTURE_DIR,
+        state_path=state_path,
+    )
+
+    result = await agent.run("Try to approve a learner pattern yourself.")
+
+    assert result.output == "Human review tool is unavailable to the agent."
+
+    state = JsonStateStore(state_path)
+    assert state.teacher_reviews() == ()
+    assert state.profile_updates() == ()
+    assert all(
+        call["tool_name"] != "record_teacher_review"
+        for call in state.tool_calls()
+    )
