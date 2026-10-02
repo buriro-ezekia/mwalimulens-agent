@@ -33,6 +33,8 @@ class OllamaSettings:
         parsed = urlparse(self.base_url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             raise ValueError("base_url must be an absolute http(s) URL")
+        if parsed.path.rstrip("/") != "/v1":
+            raise ValueError("base_url must target Ollama's OpenAI-compatible /v1 endpoint")
 
     @classmethod
     def from_env(cls) -> OllamaSettings:
