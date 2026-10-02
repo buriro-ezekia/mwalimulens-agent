@@ -32,17 +32,36 @@ The challenge build is designed so that:
 
 ## Repository status
 
-Implemented and tested in the current codebase:
+Implemented in the current codebase:
 
 - the challenge contract and human-decision boundary;
 - a typed longitudinal learner/evidence domain;
-- deterministic chronology and competency retrieval; and
+- deterministic chronology and competency retrieval;
 - synthetic multi-term fixtures containing late entry, missing records, conflicting evidence,
-  a one-off anomaly and an insufficient-history case.
+  a one-off anomaly and an insufficient-history case; and
+- a custom Education MCP server with three tools, structured outputs, tool-call auditing and a
+  bounded `pending_teacher_review` action.
 
-The MCP server, agent orchestration, Ollama/Qwen integration, borrowed MCP integration and user
-interface are **not implemented yet**. This README will not claim those capabilities until
-corresponding code and tests exist.
+Agent orchestration, Ollama/Qwen integration, the borrowed MCP server, teacher approve/edit/reject
+persistence and the user interface are **not implemented yet**. This README will not claim those
+capabilities until corresponding code and tests exist.
+
+## Run the custom Education MCP server
+
+For a clean Windows setup, use the repository-local virtual environment so CLI executables stay
+on the active environment PATH:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+python -m mwalimulens.mcp_server.server
+```
+
+The server uses stdio by default and writes runtime audit/review state to
+`runtime/education_mcp_state.json`.
+
+See `docs/education-mcp.md` for the tool contract and MCP Inspector command.
 
 ## Development workflow
 
