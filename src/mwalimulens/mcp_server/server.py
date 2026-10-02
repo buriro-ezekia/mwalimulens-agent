@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Literal
 
@@ -18,10 +19,13 @@ DEFAULT_STATE_PATH = PROJECT_ROOT / "runtime" / "education_mcp_state.json"
 
 def build_server(
     *,
-    data_dir: Path = DEFAULT_DATA_DIR,
-    state_path: Path = DEFAULT_STATE_PATH,
+    data_dir: Path | None = None,
+    state_path: Path | None = None,
 ) -> MCPServer:
     """Build a self-contained Education MCP server backed by synthetic evidence."""
+
+    data_dir = data_dir or _configured_path("MWALIMULENS_DATA_DIR", DEFAULT_DATA_DIR)
+    state_path = state_path or _configured_path("MWALIMULENS_STATE_PATH", DEFAULT_STATE_PATH)
 
     dataset = load_synthetic_dataset(data_dir)
     service = EducationToolService(dataset, JsonStateStore(state_path))
@@ -91,6 +95,11 @@ def build_server(
         )
 
     return mcp
+
+
+def _configured_path(variable: str, default: Path) -> Path:
+    value = os.environ.get(variable)
+    return Path(value).expanduser().resolve() if value else default
 
 
 mcp = build_server()
