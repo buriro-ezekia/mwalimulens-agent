@@ -44,10 +44,13 @@ Implemented in the current codebase:
 - an explicit teacher approve/edit/reject gate that records reviewer identity and permits profile
   updates only after approve/edit decisions; and
 - a PydanticAI orchestrator whose MCP toolset exposes only evidence retrieval and
-  `flag_pattern_for_review` to the model.
+  `flag_pattern_for_review` to the model; and
+- a local Qwen/Ollama provider plus an executable open-weights challenge task and JSON evidence
+  report.
 
-Ollama/Qwen integration, the borrowed MCP server and the user interface are **not implemented
-yet**. This README will not claim those capabilities until corresponding code and tests exist.
+The **real local Qwen run is still pending verification**. The borrowed MCP server and user
+interface are also not implemented yet. This README does not mark the open-weights requirement
+complete until a passing local report is promoted into `evidence/open_weights_run.json`.
 
 ## Run the custom Education MCP server
 
@@ -64,8 +67,9 @@ python -m mwalimulens.mcp_server.server
 The server uses stdio by default and writes runtime audit/review state to
 `runtime/education_mcp_state.json`.
 
-See `docs/education-mcp.md` for the tool contract and MCP Inspector command, and
-`docs/agent-orchestrator.md` for the model-facing allowlist boundary.
+See `docs/education-mcp.md` for the tool contract, `docs/agent-orchestrator.md` for the
+model-facing allowlist boundary, and `docs/open-weights-run.md` for the local Qwen validation
+workflow.
 
 ## Development workflow
 
