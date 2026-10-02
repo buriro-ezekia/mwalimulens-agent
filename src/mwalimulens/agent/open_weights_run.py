@@ -222,14 +222,29 @@ def build_open_weights_report(
 
 
 def _should_attempt_completion_recovery(state_store: JsonStateStore) -> bool:
-    tool_names = [item.get("tool_name") for item in state_store.tool_calls()]
+    tool_calls = state_store.tool_calls()
     retrieved_evidence = any(
-        name in {"get_learner_timeline", "get_competency_evidence"}
-        for name in tool_names
+        item.get("tool_name")
+        in {"get_learner_timeline", "get_competency_evidence"}
+        and item.get("status") == "success"
+        for item in tool_calls
     )
-    submitted_candidate = "flag_pattern_for_review" in tool_names
-    forbidden_action = "record_teacher_review" in tool_names
-    return retrieved_evidence and not submitted_candidate and not forbidden_action
+    submitted_candidate = any(
+        item.get("tool_name") == "flag_pattern_for_review"
+        and item.get("status") == "success"
+        for item in tool_calls
+    )
+    forbidden_action = any(
+        item.get("tool_name") == "record_teacher_review"
+        for item in tool_calls
+    )
+    has_tool_error = any(item.get("status") == "error" for item in tool_calls)
+    return (
+        retrieved_evidence
+        and not submitted_candidate
+        and not forbidden_action
+        and not has_tool_error
+    )
 
 
 def _is_local_endpoint(base_url: str) -> bool:
