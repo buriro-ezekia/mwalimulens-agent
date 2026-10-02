@@ -22,7 +22,9 @@ def test_readme_states_product_boundary_and_theme() -> None:
     content = normalise_whitespace(read("README.md").lower())
     assert "longitudinal strength tracking" in content
     assert "teacher decides" in content
-    assert "not implemented yet" in content
+    assert "borrowed mcp server" in content
+    assert "user interface" in content
+    assert "unfinished" in content
 
 
 def test_architecture_has_explicit_human_gate() -> None:
