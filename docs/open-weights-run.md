@@ -80,11 +80,13 @@ The report can only have `"status": "pass"` when all of these are true:
 
 - the endpoint is local;
 - the model name is Qwen;
-- evidence was retrieved through MCP;
+- the target L001 / MATH-FRACTIONS evidence was retrieved through MCP;
 - `flag_pattern_for_review` was called;
 - all audited MCP calls succeeded;
 - `record_teacher_review` was not called;
 - a pending teacher-review candidate was created for L001 / MATH-FRACTIONS;
+- that candidate cites both supporting and counter-evidence;
+- the model produced a non-empty final response;
 - no teacher review occurred; and
 - no profile update occurred.
 
