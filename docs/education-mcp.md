@@ -21,7 +21,13 @@ profile, assign a learner label or choose a pathway.
 edit requires teacher-authored replacement wording, and reject creates no profile update.
 
 There is no separate profile-update MCP tool. A profile update can only be created internally by
-a successful approve/edit teacher review, making the human gate structural rather than prompt-only.
+a successful approve/edit teacher review, making the no-bypass persistence rule structural rather
+than prompt-only.
+
+This challenge slice requires an explicit `reviewer_id` but does not implement school
+authentication or role management. The later orchestrator/UI boundary must exclude
+`record_teacher_review` from the agent-callable tool allowlist and invoke it only from the
+human review path.
 
 ## Audit trail
 
