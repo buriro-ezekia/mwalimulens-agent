@@ -77,5 +77,6 @@ runs.
 The orchestration layer is model-independent. Tests use PydanticAI's local `TestModel` and
 `FunctionModel` so no external model or API key is required.
 
-The challenge's required open-weights run with local Qwen/Ollama is the next model-integration
-slice; it is not claimed as complete here.
+Local Qwen/Ollama integration is now implemented in the model layer. The challenge requirement is
+still not claimed complete until the real task produces a passing report and that report is
+promoted into `evidence/open_weights_run.json`.
