@@ -75,6 +75,11 @@ def test_approve_records_named_teacher_and_creates_profile_update(tmp_path) -> N
     assert len(service.state_store.teacher_reviews()) == 1
     assert len(service.state_store.profile_updates()) == 1
 
+    calls = service.state_store.tool_calls()
+    assert calls[-1]["tool_name"] == "record_teacher_review"
+    assert calls[-1]["status"] == "success"
+    assert calls[-1]["output"] == result
+
 
 def test_edit_requires_and_persists_teacher_edited_claim(tmp_path) -> None:
     service = _service(tmp_path)
@@ -245,3 +250,10 @@ def test_old_runtime_state_is_backward_compatible(tmp_path) -> None:
     assert store.pending_reviews()[0]["review_id"] == "review-legacy"
     assert store.teacher_reviews() == ()
     assert store.profile_updates() == ()
+
+
+
+def test_state_store_exposes_no_direct_profile_update_writer(tmp_path) -> None:
+    store = JsonStateStore(tmp_path / "state.json")
+
+    assert not hasattr(store, "record_profile_update")
