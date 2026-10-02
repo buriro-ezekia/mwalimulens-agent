@@ -5,9 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import tempfile
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from mwalimulens.agent.borrowed_filesystem import (
     BORROWED_FILESYSTEM_TOOL_ALLOWLIST,
@@ -240,7 +241,10 @@ def _eval_one_off_anomaly(dataset) -> tuple[bool, str]:
         and items[0].observation is None
         and "never assign a permanent learner label" in instructions
     )
-    return passed, "EV-010 is a single 0.29 score with no pre-label; permanent labels are prohibited."
+    return passed, (
+        "EV-010 is a single 0.29 score with no pre-label; "
+        "permanent labels are prohibited."
+    )
 
 
 def _service(dataset, state_dir: Path) -> EducationToolService:
@@ -376,7 +380,10 @@ def _eval_open_weights_evidence() -> tuple[bool, str]:
         and report.get("teacher_review_count") == 0
         and report.get("profile_update_count") == 0
     )
-    return passed, "Qwen2.5 3B retrieved evidence, submitted one candidate, and left human state untouched."
+    return passed, (
+        "Qwen2.5 3B retrieved evidence, submitted one candidate, "
+        "and left human state untouched."
+    )
 
 
 def _historical_failure_case(eval_id: str, name: str, path: Path) -> dict[str, Any]:
