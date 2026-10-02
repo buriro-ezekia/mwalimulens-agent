@@ -28,7 +28,7 @@ async def mcp_client(tmp_path):
 
 
 @pytest.mark.anyio
-async def test_server_negotiates_current_protocol_and_lists_three_tools(mcp_client) -> None:
+async def test_server_negotiates_current_protocol_and_lists_four_tools(mcp_client) -> None:
     client, _ = mcp_client
 
     result = await client.list_tools()
@@ -39,6 +39,7 @@ async def test_server_negotiates_current_protocol_and_lists_three_tools(mcp_clie
         "get_learner_timeline",
         "get_competency_evidence",
         "flag_pattern_for_review",
+        "record_teacher_review",
     }
 
 
@@ -93,3 +94,90 @@ async def test_tool_failure_returns_error_and_is_audited(mcp_client) -> None:
     assert len(calls) == 1
     assert calls[0]["status"] == "error"
     assert calls[0]["error"]["type"] == "KeyError"
+
+
+async def _flag_candidate(client):
+    result = await client.call_tool(
+        "flag_pattern_for_review",
+        {
+            "learner_id": "L001",
+            "competency_code": "MATH-FRACTIONS",
+            "claim": "Fraction-equivalence evidence is repeatedly strong across terms.",
+            "supporting_evidence_ids": ["EV-004", "EV-007", "EV-009"],
+            "counter_evidence_ids": ["EV-008"],
+            "uncertainty": "Open-ended explanation evidence is mixed.",
+            "suggested_teacher_question": "Does this hold in an unfamiliar problem?",
+        },
+    )
+    assert result.is_error is False
+    assert result.structured_content is not None
+    return result.structured_content["review_id"]
+
+
+@pytest.mark.anyio
+async def test_teacher_approve_creates_human_gated_profile_update(mcp_client) -> None:
+    client, state_store = mcp_client
+    review_id = await _flag_candidate(client)
+
+    result = await client.call_tool(
+        "record_teacher_review",
+        {
+            "review_id": review_id,
+            "reviewer_id": "teacher-mcp-001",
+            "decision": "approve",
+            "reason": "Approved after reviewing the cited evidence.",
+        },
+    )
+
+    assert result.is_error is False
+    assert result.structured_content is not None
+    assert result.structured_content["teacher_review"]["decision"] == "approve"
+    assert result.structured_content["profile_update"] is not None
+    assert len(state_store.teacher_reviews()) == 1
+    assert len(state_store.profile_updates()) == 1
+
+
+@pytest.mark.anyio
+async def test_teacher_edit_uses_human_revised_claim(mcp_client) -> None:
+    client, state_store = mcp_client
+    review_id = await _flag_candidate(client)
+    edited_claim = "Evidence is promising, with mixed open-ended explanation evidence."
+
+    result = await client.call_tool(
+        "record_teacher_review",
+        {
+            "review_id": review_id,
+            "reviewer_id": "teacher-mcp-002",
+            "decision": "edit",
+            "reason": "The teacher narrowed the claim to reflect the counter-evidence.",
+            "edited_claim": edited_claim,
+        },
+    )
+
+    assert result.is_error is False
+    assert result.structured_content is not None
+    assert result.structured_content["teacher_review"]["final_claim"] == edited_claim
+    assert result.structured_content["profile_update"]["claim"] == edited_claim
+    assert state_store.profile_updates()[0]["claim"] == edited_claim
+
+
+@pytest.mark.anyio
+async def test_teacher_reject_creates_no_profile_update(mcp_client) -> None:
+    client, state_store = mcp_client
+    review_id = await _flag_candidate(client)
+
+    result = await client.call_tool(
+        "record_teacher_review",
+        {
+            "review_id": review_id,
+            "reviewer_id": "teacher-mcp-003",
+            "decision": "reject",
+            "reason": "The evidence is too mixed for a learner-profile statement.",
+        },
+    )
+
+    assert result.is_error is False
+    assert result.structured_content is not None
+    assert result.structured_content["teacher_review"]["decision"] == "reject"
+    assert result.structured_content["profile_update"] is None
+    assert state_store.profile_updates() == ()
