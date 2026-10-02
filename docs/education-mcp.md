@@ -47,11 +47,17 @@ The `runtime/` directory is ignored by Git.
 
 ## Run locally
 
-After installing the project:
+Use the repository-local virtual environment on Windows:
 
 ```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
 python -m mwalimulens.mcp_server.server
 ```
+
+Using an activated `.venv` also keeps the installed `mcp.exe` and related CLI scripts on the
+current shell PATH without modifying the user's global PATH.
 
 The default transport is stdio, which is the official SDK's local-server transport.
 
