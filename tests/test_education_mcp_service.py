@@ -66,7 +66,7 @@ def test_competency_read_preserves_source_evidence(tmp_path) -> None:
 
     result = service.get_competency_evidence("L001", "MATH-FRACTIONS")
 
-    assert result["evidence_count"] == 7
+    assert result["evidence_count"] == 8
     assert {item["evidence_id"] for item in result["evidence"]} == {
         "EV-001",
         "EV-002",
