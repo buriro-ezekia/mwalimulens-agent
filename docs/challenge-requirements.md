@@ -32,7 +32,7 @@ or subject pathway.
 | `ARCHITECTURE.md` | One-page agent/MCP boundary | Present |
 | `EVALS.md` with at least 8 tasks | 13-case reproducible suite + promoted `evidence/evals_run.json` | Present |
 | Include one genuine unfixed failure | Real Qwen 1.5B/3B workflow failures preserved under `evidence/failures/` with next attempt | Present |
-| Demo under 3 minutes | Fast real-MCP browser demo + timed recording guide | Pending demo validation |
+| Demo under 3 minutes | Fast real-MCP browser demo validated locally + timed recording guide | Ready to record |
 
 ## Safety and human-decision invariants
 
