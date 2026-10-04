@@ -12,8 +12,8 @@ actually been validated.
 
 **Longitudinal strength tracking**
 
-MwalimuLens will follow synthetic learner evidence across terms and years and surface candidate
-patterns for a teacher to review. It will not autonomously assign a learner track, label, career
+MwalimuLens follows synthetic learner evidence across terms and years and surfaces candidate
+patterns for a teacher to review. It does not autonomously assign a learner track, label, career
 or subject pathway.
 
 ## Non-negotiable challenge requirements
@@ -48,7 +48,7 @@ These are product invariants, not prompt-only preferences:
    committed.
 8. Tool calls used in a decision are auditable.
 
-## Initial custom MCP boundary
+## Custom MCP boundary
 
 The challenge implementation uses four deliberately narrow tools:
 
@@ -75,8 +75,8 @@ permanent trait, assign a pathway, or bypass teacher review.
 
 ## Synthetic-data requirements
 
-Synthetic records should be deliberately realistic rather than curated to make the agent pass.
-Fixtures will include combinations of:
+The synthetic records are deliberately realistic rather than curated to make the agent pass.
+The committed fixtures include combinations of:
 
 - missing terms or attendance records;
 - results entered late;
