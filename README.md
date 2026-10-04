@@ -1,131 +1,230 @@
 # MwalimuLens
 
-> The agent identifies patterns. The teacher decides what they mean.
+> **The agent identifies patterns. The teacher decides what they mean.**
 
-MwalimuLens is an evidence-grounded educational agent for the **Education — The Long View**
-track of the African Agentic AI Design Challenge.
+MwalimuLens is an evidence-grounded educational agent built for the **Education — The Long View**
+track of the African Agentic AI Design Challenge. It focuses on **longitudinal strength tracking**:
+helping a teacher see how learner evidence changes across terms without turning a single score into
+a permanent label.
 
-Its selected theme is **longitudinal strength tracking**: connecting evidence across terms and
-years so a teacher can inspect defensible patterns that may be invisible in a single term.
+The challenge build uses synthetic learner data only.
 
-## Product boundary
+## Why this exists
 
-MwalimuLens is decision support, not an autonomous learner-classification system.
+A teacher may have quiz scores, practical work, attendance records and classroom observations
+spread across several terms. A simple dashboard can show those records, but it may still leave the
+teacher to notice patterns by hand.
 
-The challenge build is designed so that:
+MwalimuLens retrieves the relevant evidence, keeps it in event chronology, looks for supporting and
+counter-evidence, and produces a cautious candidate pattern for review. It does not decide that the
+candidate is true. That decision remains with the teacher.
 
-- every claimed learner pattern cites source evidence;
-- supporting and counter-evidence remain visible;
-- uncertainty is explicit;
-- the agent never ranks learners against classmates;
-- the agent never autonomously assigns a learner label, track, career or subject pathway; and
-- consequential profile changes require an explicit teacher review.
+## What the agent can and cannot do
 
-## Planned challenge stack
+The model can:
 
-- **Custom MCP server:** longitudinal learner evidence and bounded review actions
-- **Borrowed MCP server:** official Model Context Protocol Filesystem MCP, read-only and sandboxed
-- **Orchestration:** open-source Python orchestration
-- **Open-weights model:** local Qwen through Ollama
-- **Data:** synthetic learner records only
-- **Evaluation:** longitudinal, adversarial and human-gate cases
+- retrieve a learner timeline;
+- retrieve evidence for a specific competency;
+- compare evidence across terms;
+- cite concrete evidence IDs;
+- preserve uncertainty and counter-evidence; and
+- submit a candidate pattern as `pending_teacher_review`.
 
-## Repository status
+The model cannot:
 
-Implemented in the current codebase:
+- call `record_teacher_review`;
+- approve, edit or reject its own candidate;
+- create a learner-profile update on its own;
+- rank learners against classmates; or
+- assign a permanent label, pathway, career or subject track.
 
-- the challenge contract and human-decision boundary;
-- a typed longitudinal learner/evidence domain;
-- deterministic chronology and competency retrieval;
-- synthetic multi-term fixtures containing late entry, missing records, conflicting evidence,
-  a one-off anomaly and an insufficient-history case; and
-- a custom Education MCP server with four tools, structured outputs and tool-call auditing;
-- a bounded `pending_teacher_review` action; and
-- an explicit teacher approve/edit/reject gate that records reviewer identity and permits profile
-  updates only after approve/edit decisions; and
-- a PydanticAI orchestrator whose MCP toolset exposes only evidence retrieval and
-  `flag_pattern_for_review` to the model; and
-- a local Qwen/Ollama provider plus an executable open-weights challenge task and JSON evidence
-  report; and
-- an official borrowed Filesystem MCP integration restricted to read-only classroom-reference
-  access, with borrowed calls written to the same audit stream; and
-- a reproducible 13-case evaluation suite covering messy longitudinal data, human-gate
-  invariants, borrowed-MCP safety, current real-model success and preserved model failures.
+The human review boundary is enforced in code, not left to prompt wording.
 
-A real local Qwen2.5 3B run has passed all open-weights evidence and safety checks and is
-committed at `evidence/open_weights_run.json`. The official borrowed Filesystem MCP has also
-passed its real read-only smoke run, with promoted evidence committed at
-`evidence/borrowed_mcp_run.json`. The 13-case reliability evaluation has also passed and is committed at `evidence/evals_run.json`. The user interface remains unfinished.
+## Fast judge demo
 
-## One-command challenge run
+After cloning the repository, the quickest recording-friendly demo is:
 
-From a clean checkout, the judge-facing workflow is:
+```powershell
+python scripts/run_demo.py
+```
+
+The command prepares the local environment, runs a short real MCP workflow and opens a
+self-contained browser page. The fast demo uses a deterministic local model so the video can show
+the MCP sequence without waiting several minutes for Qwen.
+
+The page shows:
+
+1. the synthetic L001 / MATH-FRACTIONS evidence timeline;
+2. the actual Education MCP evidence call;
+3. the actual read-only borrowed Filesystem MCP call;
+4. the actual `flag_pattern_for_review` action;
+5. the supporting and counter-evidence behind the candidate;
+6. the human review gate, with zero teacher decisions and zero profile updates; and
+7. the separately committed **real Qwen2.5 3B** validation result.
+
+The deterministic demo is **not** presented as the open-weights evidence. The real Qwen run is
+stored separately in `evidence/open_weights_run.json`.
+
+A timed recording guide is in `docs/demo-guide.md`.
+
+## Full reproducible challenge run
+
+For the complete local validation path:
 
 ```powershell
 python scripts/run_challenge.py
 ```
 
-External prerequisites are **Python 3.11+**, **Node.js 20+ with npm**, and a locally running
-**Ollama** instance with `qwen2.5:3b` already installed. The command does not install Ollama or
-download a model.
+External prerequisites are:
 
-The bootstrap creates/reuses `.venv`, installs MwalimuLens, installs the exact borrowed-MCP npm
-dependency graph with `npm ci`, then runs:
+- Python 3.11 or newer;
+- Node.js 20 or newer with npm;
+- a locally running Ollama service; and
+- `qwen2.5:3b` installed in Ollama.
 
-1. the real local Qwen longitudinal task;
-2. the real official Filesystem MCP smoke; and
-3. the 13-case reliability evaluation.
+The bootstrap creates or reuses `.venv`, installs MwalimuLens, installs the exact npm dependency
+graph with `npm ci`, then runs the real open-weights task, the borrowed MCP smoke and the
+13-case evaluation suite.
 
-The final summary is written to `runtime/challenge_run.json`. A passing real one-command run is
-committed at `evidence/challenge_run.json`. Detailed component reports remain under `runtime/`
-for auditability.
+A passing real run is committed at `evidence/challenge_run.json`.
 
-If the model is missing, install it once with:
+## Current evidence
 
-```powershell
-ollama pull qwen2.5:3b
+| Area | Result | Inspectable evidence |
+|---|---|---|
+| Custom Education MCP | PASS | Four implemented tools and audited state |
+| Open-weights model | PASS | `evidence/open_weights_run.json` — Qwen2.5 3B |
+| Borrowed MCP | PASS | `evidence/borrowed_mcp_run.json` |
+| Evaluation suite | PASS | `evidence/evals_run.json` |
+| One-command workflow | PASS | `evidence/challenge_run.json` |
+| Historical model failures | Preserved | `evidence/failures/` |
+| Under-three-minute video | Ready to record | `docs/demo-guide.md` |
+
+The evaluation report contains **11 current PASS cases and 2 preserved historical FAIL cases**.
+Those failures are intentionally retained rather than rewritten after later fixes.
+
+## Architecture
+
+```text
+Synthetic learner evidence
+        |
+        v
+Custom Education MCP
+  get_learner_timeline
+  get_competency_evidence
+  flag_pattern_for_review
+  record_teacher_review  <-- human path only
+        |
+        v
+PydanticAI orchestrator
+        |
+        +----> local Qwen / Ollama
+        |
+        +----> official Filesystem MCP
+               read-only, sandboxed
+        |
+        v
+Evidence-grounded candidate
+        |
+        v
+PENDING TEACHER REVIEW
+        |
+        v
+Approve / Edit / Reject
 ```
 
-See `docs/reproducible-run.md` for prerequisites, generated files and failure behaviour.
+The detailed design and boundaries are documented in `ARCHITECTURE.md`.
 
-## Run the custom Education MCP server
+## MCP boundaries
 
-For a clean Windows setup, use the repository-local virtual environment so CLI executables stay
-on the active environment PATH:
+### Custom Education MCP
+
+| Tool | Purpose | Model-visible |
+|---|---|---|
+| `get_learner_timeline` | Retrieve ordered learner evidence | Yes |
+| `get_competency_evidence` | Retrieve evidence for one competency | Yes |
+| `flag_pattern_for_review` | Persist a provisional candidate | Yes |
+| `record_teacher_review` | Record approve/edit/reject and any human-approved consequence | **No** |
+
+### Borrowed Filesystem MCP
+
+MwalimuLens reuses the official
+`@modelcontextprotocol/server-filesystem@2026.8.31` package for generic local reference-file
+access. The model sees only six read-only tools, and the server is sandboxed to `data/reference/`.
+
+This keeps generic filesystem infrastructure out of the custom Education MCP while preserving an
+auditable boundary between reference material and learner evidence.
+
+## Evaluation
+
+`EVALS.md` documents 13 cases covering:
+
+- late-entered evidence;
+- conflicting quantitative and qualitative evidence;
+- missing-term gaps;
+- insufficient longitudinal history;
+- one-off anomalies;
+- evidence-ID and competency validation;
+- teacher approve/edit/reject consequences;
+- the model-facing tool boundary;
+- borrowed-MCP read-only behaviour;
+- the successful real Qwen workflow; and
+- preserved genuine model failures.
+
+Run the deterministic suite with:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
-python -m mwalimulens.mcp_server.server
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check .
 ```
 
-The server uses stdio by default and writes runtime audit/review state to
-`runtime/education_mcp_state.json`.
+## Repository guide
 
-See `docs/education-mcp.md` for the tool contract, `docs/agent-orchestrator.md` for the
-model-facing allowlist boundary, `docs/open-weights-run.md` for the local Qwen validation
-workflow, `docs/borrowed-filesystem-mcp.md` for the borrowed-server boundary and rationale, and
-`EVALS.md` for the reproducible reliability evaluation matrix.
+```text
+data/synthetic/          fictional learner evidence used by the challenge
+data/reference/          classroom reference material; not learner evidence
+src/mwalimulens/domain/  validated longitudinal data model
+src/mwalimulens/mcp_server/
+                         custom Education MCP and local audit/review state
+src/mwalimulens/agent/   orchestration, Ollama and borrowed-MCP integration
+evidence/                promoted judge-inspectable run evidence
+tests/                   deterministic contract, safety and reliability tests
+scripts/                 clean-checkout challenge and demo entry points
+```
 
-## Development workflow
+## Limitations
 
-Feature work is developed on a branch, reviewed in a pull request, tested locally, and only then
-merged to `main`.
+MwalimuLens is a challenge prototype, not a validated production decision system.
 
-GitHub Actions may be unavailable because of repository/account budget limits. A failed or
-unstarted hosted workflow is therefore not treated as a product defect unless its logs show an
-actual code or test failure. Local test output is the authoritative validation evidence during
-development.
+- The committed learner records are synthetic.
+- The evaluation set is deliberately small.
+- The fast browser demo uses deterministic orchestration for recording speed.
+- The real open-weights evidence comes from a separate local Qwen2.5 3B run.
+- The project does not establish educational validity across real schools, curricula, languages or
+  learner populations.
+- A candidate pattern is not a diagnosis, classification or permanent learner profile.
 
-## Official challenge source
+These limits are intentional. The project is designed to make uncertainty and human responsibility
+visible rather than hide them.
 
-Education track: https://agentic-africa-challenge.lovable.app/tracks/education
+## Further documentation
 
-The public track page currently shows a **15 October 2026** deadline. Its detailed rules still
-leave the exact submission-period timestamp as TBC, so this project targets completion before
-15 October rather than assuming a final-hour cutoff.
+- `ARCHITECTURE.md` — system design and decision boundaries
+- `EVALS.md` — evaluation cases and preserved failures
+- `docs/education-mcp.md` — custom MCP contract
+- `docs/agent-orchestrator.md` — model-facing tool boundary
+- `docs/borrowed-filesystem-mcp.md` — borrowed server rationale and read-only boundary
+- `docs/open-weights-run.md` — local Qwen workflow
+- `docs/reproducible-run.md` — clean-checkout validation path
+- `docs/demo-guide.md` — recording workflow
+- `docs/submission-readiness.md` — final repository audit
 
-## Licence
+## Challenge and licence
 
-Apache-2.0.
+Official Education track:
+https://agentic-africa-challenge.lovable.app/tracks/education
+
+Submission timing and repository evidence are tracked in
+`docs/challenge-requirements.md`.
+
+MwalimuLens is licensed under the **Apache License 2.0**.
