@@ -19,6 +19,10 @@ from mwalimulens.agent.promote_open_weights_evidence import promote_open_weights
 from mwalimulens.mcp_server.state import JsonStateStore
 
 
+def test_default_ollama_model_matches_validated_challenge_path() -> None:
+    assert DEFAULT_OLLAMA_MODEL == "qwen2.5:3b"
+
+
 def test_ollama_settings_defaults(monkeypatch) -> None:
     monkeypatch.delenv("MWALIMULENS_OLLAMA_MODEL", raising=False)
     monkeypatch.delenv("MWALIMULENS_OLLAMA_BASE_URL", raising=False)
