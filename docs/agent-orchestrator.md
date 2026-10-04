@@ -60,7 +60,9 @@ instructions.
 ## Runtime connection
 
 PydanticAI connects to the custom Education MCP server through stdio using the same Python
-interpreter as the application.
+interpreter as the application. The Education MCP client is explicitly pinned to
+`mode="legacy"` so FastMCP uses the standard `initialize` handshake rather than probing the
+newer `server/discover` negotiation first.
 
 For isolated tests and demo runs, the orchestrator passes:
 
@@ -77,9 +79,8 @@ runs.
 The orchestration layer is model-independent. Tests use PydanticAI's local `TestModel` and
 `FunctionModel` so no external model or API key is required.
 
-Local Qwen/Ollama integration is now implemented in the model layer. The challenge requirement is
-still not claimed complete until the real task produces a passing report and that report is
-promoted into `evidence/open_weights_run.json`.
+Local Qwen/Ollama integration is implemented in the model layer. A passing real Qwen2.5 3B task
+is committed at `evidence/open_weights_run.json`.
 
 
 ## Borrowed toolsets
