@@ -62,7 +62,7 @@ The page shows:
 6. the human review gate, with zero teacher decisions and zero profile updates; and
 7. the separately committed **real Qwen2.5 3B** validation result.
 
-The deterministic demo is **not** presented as the open-weights evidence. The real Qwen run is
+The deterministic demo is not presented as the open-weights evidence. The real Qwen run is
 stored separately in `evidence/open_weights_run.json`.
 
 A timed recording guide is in `docs/demo-guide.md`.
