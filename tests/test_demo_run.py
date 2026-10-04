@@ -12,7 +12,7 @@ from mwalimulens.demo_run import (
 from mwalimulens.mcp_server.state import JsonStateStore
 
 
-def _state(path: Path) -> JsonStateStore:
+def _state(path: Path, *, claim: str = DEMO_CLAIM) -> JsonStateStore:
     store = JsonStateStore(path)
     store.record_tool_call(
         {
@@ -46,7 +46,7 @@ def _state(path: Path) -> JsonStateStore:
         "status": "pending_teacher_review",
         "learner_id": "L001",
         "competency_code": "MATH-FRACTIONS",
-        "claim": DEMO_CLAIM,
+        "claim": claim,
         "supporting_evidence_ids": ["EV-004", "EV-007", "EV-009", "EV-011"],
         "counter_evidence_ids": ["EV-008"],
         "uncertainty": "Mixed explanation evidence.",
@@ -92,6 +92,7 @@ def test_demo_report_preserves_human_gate(tmp_path) -> None:
     )
 
     assert report["status"] == "pass"
+    assert report["pending_review_count"] == 1
     assert report["teacher_review_count"] == 0
     assert report["profile_update_count"] == 0
     assert all(report["checks"].values())
@@ -127,10 +128,10 @@ def test_demo_report_rejects_human_review_tool_visibility(tmp_path) -> None:
 
 def test_demo_html_is_self_contained_and_escapes_candidate(tmp_path) -> None:
     state_path = tmp_path / "state.json"
-    store = _state(state_path)
-    state = store._load()
-    state["pending_reviews"][0]["claim"] = "<script>alert('x')</script>"
-    store._write(state)
+    _state(
+        state_path,
+        claim="<script>alert('x')</script>",
+    )
 
     report = build_demo_report(
         state_path=state_path,
