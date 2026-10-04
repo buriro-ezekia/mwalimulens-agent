@@ -37,8 +37,10 @@ The repository already contains evidence for:
 
 The repository cannot prove the **under-three-minute demo video** until a real recording exists.
 
-The demo workflow is ready to record using `docs/demo-guide.md`. The challenge matrix should
-therefore remain **Ready to record**, not **Present**, until the final video URL is available.
+The demo workflow is implemented and documented in `docs/demo-guide.md`, but the fast demo still
+needs one local validation run on this branch. The challenge matrix therefore remains
+**Pending demo validation** until that succeeds, and must not become **Present** until the final
+video URL is available.
 
 ## Known limitations
 
