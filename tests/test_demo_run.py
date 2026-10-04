@@ -4,11 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mwalimulens.demo_run import (
-    DEMO_CLAIM,
-    build_demo_report,
-    render_demo_html,
-)
+from mwalimulens.demo_run import DEMO_CLAIM, build_demo_report
+from mwalimulens.demo_view import render_demo_html
 from mwalimulens.mcp_server.state import JsonStateStore
 
 
