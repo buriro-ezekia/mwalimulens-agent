@@ -32,6 +32,10 @@ The repository already contains evidence for:
 - Stale "planned" and "in this slice" status language has been removed where implementation is
   complete.
 - Console entry points are available after installation for both the challenge run and demo.
+- The final [recording package](demo-guide.md) supplies a natural spoken script, a 2:40
+  command-first storyboard, short captions and a [recording checklist](demo-checklist.md).
+- The recording page identifies deterministic orchestration and separate committed Qwen
+  validation, and exposes the actual pending status beside the human review counts.
 
 ## Remaining submission blocker
 
@@ -39,9 +43,11 @@ The repository cannot prove the **under-three-minute demo video** until a real r
 
 The fast demo has now passed locally with the real custom and borrowed MCP boundaries: evidence
 retrieval PASS, borrowed reference read PASS, candidate creation PASS, human gate untouched, and
-real Qwen validation PASS. The challenge matrix is therefore **Ready to record**.
+separate committed real Qwen validation PASS. The challenge matrix is therefore **Ready to record**.
 
-It must not become **Present** until the final under-three-minute video URL is available.
+It must not become **Present** until the final under-three-minute public video URL is available
+and signed-out playback is verified. The README and challenge matrix contain explicit pending
+URL placeholders; no public video is claimed by the recording package.
 
 ## Known limitations
 
@@ -55,9 +61,12 @@ These are documented rather than hidden:
 
 ## Final pre-submission checks after video recording
 
-1. Confirm the final video is public and under the challenge time limit.
-2. Add the video URL to the README and challenge evidence map.
-3. Run `python scripts/run_challenge.py` one final time from `main`.
-4. Run the deterministic test suite and Ruff.
-5. Confirm `git status` contains no unintended files.
-6. Confirm the submission references the final `main` commit.
+1. Follow the [final recording checklist](demo-checklist.md): one continuous take, live command,
+   visible evidence and gate, natural voice, ideally 2:30–2:45 and strictly under 3:00.
+2. Verify public playback without signing in, then add the real URL and duration to the README
+   and challenge evidence map and mark the video **Present**.
+3. Keep full Qwen reproducibility checks separate and off camera. The existing committed PASS
+   reports remain the open-weights proof; do not overwrite or promote them from the fast demo.
+4. Run the full deterministic test suite and Ruff after any code or contract changes.
+5. Review the diff and `git status`; exclude generated media and preserve historical failures.
+6. Confirm the submission references the final `main` commit and public video URL.

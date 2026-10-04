@@ -42,15 +42,22 @@ The human review boundary is enforced in code, not left to prompt wording.
 
 ## Fast judge demo
 
-After cloning the repository, the quickest recording-friendly demo is:
+After cloning the repository, prepare and validate the demo off camera:
 
 ```powershell
-python scripts/run_demo.py
+python scripts/run_demo.py --no-open
 ```
 
-The command prepares the local environment, runs a short real MCP workflow and opens a
-self-contained browser page. The fast demo uses a deterministic local model so the video can show
-the MCP sequence without waiting several minutes for Qwen.
+This prepares the local environment and validates the short real MCP workflow. For the actual
+recording, start capture with the terminal visible, then run:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.demo_run
+```
+
+The live command runs the MCP workflow again and opens its self-contained browser page. The fast
+demo uses a deterministic local model so the video can show the MCP sequence without waiting
+several minutes for Qwen.
 
 The page shows:
 
@@ -65,7 +72,12 @@ The page shows:
 The deterministic demo is not presented as the open-weights evidence. The real Qwen run is
 stored separately in `evidence/open_weights_run.json`.
 
-A timed recording guide is in `docs/demo-guide.md`.
+The final recording package targets **2:40 in one continuous take**: [storyboard and setup](docs/demo-guide.md),
+[natural spoken script](docs/demo-narration.md), [short captions](docs/demo-cues.md), and
+[final checklist](docs/demo-checklist.md).
+
+**Public demo video URL: pending** — add the verified public link and duration after recording.
+The video requirement remains **Ready to record** until then.
 
 ## Full reproducible challenge run
 
@@ -98,7 +110,7 @@ A passing real run is committed at `evidence/challenge_run.json`.
 | Evaluation suite | PASS | `evidence/evals_run.json` |
 | One-command workflow | PASS | `evidence/challenge_run.json` |
 | Historical model failures | Preserved | `evidence/failures/` |
-| Under-three-minute video | Fast demo validated; ready to record | `docs/demo-guide.md` |
+| Under-three-minute video | Ready to record; public video pending | [Final recording package](docs/demo-guide.md) |
 
 The evaluation report contains **11 current PASS cases and 2 preserved historical FAIL cases**.
 Those failures are intentionally retained rather than rewritten after later fixes.

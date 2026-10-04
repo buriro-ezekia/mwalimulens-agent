@@ -298,11 +298,30 @@ def print_demo_summary(report: dict[str, Any], html_path: Path) -> None:
     """Print the short recording-oriented summary."""
 
     print("MwalimuLens judge demo")
+    print("  Deterministic fast demo with live MCP calls; no Qwen inference in this run.")
+    for call in report["tool_calls"]:
+        source = (
+            "Borrowed read-only Filesystem MCP"
+            if call.get("source") == "borrowed_mcp"
+            else "Custom Education MCP"
+        )
+        print(f"  {call.get('tool_name')}: {str(call.get('status', '')).upper()} | {source}")
     print(f"  Education evidence retrieval: {_check(report, 'education_evidence_retrieved')}")
     print(f"  Borrowed reference read: {_check(report, 'borrowed_reference_read')}")
-    print(f"  Candidate pending review: {_check(report, 'candidate_created')}")
+    candidate = report.get("candidate") or {}
+    print(f"  Candidate status: {candidate.get('status', 'No candidate')}")
+    print(f"  Teacher decisions: {report['teacher_review_count']}")
+    print(f"  Profile updates: {report['profile_update_count']}")
     print(f"  Human gate untouched: {_check(report, 'human_gate_untouched')}")
-    print(f"  Real Qwen validation: {_check(report, 'real_qwen_evidence_passed')}")
+    print("Separate committed evidence (not rerun here):")
+    print(
+        f"  Real Qwen2.5 3B: {_check(report, 'real_qwen_evidence_passed')}"
+        " | evidence/open_weights_run.json"
+    )
+    print(
+        f"  Challenge run: {_check(report, 'challenge_evidence_passed')}"
+        " | evidence/challenge_run.json"
+    )
     print(f"DEMO RUN: {report['status'].upper()}")
     print(f"Open: {html_path.resolve()}")
 
