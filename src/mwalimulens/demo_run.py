@@ -15,7 +15,6 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from mwalimulens.agent.borrowed_filesystem import (
     BORROWED_FILESYSTEM_TOOL_ALLOWLIST,
-    DEFAULT_BORROWED_MCP_STDERR,
     DEFAULT_REFERENCE_DIR,
     build_borrowed_filesystem_toolset,
 )
