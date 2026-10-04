@@ -8,22 +8,27 @@ The separately committed Qwen2.5 3B run remains the open-weights evidence.
 
 ## Before recording
 
-From the repository root:
+Prepare and validate the environment once before starting the screen capture:
 
 ```powershell
 git switch main
 git pull --ff-only origin main
-python scripts/run_demo.py
-```
-
-The command prepares the environment, runs the short MCP workflow and opens
-`runtime/mwalimulens_demo.html`.
-
-For a dry run without opening the browser automatically:
-
-```powershell
 python scripts/run_demo.py --no-open
 ```
+
+This bootstrap step installs/reuses the local environment and validates the fast demo without
+opening the browser.
+
+## Start the actual recording
+
+Begin the unedited screen capture with the terminal visible, then run the real fast MCP workflow:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.demo_run
+```
+
+This command performs the live MCP calls and opens `runtime/mwalimulens_demo.html`. Capture the
+terminal PASS summary briefly before moving to the browser page.
 
 The terminal should finish with:
 
