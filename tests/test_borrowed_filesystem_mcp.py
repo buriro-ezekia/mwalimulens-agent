@@ -78,7 +78,7 @@ def test_filesystem_stdio_spec_requires_local_install(tmp_path) -> None:
     reference_dir = tmp_path / "reference"
     reference_dir.mkdir()
 
-    with pytest.raises(ValueError, match="run npm install"):
+    with pytest.raises(ValueError, match="run npm ci"):
         filesystem_stdio_spec(
             reference_dir,
             entrypoint=tmp_path / "missing.js",
