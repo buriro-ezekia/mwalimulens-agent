@@ -65,12 +65,12 @@ def test_readme_has_exact_one_command_run_path() -> None:
     assert (ROOT / "scripts" / "run_challenge.py").is_file()
 
 
-def test_challenge_contract_tracks_one_command_evidence_gate() -> None:
+def test_challenge_contract_tracks_one_command_evidence() -> None:
     content = normalise_whitespace(read("docs/challenge-requirements.md").lower())
 
     assert "python scripts/run_challenge.py" in content
-    assert "pending real one-command" in content
-
+    assert "evidence/challenge_run.json" in content
+    assert "present" in content
 
 
 def test_readme_separates_fast_demo_from_real_qwen_evidence() -> None:
@@ -81,8 +81,8 @@ def test_readme_separates_fast_demo_from_real_qwen_evidence() -> None:
     assert "evidence/open_weights_run.json" in content
 
 
-def test_demo_requirement_is_ready_to_record_not_present() -> None:
+def test_demo_requirement_is_not_claimed_complete_without_video() -> None:
     content = read("docs/challenge-requirements.md")
 
-    assert "Ready to record" in content
+    assert "Pending demo validation" in content
     assert "| Demo under 3 minutes" in content
