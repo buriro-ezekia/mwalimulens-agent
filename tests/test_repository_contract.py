@@ -29,8 +29,8 @@ def test_readme_states_product_boundary_and_theme() -> None:
     assert "longitudinal strength tracking" in content
     assert "teacher decides" in content
     assert "borrowed mcp server" in content
-    assert "user interface" in content
-    assert "unfinished" in content
+    assert "fast judge demo" in content
+    assert "real qwen2.5 3b" in content
 
 
 def test_architecture_has_explicit_human_gate() -> None:
@@ -49,7 +49,7 @@ def test_challenge_contract_names_four_initial_tools() -> None:
         "record_teacher_review",
     }
     missing = {name for name in expected if name not in content}
-    assert not missing, f"missing planned MCP tools: {sorted(missing)}"
+    assert not missing, f"missing MCP tools: {sorted(missing)}"
 
 
 def test_challenge_contract_preserves_required_eval_failure() -> None:
@@ -70,3 +70,19 @@ def test_challenge_contract_tracks_one_command_evidence_gate() -> None:
 
     assert "python scripts/run_challenge.py" in content
     assert "pending real one-command" in content
+
+
+
+def test_readme_separates_fast_demo_from_real_qwen_evidence() -> None:
+    content = normalise_whitespace(read("README.md").lower())
+
+    assert "deterministic local model" in content
+    assert "not presented as the open-weights evidence" in content
+    assert "evidence/open_weights_run.json" in content
+
+
+def test_demo_requirement_is_ready_to_record_not_present() -> None:
+    content = read("docs/challenge-requirements.md")
+
+    assert "Ready to record" in content
+    assert "| Demo under 3 minutes" in content
