@@ -8,8 +8,8 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 VENV_DIR = PROJECT_ROOT / ".venv"
@@ -50,6 +50,18 @@ def parse_node_major(value: str) -> int:
     if match is None:
         raise BootstrapError(f"Could not parse Node version: {value!r}")
     return int(match.group(1))
+
+
+def ensure_node_supported(value: str) -> int:
+    """Require the Node major version needed by the pinned npm dependency graph."""
+
+    major = parse_node_major(value)
+    if major < MIN_NODE_MAJOR:
+        raise BootstrapError(
+            f"Node {MIN_NODE_MAJOR}+ is required for the pinned MCP dependency. "
+            f"Found {value.strip() or 'unknown'}."
+        )
+    return major
 
 
 def require_command(name: str) -> str:
@@ -120,15 +132,10 @@ def bootstrap_environment() -> Path:
         text=True,
         check=False,
     ).stdout.strip()
-    major = parse_node_major(node_version)
-    if major < MIN_NODE_MAJOR:
-        raise BootstrapError(
-            f"Node {MIN_NODE_MAJOR}+ is required for the pinned MCP dependency. "
-            f"Found {node_version or 'unknown'}."
-        )
+    ensure_node_supported(node_version)
 
     run_checked(
-        [npm, "ci"],
+        [npm, "ci", "--no-audit", "--no-fund"],
         label="Install pinned borrowed-MCP npm dependencies",
     )
     return python_path
