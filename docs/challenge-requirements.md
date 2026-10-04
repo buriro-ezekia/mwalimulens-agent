@@ -5,8 +5,8 @@ Official brief: https://agentic-africa-challenge.lovable.app/tracks/education
 Last checked: 2026-10-02
 
 This document is the repository-level implementation contract. It distinguishes challenge
-requirements from planned MwalimuLens evidence so that the README and demo do not overclaim
-unfinished work.
+requirements from MwalimuLens evidence so that the README and demo do not overclaim what has
+actually been validated.
 
 ## Selected theme
 
@@ -29,10 +29,10 @@ or subject pathway.
 | Gate consequential/irreversible actions | Named approve/edit/reject teacher gate; profile update only after approve/edit | Present |
 | Public repository with OSI-approved licence | Public GitHub repository + Apache-2.0 | Present |
 | README supports reproducible execution | `python scripts/run_challenge.py` + promoted `evidence/challenge_run.json` | Present |
-| `ARCHITECTURE.md` | One-page agent/MCP boundary | Present in this slice |
+| `ARCHITECTURE.md` | One-page agent/MCP boundary | Present |
 | `EVALS.md` with at least 8 tasks | 13-case reproducible suite + promoted `evidence/evals_run.json` | Present |
 | Include one genuine unfixed failure | Real Qwen 1.5B/3B workflow failures preserved under `evidence/failures/` with next attempt | Present |
-| Demo under 3 minutes | Unedited real run with visible tool calls | Planned |
+| Demo under 3 minutes | Fast real-MCP browser demo + timed recording guide | Ready to record |
 
 ## Safety and human-decision invariants
 
