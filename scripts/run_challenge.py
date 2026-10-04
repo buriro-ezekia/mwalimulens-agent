@@ -82,12 +82,15 @@ def run_checked(
     """Run one bootstrap step and fail at its original exit code."""
 
     print(f"==> {label}")
-    completed = subprocess.run(
-        list(command),
-        cwd=PROJECT_ROOT,
-        env=env,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            list(command),
+            cwd=PROJECT_ROOT,
+            env=env,
+            check=False,
+        )
+    except OSError as exc:
+        raise BootstrapError(f"{label} could not start: {exc}") from exc
     if completed.returncode != 0:
         raise BootstrapError(
             f"{label} failed with exit code {completed.returncode}: "
