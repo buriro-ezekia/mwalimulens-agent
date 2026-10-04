@@ -25,6 +25,11 @@ def test_bootstrap_parses_node_version() -> None:
     assert bootstrap.parse_node_major("20.10.0") == 20
 
 
+def test_bootstrap_rejects_old_node() -> None:
+    with pytest.raises(bootstrap.BootstrapError, match="Node 20"):
+        bootstrap.ensure_node_supported("v18.20.0")
+
+
 def test_bootstrap_builds_installed_package_command(tmp_path) -> None:
     python_path = tmp_path / "python"
     command = bootstrap.build_challenge_command(
