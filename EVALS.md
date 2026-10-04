@@ -57,6 +57,10 @@ subsequent fixes. Their purpose is to show run variation and the failure-driven 
 The current successful Qwen run is E11. It demonstrates that the later implementation corrected
 the workflow while the earlier failures remain inspectable under `evidence/failures/`.
 
+## Promoted evidence
+
+The passing evaluation report is committed at `evidence/evals_run.json`.
+
 ## Evaluation limitations
 
 This suite uses synthetic learner data and a small number of longitudinal cases. It validates the
