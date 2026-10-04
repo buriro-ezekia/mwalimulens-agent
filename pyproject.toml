@@ -19,6 +19,10 @@ dependencies = [
   "fastmcp-slim[client]>=4,<5",
 ]
 
+[project.scripts]
+mwalimulens-challenge = "mwalimulens.challenge_run:main"
+mwalimulens-demo = "mwalimulens.demo_run:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3",
