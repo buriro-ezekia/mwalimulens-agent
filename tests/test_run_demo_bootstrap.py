@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "run_demo.py"
 SPEC = importlib.util.spec_from_file_location("mwalimulens_demo_bootstrap", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
-demo_bootstrap = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(demo_bootstrap)
+sys.path.insert(0, str(SCRIPT.parent))
+try:
+    demo_bootstrap = importlib.util.module_from_spec(SPEC)
+    SPEC.loader.exec_module(demo_bootstrap)
+finally:
+    sys.path.remove(str(SCRIPT.parent))
 
 
 def test_demo_command_uses_installed_package(tmp_path) -> None:
