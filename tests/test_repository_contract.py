@@ -58,7 +58,6 @@ def test_challenge_contract_preserves_required_eval_failure() -> None:
     assert "at least 8" in content
 
 
-
 def test_readme_has_exact_one_command_run_path() -> None:
     content = read("README.md")
 
