@@ -6,22 +6,21 @@ agent task run on an open-weights model.
 MwalimuLens defaults to:
 
 - provider: Ollama;
-- model: `qwen2.5:1.5b`;
+- model: `qwen2.5:3b`;
 - endpoint: `http://localhost:11434/v1`;
 - agent MCP allowlist: `get_learner_timeline`, `get_competency_evidence`,
   `flag_pattern_for_review`.
 
 The model never receives `record_teacher_review`.
 
-## Why Qwen2.5 1.5B
+## Why Qwen2.5 3B
 
-The default uses Qwen2.5 1.5B to keep local resource requirements modest. Ollama lists the
-Qwen2.5 family, including the 1.5B variant, as tool-capable, so it can exercise the real MCP
-workflow without requiring a larger model by default.
+The default is Qwen2.5 3B because that is the local model that completed the validated challenge
+workflow while preserving the human-review boundary. The smaller 1.5B model remains useful as
+historical failure evidence, but it is no longer the default judge path.
 
-The model name remains configurable. If the 1.5B model produces an honest tool-calling failure,
-preserve that result for later evaluation and retry with a stronger local Qwen model rather than
-weakening the safety checks.
+The model name remains configurable. Any alternative run uses the same MCP tool allowlist and the
+same safety checks; changing model size does not weaken the review gate.
 
 ## 1. Prepare the project environment
 
@@ -49,10 +48,10 @@ No broken requirements found.
 ollama list
 ```
 
-If `qwen2.5:1.5b` is not present:
+If `qwen2.5:3b` is not present:
 
 ```powershell
-ollama pull qwen2.5:1.5b
+ollama pull qwen2.5:3b
 ```
 
 Make sure the local Ollama service is running before the task.
@@ -152,14 +151,14 @@ evaluation evidence rather than overwritten.
 For a different local Qwen model:
 
 ```powershell
-$env:MWALIMULENS_OLLAMA_MODEL = "qwen2.5:3b"
+$env:MWALIMULENS_OLLAMA_MODEL = "qwen2.5:1.5b"
 .\.venv\Scripts\python.exe -m mwalimulens.agent.open_weights_run
 ```
 
 Or use the CLI flag:
 
 ```powershell
-.\.venv\Scripts\python.exe -m mwalimulens.agent.open_weights_run --model qwen2.5:3b
+.\.venv\Scripts\python.exe -m mwalimulens.agent.open_weights_run --model qwen2.5:1.5b
 ```
 
 The same model-facing MCP safety boundary is used regardless of which local Qwen model is chosen.

@@ -82,7 +82,7 @@ def filesystem_stdio_spec(
         raise ValueError(f"reference directory does not exist: {reference_dir}")
     if not entrypoint.is_file():
         raise ValueError(
-            "borrowed Filesystem MCP entrypoint is missing; run npm install "
+            "borrowed Filesystem MCP entrypoint is missing; run npm ci "
             f"before the smoke test: {entrypoint}"
         )
 

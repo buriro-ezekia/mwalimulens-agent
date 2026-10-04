@@ -10,7 +10,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from mwalimulens.agent.ollama import OllamaSettings, build_ollama_agent
+from mwalimulens.agent.ollama import (
+    DEFAULT_OLLAMA_MODEL,
+    OllamaSettings,
+    build_ollama_agent,
+)
 from mwalimulens.agent.orchestrator import (
     AGENT_MCP_TOOL_ALLOWLIST,
     CANDIDATE_REVIEW_POLICY,
@@ -283,7 +287,10 @@ def main() -> int:
     parser.add_argument(
         "--model",
         default=None,
-        help="Ollama model name; defaults to MWALIMULENS_OLLAMA_MODEL or qwen2.5:1.5b.",
+        help=(
+            "Ollama model name; defaults to MWALIMULENS_OLLAMA_MODEL "
+            f"or {DEFAULT_OLLAMA_MODEL}."
+        ),
     )
     parser.add_argument(
         "--base-url",

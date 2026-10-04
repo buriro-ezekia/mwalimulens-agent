@@ -16,7 +16,7 @@ The version is pinned so judges reproduce the same tool schemas and annotations.
 Install the pinned borrowed dependency once at repository root:
 
 ```powershell
-npm install
+npm ci
 ```
 
 MwalimuLens then launches the installed upstream JavaScript entrypoint directly with Node:
@@ -100,7 +100,7 @@ Install the pinned npm dependency, then run the upstream server through the Mwal
 harness:
 
 ```powershell
-npm install
+npm ci
 .\.venv\Scripts\python.exe -m mwalimulens.agent.borrowed_mcp_run
 $LASTEXITCODE
 Get-Content runtime\borrowed_mcp_run.json

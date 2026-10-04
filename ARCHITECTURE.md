@@ -6,7 +6,7 @@ MwalimuLens is a bounded teacher decision-support agent for longitudinal learner
 The agent may retrieve, compare and summarise evidence, but the teacher retains authority over
 consequential interpretation and profile changes.
 
-## Challenge slice
+## System flow
 
 ```text
 Synthetic learner evidence
@@ -72,7 +72,7 @@ decision gate enforceable in code.
 The challenge implementation uses synthetic learner data. Real learner records, especially
 records concerning minors, are not required for demonstrating the workflow.
 
-## Planned implementation order
+## Implementation path
 
 1. Evidence-first domain model and realistic synthetic fixtures.
 2. Custom Education MCP server and contract tests.
@@ -96,4 +96,9 @@ The official borrowed Filesystem MCP integration is implemented for generic loca
 reference access. It is sandboxed to `data/reference/`, filtered to an explicit read-only
 allowlist, audited through the same runtime state, and pinned to the legacy initialize handshake
 required by the upstream JS MCP SDK. A passing real smoke report is committed at
-`evidence/borrowed_mcp_run.json`. The interface remains planned.
+`evidence/borrowed_mcp_run.json`.
+
+The judge-facing demo is implemented as a fast deterministic orchestration over the same custom
+and borrowed MCP boundaries. It generates a self-contained browser page and deliberately does not
+pretend to be the open-weights validation; the separate passing Qwen2.5 3B evidence remains
+authoritative for that requirement.
