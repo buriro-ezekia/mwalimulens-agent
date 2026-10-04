@@ -28,7 +28,7 @@ or subject pathway.
 | Log every tool action | Tool-call audit records for success/failure with inputs, outputs/errors and timestamps | Present |
 | Gate consequential/irreversible actions | Named approve/edit/reject teacher gate; profile update only after approve/edit | Present |
 | Public repository with OSI-approved licence | Public GitHub repository + Apache-2.0 | Present |
-| README supports reproducible execution | One-command run path | Planned |
+| README supports reproducible execution | `python scripts/run_challenge.py`; real promotion pending | Pending real one-command |
 | `ARCHITECTURE.md` | One-page agent/MCP boundary | Present in this slice |
 | `EVALS.md` with at least 8 tasks | 13-case reproducible suite + promoted `evidence/evals_run.json` | Present |
 | Include one genuine unfixed failure | Real Qwen 1.5B/3B workflow failures preserved under `evidence/failures/` with next attempt | Present |
