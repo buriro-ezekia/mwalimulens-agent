@@ -56,6 +56,10 @@ Keep draft readiness separate from the video requirement: the latter still needs
 
 ## Remaining submission blocker
 
+The [final OBS recording launcher](final-recording-automation.md) provides non-recording dry-run
+and full preflight modes, timed live MCP capture and saved-file checks. Its automated checks do
+not replace the owner's real OBS/browser/narration playback check or supply a public video URL.
+
 The repository cannot prove the **under-three-minute demo video** until a real recording exists.
 
 The fast demo has now passed locally with the real custom and borrowed MCP boundaries: evidence

@@ -1,5 +1,9 @@
 # Windows demo production guide
 
+For the final male narration asset and automated OBS take, use
+[final recording automation](final-recording-automation.md). The guide below covers the
+alternative human-voiced manual recording; its timing and microphone settings differ.
+
 Use this to prepare a **single continuous 2:30–2:45 take**, targeting 2:40 and strictly under
 3:00. The project owner records locally with their own voice. No recording or upload is performed
 by this package, and no audio/video files belong in this repository.

@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import json
 import os
+import sys
 import webbrowser
 from pathlib import Path
 from typing import Any
@@ -342,6 +343,16 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    recording_url = os.environ.get("MWALIMULENS_RECORDING_URL") if args.open else None
+    if recording_url:
+        from mwalimulens.recording_browser import RecordingBrowserError, validate_recording_url
+
+        try:
+            validate_recording_url(recording_url)
+        except RecordingBrowserError as exc:
+            print(f"Recording browser: {exc}", file=sys.stderr)
+            return 2
+
     report = asyncio.run(
         run_demo(
             report_path=args.report,
@@ -350,7 +361,26 @@ def main() -> int:
     )
     print_demo_summary(report, args.html)
     if args.open and report["status"] == "pass":
-        webbrowser.open(args.html.resolve().as_uri())
+        if recording_url:
+            from mwalimulens.recording_browser import notify_recording_ready
+
+            try:
+                # The coordinator holds the terminal summary before opening this fresh page.
+                notify_recording_ready(recording_url, args.html)
+            except RecordingBrowserError as exc:
+                print(f"Recording browser: {exc}", file=sys.stderr)
+                return 2
+        else:
+            try:
+                opened = webbrowser.open(args.html.resolve().as_uri())
+            except (OSError, webbrowser.Error):
+                opened = False
+            if not opened:
+                print(
+                    "Demo passed, but the browser could not open. Open the HTML above.",
+                    file=sys.stderr,
+                )
+                return 2
     return 0 if report["status"] == "pass" else 2
 
 
