@@ -56,3 +56,18 @@ def test_challenge_contract_preserves_required_eval_failure() -> None:
     content = normalise_whitespace(read("docs/challenge-requirements.md").lower())
     assert "one genuine unfixed failure" in content
     assert "at least 8" in content
+
+
+
+def test_readme_has_exact_one_command_run_path() -> None:
+    content = read("README.md")
+
+    assert "python scripts/run_challenge.py" in content
+    assert (ROOT / "scripts" / "run_challenge.py").is_file()
+
+
+def test_challenge_contract_tracks_one_command_evidence_gate() -> None:
+    content = normalise_whitespace(read("docs/challenge-requirements.md").lower())
+
+    assert "python scripts/run_challenge.py" in content
+    assert "pending real one-command" in content
