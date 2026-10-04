@@ -79,11 +79,11 @@ The final recording package targets **2:40 in one continuous take**. Start with 
 [final checklist](docs/demo-checklist.md). The [YouTube package](docs/youtube-package.md) includes
 title/description copy, upload verification and the final repository update.
 
-PR #24 remains draft until the owner completes a browser visual playback check and a full timed
-spoken rehearsal. Record at 1080p/30 fps with microphone narration and one continuous capture.
+The recording package is merged, and the final demo was captured as one continuous 1080p/30 fps
+take using the validated narration and recording automation.
 
-**Public demo video URL: pending** — add the verified public link and duration after recording.
-The video requirement remains **Ready to record** until then.
+**Public demo video:** [MwalimuLens Demo on YouTube](https://youtu.be/Zh9V_Ptc4ME) — verified
+duration **2:39.03**. The under-three-minute video requirement is **Present**.
 
 For the supplied final male narration (156.48 seconds), the
 [Windows recording automation](docs/final-recording-automation.md) coordinates OBS, the live
@@ -122,7 +122,7 @@ A passing real run is committed at `evidence/challenge_run.json`.
 | Evaluation suite | PASS | `evidence/evals_run.json` |
 | One-command workflow | PASS | `evidence/challenge_run.json` |
 | Historical model failures | Preserved | `evidence/failures/` |
-| Under-three-minute video | Ready to record; public video pending | [Final recording package](docs/demo-guide.md) |
+| Under-three-minute video | Present | [Public demo — 2:39.03](https://youtu.be/Zh9V_Ptc4ME) |
 
 The evaluation report contains **11 current PASS cases and 2 preserved historical FAIL cases**.
 Those failures are intentionally retained rather than rewritten after later fixes.

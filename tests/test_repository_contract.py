@@ -83,8 +83,9 @@ def test_readme_separates_fast_demo_from_real_qwen_evidence() -> None:
     assert "evidence/open_weights_run.json" in content
 
 
-def test_demo_requirement_is_ready_to_record_but_not_present() -> None:
+def test_demo_requirement_is_present_with_public_video() -> None:
     content = read("docs/challenge-requirements.md")
 
-    assert "Ready to record" in content
     assert "| Demo under 3 minutes" in content
+    assert "https://youtu.be/Zh9V_Ptc4ME" in content
+    assert "| Present |" in content

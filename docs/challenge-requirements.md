@@ -2,7 +2,7 @@
 
 Source: African Agentic AI Design Challenge — Education track, **The Long View**  
 Official brief: https://agentic-africa-challenge.lovable.app/tracks/education  
-Last checked: 2026-10-02
+Last checked: 2026-10-04
 
 This document is the repository-level implementation contract. It distinguishes challenge
 requirements from MwalimuLens evidence so that the README and demo do not overclaim what has
@@ -32,11 +32,12 @@ or subject pathway.
 | `ARCHITECTURE.md` | One-page agent/MCP boundary | Present |
 | `EVALS.md` with at least 8 tasks | 13-case reproducible suite + promoted `evidence/evals_run.json` | Present |
 | Include one genuine unfixed failure | Real Qwen 1.5B/3B workflow failures preserved under `evidence/failures/` with next attempt | Present |
-| Demo under 3 minutes | Fast real-MCP demo + [2:40 recording package](demo-guide.md), [Windows production](demo-production.md) and [YouTube hand-off](youtube-package.md); public video pending | Ready to record |
+| Demo under 3 minutes | [Public MwalimuLens demo — 2:39.03](https://youtu.be/Zh9V_Ptc4ME), continuous real-MCP recording with captions and visible human gate | Present |
 
-**Public demo video URL: pending.** Replace this with the real public link and verified duration
-after recording and checking signed-out playback. Only then mark the video requirement **Present**.
-The script and storyboard alone do not satisfy the video requirement.
+**Public demo video:** [https://youtu.be/Zh9V_Ptc4ME](https://youtu.be/Zh9V_Ptc4ME) —
+verified duration **2:39.03**. The owner verified 1080p playback on 4 October 2026. The published
+continuous take shows the live MCP workflow, counter-evidence, pending teacher-review gate,
+separate committed Qwen validation and the prototype limitation.
 
 ## Safety and human-decision invariants
 

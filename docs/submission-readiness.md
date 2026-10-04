@@ -2,7 +2,7 @@
 
 **Repository audit date:** 4 October 2026
 
-This note records the final repository-side review before the demo video is recorded.
+This note records the final repository-side review after the demo video was recorded and published.
 
 ## Strong, inspectable requirements
 
@@ -38,37 +38,33 @@ The repository already contains evidence for:
   validation, and exposes the actual pending status beside the human review counts.
 - The [Windows production guide](demo-production.md) covers capture, sound, rehearsal and the
   complete take; [operator cues](demo-operator-cues.md) keep on-the-day actions short.
-- The [YouTube package](youtube-package.md) supplies upload copy, playback checks and exact
-  post-upload repository updates. No recording, media file or public video URL is supplied.
+- The [YouTube package](youtube-package.md) supplied the upload copy and verification workflow.
+- The final continuous demo was recorded at 1920×1080/30 fps, measured at **2:39.03**, remuxed to
+  MP4, uploaded with captions, and verified at 1080p.
+- Public demo: [https://youtu.be/Zh9V_Ptc4ME](https://youtu.be/Zh9V_Ptc4ME).
 
-## Owner checks before leaving draft
+## Final owner checks completed
 
-PR #24 stays **draft** until the project owner has completed both:
+The owner completed the final visual and playback review on 4 October 2026. The published take is
+one continuous **2:39.03** recording and preserves the intended evidence sequence: the live command,
+counter-evidence, three audited MCP calls, the pending teacher-review state, **1 pending / 0 teacher
+decisions / 0 profile updates**, separate committed Qwen2.5 3B validation and the explicit
+real-classroom limitation. Captions were added to the published video, and 1080p playback was
+verified.
 
-1. A browser visual playback check on the recording machine, with the command, counter-evidence,
-   three MCP calls, pending status, zero counts and separate Qwen path readable.
-2. A full spoken rehearsal with a stopwatch and real navigation, finishing in 2:30–2:45,
-   including the final two-second hold.
+## Demo video requirement completed
 
-Also complete the microphone playback test in the [pre-recording checklist](demo-checklist.md).
-These owner checks are pending; automated tests and script word counts do not complete them.
-Keep draft readiness separate from the video requirement: the latter still needs a verified URL.
+The under-three-minute demo requirement is now **Present**.
 
-## Remaining submission blocker
+- Public video: [https://youtu.be/Zh9V_Ptc4ME](https://youtu.be/Zh9V_Ptc4ME)
+- Verified local master duration: **2:39.03**
+- Resolution/frame rate: **1920×1080 at 30 fps**
+- Video/audio: **H.264 + AAC**
+- Published captions: **Present**
+- 1080p playback verified: **4 October 2026**
 
-The [final OBS recording launcher](final-recording-automation.md) provides non-recording dry-run
-and full preflight modes, timed live MCP capture and saved-file checks. Its automated checks do
-not replace the owner's real OBS/browser/narration playback check or supply a public video URL.
-
-The repository cannot prove the **under-three-minute demo video** until a real recording exists.
-
-The fast demo has now passed locally with the real custom and borrowed MCP boundaries: evidence
-retrieval PASS, borrowed reference read PASS, candidate creation PASS, human gate untouched, and
-separate committed real Qwen validation PASS. The challenge matrix is therefore **Ready to record**.
-
-It must not become **Present** until the final under-three-minute public video URL is available
-and signed-out playback is verified. The README and challenge matrix contain explicit pending
-URL placeholders; no public video is claimed by the recording package.
+The deterministic recording remains distinct from the committed real Qwen evidence. No promoted
+model/evaluation evidence, historical failures or human-review semantics were changed.
 
 ## Known limitations
 
@@ -80,15 +76,11 @@ These are documented rather than hidden:
 - no claim of educational validity across real schools or curricula; and
 - no autonomous learner classification or pathway assignment.
 
-## Final pre-submission checks after video recording
+## Final pre-submission checks
 
-1. Follow the [final recording checklist](demo-checklist.md): one continuous take, live command,
-   visible evidence and gate, natural voice, ideally 2:30–2:45 and strictly under 3:00.
-2. Follow the [YouTube verification and post-upload steps](youtube-package.md): finish HD
-   processing, verify signed-out playback, then add the real URL and duration to the README,
-   challenge evidence map and this audit; mark the video **Present**.
-3. Keep full Qwen reproducibility checks separate and off camera. The existing committed PASS
-   reports remain the open-weights proof; do not overwrite or promote them from the fast demo.
-4. Run the full deterministic test suite and Ruff for the final submission-state update.
-5. Review the diff and `git status`; exclude generated media and preserve historical failures.
-6. Confirm the submission references the final `main` commit and public video URL.
+1. Keep full Qwen reproducibility evidence separate from the deterministic recording; the existing
+   committed PASS reports remain the open-weights proof.
+2. Run the full deterministic test suite and Ruff after this submission-state update.
+3. Review the final diff and `git status`; exclude generated media and preserve historical failures.
+4. Confirm the submission references the final `main` commit and
+   [public video](https://youtu.be/Zh9V_Ptc4ME).
