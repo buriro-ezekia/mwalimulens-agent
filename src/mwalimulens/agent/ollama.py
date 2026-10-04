@@ -15,7 +15,7 @@ from pydantic_ai.providers.ollama import OllamaProvider
 from mwalimulens.agent.orchestrator import build_agent
 from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR, DEFAULT_STATE_PATH
 
-DEFAULT_OLLAMA_MODEL = "qwen2.5:1.5b"
+DEFAULT_OLLAMA_MODEL = "qwen2.5:3b"
 DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434/v1"
 
 
