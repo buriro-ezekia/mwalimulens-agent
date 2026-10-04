@@ -113,7 +113,6 @@ def test_challenge_report_fails_if_agent_crosses_human_gate(monkeypatch) -> None
     assert report["checks"]["human_gate_preserved"] is False
 
 
-
 def test_ollama_preflight_rejects_non_local_endpoint() -> None:
     settings = OllamaSettings(
         model_name="qwen2.5:3b",
