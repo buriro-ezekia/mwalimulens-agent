@@ -14,6 +14,7 @@ def render_demo_html(report: dict[str, Any]) -> str:
     evidence_rows = "".join(_render_evidence_row(row) for row in report["evidence"])
     tool_rows = "".join(_render_tool_row(call) for call in report["tool_calls"])
     eval_summary = report["evaluation_validation"].get("summary") or {}
+    qwen = report["real_qwen_validation"]
 
     return f"""<!doctype html>
 <html lang="en">
@@ -29,7 +30,21 @@ def render_demo_html(report: dict[str, Any]) -> str:
 }}
 * {{ box-sizing: border-box; }}
 body {{ margin: 0; }}
+section {{ scroll-margin-top: 80px; }}
 main {{ max-width: 1180px; margin: 0 auto; padding: 28px 24px 48px; }}
+nav {{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 0;
+  background: #f4f7fb;
+}}
+nav a {{ color: #14213d; padding: 8px 10px; border-radius: 8px; font-size: 14px; }}
+nav a:hover, nav a:focus-visible {{ background: #dce5f5; }}
+code {{ overflow-wrap: anywhere; }}
 .hero {{
   background: #14213d;
   color: white;
@@ -45,6 +60,7 @@ main {{ max-width: 1180px; margin: 0 auto; padding: 28px 24px 48px; }}
 }}
 h1 {{ margin: 8px 0 10px; font-size: 38px; }}
 .hero p {{ max-width: 780px; margin: 0; line-height: 1.55; color: #dce5f5; }}
+.hero .mode-note {{ margin-top: 16px; font-size: 14px; }}
 .badges {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }}
 .badge {{
   display: inline-flex;
@@ -60,6 +76,7 @@ h1 {{ margin: 8px 0 10px; font-size: 38px; }}
   margin-top: 18px;
 }}
 .card {{
+  min-width: 0;
   background: white;
   border: 1px solid #e3e8f0;
   border-radius: 18px;
@@ -94,7 +111,9 @@ th {{
 .role-counter {{ color: #a4422c; }}
 .role-neutral {{ color: #68758a; }}
 .tool {{ display: flex; gap: 10px; align-items: flex-start; margin: 11px 0; }}
+.tool strong {{ overflow-wrap: anywhere; }}
 .dot {{
+  flex-shrink: 0;
   width: 10px;
   height: 10px;
   margin-top: 6px;
@@ -110,7 +129,10 @@ th {{
   gap: 10px;
 }}
 .validation > div {{ background: #f6f8fc; border-radius: 14px; padding: 14px; }}
+#validation {{ grid-column: 1 / -1; }}
 .pass {{ color: #18794e; font-weight: 700; }}
+.fail {{ color: #a4422c; font-weight: 700; }}
+.table-scroll {{ overflow-x: auto; }}
 footer {{ margin-top: 20px; color: #68758a; font-size: 13px; }}
 @media (max-width: 860px) {{
   .grid, .kpis, .validation {{ grid-template-columns: 1fr; }}
@@ -130,12 +152,24 @@ footer {{ margin-top: 20px; color: #68758a; font-size: 13px; }}
     pattern; the teacher decides what it means.
   </p>
   <div class="badges">
-    <span class="badge">Fast live MCP demo</span>
-    <span class="badge">Real Qwen2.5 3B validation: PASS</span>
+    <span class="badge">Deterministic fast demo · live MCP</span>
     <span class="badge">Human review required</span>
     <span class="badge">Synthetic learner data</span>
   </div>
+  <p class="mode-note">
+    This deterministic sequence makes real MCP calls. Open-weights validation is a separate
+    committed run; no Qwen inference runs in this demo.
+  </p>
 </section>
+
+<nav aria-label="Demo sections">
+  <a href="#evidence">Evidence</a>
+  <a href="#activity">MCP activity</a>
+  <a href="#candidate">Candidate</a>
+  <a href="#gate">Human gate</a>
+  <a href="#validation">Separate validation</a>
+  <a href="#limitation">Limitation</a>
+</nav>
 
 <section class="kpis">
   <div class="kpi">
@@ -157,29 +191,37 @@ footer {{ margin-top: 20px; color: #68758a; font-size: 13px; }}
 </section>
 
 <div class="grid">
-<section class="card">
+<section class="card" id="evidence">
   <h2>Evidence timeline · MATH-FRACTIONS</h2>
   <p class="muted">
     The agent sees the evidence in event chronology, including counter-evidence.
   </p>
+  <div class="table-scroll">
   <table>
     <thead>
       <tr><th>Term</th><th>Evidence</th><th>Type</th><th>Value</th><th>Role</th></tr>
     </thead>
     <tbody>{evidence_rows}</tbody>
   </table>
+  </div>
 </section>
 
-<section class="card">
+<section class="card" id="activity">
   <h2>Visible MCP activity</h2>
   <p class="muted">
     These calls were made in this fast demo. The human review action is not model-visible.
   </p>
   {tool_rows}
+  <p class="muted">
+    The borrowed read-only Filesystem MCP reads a teaching reference, not learner evidence.
+  </p>
 </section>
 
-<section class="card candidate">
-  <h2>Candidate pattern — pending review</h2>
+<section class="card candidate" id="candidate">
+  <h2>Candidate pattern</h2>
+  <p class="muted">
+    <strong>Status:</strong> <code>{escape(str(candidate.get("status", "No candidate")))}</code>
+  </p>
   <p><strong>{escape(str(candidate.get("claim", "No candidate created")))}</strong></p>
   <p class="muted">{escape(str(candidate.get("uncertainty", "")))}</p>
   <p class="muted">
@@ -188,10 +230,11 @@ footer {{ margin-top: 20px; color: #68758a; font-size: 13px; }}
   </p>
 </section>
 
-<section class="card gate">
+<section class="card gate" id="gate">
   <h2>Human decision gate</h2>
   <p class="muted">
     The agent stops here. Approve, edit and reject remain separate teacher actions.
+    <code>record_teacher_review</code> is not model-visible.
   </p>
   <div class="validation">
     <div>
@@ -209,35 +252,38 @@ footer {{ margin-top: 20px; color: #68758a; font-size: 13px; }}
   </div>
 </section>
 
-<section class="card">
-  <h2>Independent validation</h2>
+<section class="card" id="validation">
+  <h2>Separate committed validation</h2>
+  <p class="muted">
+    These results come from committed evidence files, not the deterministic live demo above.
+  </p>
   <div class="validation">
     <div>
       <span class="muted">Real Qwen run</span><br>
-      <span class="pass">
-        {escape(str(report["real_qwen_validation"]["status"]).upper())}
-      </span><br>
-      <small>qwen2.5:3b</small>
+      {_render_status(qwen["status"])}<br>
+      <small>{escape(str(qwen.get("model", "Unknown model")))}</small><br>
+      <code>evidence/open_weights_run.json</code>
     </div>
     <div>
       <span class="muted">One-command run</span><br>
-      <span class="pass">
-        {escape(str(report["challenge_validation"]["status"]).upper())}
-      </span>
+      {_render_status(report["challenge_validation"]["status"])}<br>
+      <code>evidence/challenge_run.json</code>
     </div>
     <div>
-      <span class="muted">Current evals</span><br>
+      <span class="muted">Committed evals</span><br>
       <span class="pass">{eval_summary.get("current_pass", 0)} PASS</span><br>
       <small>
         {eval_summary.get("historical_fail_preserved", 0)} historical failures preserved
       </small>
+      <br><code>evidence/evals_run.json</code>
     </div>
   </div>
 </section>
 
-<section class="card limit">
+<section class="card limit" id="limitation">
   <h2>What this demo does not claim</h2>
   <p class="muted">{escape(report["limitation"])}</p>
+  <p class="muted">This synthetic prototype has not been validated in real classrooms.</p>
   <p class="muted">
     MwalimuLens does not rank learners, assign pathways or turn one score into a permanent label.
   </p>
@@ -274,9 +320,9 @@ def _render_evidence_row(row: dict[str, Any]) -> str:
 
 def _render_tool_row(call: dict[str, Any]) -> str:
     if call.get("source") == "borrowed_mcp":
-        source = "Borrowed Filesystem MCP"
+        source = "Borrowed read-only Filesystem MCP"
     else:
-        source = "Education MCP"
+        source = "Custom Education MCP"
 
     return (
         '<div class="tool"><span class="dot"></span><div>'
@@ -285,3 +331,9 @@ def _render_tool_row(call: dict[str, Any]) -> str:
         f"{escape(str(call.get('status', '')).upper())}</span>"
         "</div></div>"
     )
+
+
+def _render_status(status: Any) -> str:
+    result = str(status).upper()
+    css_class = "pass" if result == "PASS" else "fail"
+    return f'<span class="{css_class}">{escape(result)}</span>'

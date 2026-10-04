@@ -32,6 +32,27 @@ The repository already contains evidence for:
 - Stale "planned" and "in this slice" status language has been removed where implementation is
   complete.
 - Console entry points are available after installation for both the challenge run and demo.
+- The final [recording package](demo-guide.md) supplies a natural spoken script, a 2:40
+  command-first storyboard, short captions and a [recording checklist](demo-checklist.md).
+- The recording page identifies deterministic orchestration and separate committed Qwen
+  validation, and exposes the actual pending status beside the human review counts.
+- The [Windows production guide](demo-production.md) covers capture, sound, rehearsal and the
+  complete take; [operator cues](demo-operator-cues.md) keep on-the-day actions short.
+- The [YouTube package](youtube-package.md) supplies upload copy, playback checks and exact
+  post-upload repository updates. No recording, media file or public video URL is supplied.
+
+## Owner checks before leaving draft
+
+PR #24 stays **draft** until the project owner has completed both:
+
+1. A browser visual playback check on the recording machine, with the command, counter-evidence,
+   three MCP calls, pending status, zero counts and separate Qwen path readable.
+2. A full spoken rehearsal with a stopwatch and real navigation, finishing in 2:30–2:45,
+   including the final two-second hold.
+
+Also complete the microphone playback test in the [pre-recording checklist](demo-checklist.md).
+These owner checks are pending; automated tests and script word counts do not complete them.
+Keep draft readiness separate from the video requirement: the latter still needs a verified URL.
 
 ## Remaining submission blocker
 
@@ -39,9 +60,11 @@ The repository cannot prove the **under-three-minute demo video** until a real r
 
 The fast demo has now passed locally with the real custom and borrowed MCP boundaries: evidence
 retrieval PASS, borrowed reference read PASS, candidate creation PASS, human gate untouched, and
-real Qwen validation PASS. The challenge matrix is therefore **Ready to record**.
+separate committed real Qwen validation PASS. The challenge matrix is therefore **Ready to record**.
 
-It must not become **Present** until the final under-three-minute video URL is available.
+It must not become **Present** until the final under-three-minute public video URL is available
+and signed-out playback is verified. The README and challenge matrix contain explicit pending
+URL placeholders; no public video is claimed by the recording package.
 
 ## Known limitations
 
@@ -55,9 +78,13 @@ These are documented rather than hidden:
 
 ## Final pre-submission checks after video recording
 
-1. Confirm the final video is public and under the challenge time limit.
-2. Add the video URL to the README and challenge evidence map.
-3. Run `python scripts/run_challenge.py` one final time from `main`.
-4. Run the deterministic test suite and Ruff.
-5. Confirm `git status` contains no unintended files.
-6. Confirm the submission references the final `main` commit.
+1. Follow the [final recording checklist](demo-checklist.md): one continuous take, live command,
+   visible evidence and gate, natural voice, ideally 2:30–2:45 and strictly under 3:00.
+2. Follow the [YouTube verification and post-upload steps](youtube-package.md): finish HD
+   processing, verify signed-out playback, then add the real URL and duration to the README,
+   challenge evidence map and this audit; mark the video **Present**.
+3. Keep full Qwen reproducibility checks separate and off camera. The existing committed PASS
+   reports remain the open-weights proof; do not overwrite or promote them from the fast demo.
+4. Run the full deterministic test suite and Ruff for the final submission-state update.
+5. Review the diff and `git status`; exclude generated media and preserve historical failures.
+6. Confirm the submission references the final `main` commit and public video URL.
