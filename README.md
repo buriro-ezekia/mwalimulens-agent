@@ -57,6 +57,36 @@ committed at `evidence/open_weights_run.json`. The official borrowed Filesystem 
 passed its real read-only smoke run, with promoted evidence committed at
 `evidence/borrowed_mcp_run.json`. The 13-case reliability evaluation has also passed and is committed at `evidence/evals_run.json`. The user interface remains unfinished.
 
+## One-command challenge run
+
+From a clean checkout, the judge-facing workflow is:
+
+```powershell
+python scripts/run_challenge.py
+```
+
+External prerequisites are **Python 3.11+**, **Node.js 20+ with npm**, and a locally running
+**Ollama** instance with `qwen2.5:3b` already installed. The command does not install Ollama or
+download a model.
+
+The bootstrap creates/reuses `.venv`, installs MwalimuLens, installs the exact borrowed-MCP npm
+dependency graph with `npm ci`, then runs:
+
+1. the real local Qwen longitudinal task;
+2. the real official Filesystem MCP smoke; and
+3. the 13-case reliability evaluation.
+
+The final summary is written to `runtime/challenge_run.json`. Detailed component reports remain
+under `runtime/` for auditability.
+
+If the model is missing, install it once with:
+
+```powershell
+ollama pull qwen2.5:3b
+```
+
+See `docs/reproducible-run.md` for prerequisites, generated files and failure behaviour.
+
 ## Run the custom Education MCP server
 
 For a clean Windows setup, use the repository-local virtual environment so CLI executables stay
