@@ -14,7 +14,7 @@ from mwalimulens.agent.borrowed_filesystem import (
     BORROWED_FILESYSTEM_TOOL_ALLOWLIST,
     BORROWED_FILESYSTEM_WRITE_TOOLS,
 )
-from mwalimulens.agent.orchestrator import AGENT_MCP_TOOL_ALLOWLIST, AGENT_INSTRUCTIONS
+from mwalimulens.agent.orchestrator import AGENT_INSTRUCTIONS, AGENT_MCP_TOOL_ALLOWLIST
 from mwalimulens.domain import EvidenceType, load_synthetic_dataset
 from mwalimulens.mcp_server.server import PROJECT_ROOT
 from mwalimulens.mcp_server.service import EducationToolService
