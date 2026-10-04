@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from mwalimulens.challenge_run import DEFAULT_CHALLENGE_REPORT_PATH
+from mwalimulens.challenge_run import (
+    DEFAULT_CHALLENGE_MODEL,
+    DEFAULT_CHALLENGE_REPORT_PATH,
+)
 from mwalimulens.mcp_server.server import PROJECT_ROOT
 
 DEFAULT_CHALLENGE_EVIDENCE_PATH = PROJECT_ROOT / "evidence" / "challenge_run.json"
@@ -34,6 +37,10 @@ def promote_challenge_report(
         raise ValueError("challenge report must be a JSON object")
     if report.get("status") != "pass":
         raise ValueError("challenge report status must be pass before promotion")
+    if report.get("model") != DEFAULT_CHALLENGE_MODEL:
+        raise ValueError(
+            f"challenge evidence must use the default model: {DEFAULT_CHALLENGE_MODEL}"
+        )
 
     checks = report.get("checks")
     if not isinstance(checks, dict):
@@ -51,6 +58,8 @@ def promote_challenge_report(
     required_components = {"open_weights", "borrowed_mcp", "evaluations"}
     if not required_components.issubset(components):
         raise ValueError("challenge report is missing required component summaries")
+    if not all(components[name].get("status") == "pass" for name in required_components):
+        raise ValueError("every required challenge component must have status pass")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
