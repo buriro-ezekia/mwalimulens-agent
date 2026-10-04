@@ -1,8 +1,9 @@
-# Recording captions and cue sheet
+# Optional on-screen recording captions
 
 Use alongside the [storyboard](demo-guide.md#time-coded-storyboard) and
 [spoken script](demo-narration.md). These are optional short call-outs, not extra narration or
-full subtitles. The page's own labels are sufficient for a one-take recording. If using live
+full subtitles. For the short operator-only prompts, use the [operator cue sheet](demo-operator-cues.md)
+outside the capture. The page's own labels are sufficient for a one-take recording. If using live
 caption overlays, prepare them before capture, keep them clear of evidence and counters, and
 rehearse switching them. Do not add edits or cutaways to the continuous capture.
 

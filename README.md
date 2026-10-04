@@ -72,9 +72,15 @@ The page shows:
 The deterministic demo is not presented as the open-weights evidence. The real Qwen run is
 stored separately in `evidence/open_weights_run.json`.
 
-The final recording package targets **2:40 in one continuous take**: [storyboard and setup](docs/demo-guide.md),
-[natural spoken script](docs/demo-narration.md), [short captions](docs/demo-cues.md), and
-[final checklist](docs/demo-checklist.md).
+The final recording package targets **2:40 in one continuous take**. Start with the
+[Windows production guide](docs/demo-production.md), then use the [storyboard](docs/demo-guide.md),
+[natural spoken script and rehearsal](docs/demo-narration.md),
+[operator cue sheet](docs/demo-operator-cues.md), [optional captions](docs/demo-cues.md), and
+[final checklist](docs/demo-checklist.md). The [YouTube package](docs/youtube-package.md) includes
+title/description copy, upload verification and the final repository update.
+
+PR #24 remains draft until the owner completes a browser visual playback check and a full timed
+spoken rehearsal. Record at 1080p/30 fps with microphone narration and one continuous capture.
 
 **Public demo video URL: pending** — add the verified public link and duration after recording.
 The video requirement remains **Ready to record** until then.

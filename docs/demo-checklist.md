@@ -1,21 +1,38 @@
 # Final recording checklist
 
-Package: [guide and storyboard](demo-guide.md) · [narration](demo-narration.md) ·
-[captions and cues](demo-cues.md).
+Package: [Windows production](demo-production.md) · [storyboard](demo-guide.md) ·
+[narration/rehearsal](demo-narration.md) · [operator cues](demo-operator-cues.md) ·
+[optional captions](demo-cues.md) · [YouTube upload](youtube-package.md).
 
 ## Before capture
 
-- [ ] Use the reviewed recording revision; note its commit with `git rev-parse HEAD`.
-- [ ] Bootstrap off camera if needed: `python scripts/run_demo.py --no-open`.
-- [ ] Rehearse the exact live command with browser launch. Confirm `DEMO RUN: PASS` and that
-  the browser is ready by the 0:25 beat. Do not run the slow Qwen challenge path for the video.
-- [ ] Rehearse the complete script aloud with navigation. Aim for 2:30–2:45 at roughly
-  115–125 spoken words per minute; check the stopwatch, not just the word estimate.
-- [ ] Play back a short microphone and screen test. Voice is clear, conversational and unhurried;
-  text, tool names and the counter-observation are legible. No music is needed.
-- [ ] Put notes outside the capture; close old demo tabs and unrelated windows. Silence
-  notifications. Frame the terminal command without a long path wrapping it out of view.
+- [ ] Correct reviewed branch/commit: check `git branch --show-current` and `git rev-parse HEAD`.
+- [ ] `.venv` works: `.\.venv\Scripts\python.exe --version`. Bootstrap off camera if needed
+  with `python scripts/run_demo.py --no-open`.
+- [ ] Exact live command passes and opens the fresh browser page on the captured display;
+  aim for the browser around 0:25. No slow Qwen workflow is running.
+- [ ] 1920 × 1080 at 30 fps; tested start/stop controls; one continuous capture.
+- [ ] Microphone playback sounds natural and clear; no clipping, echo, music or system audio.
+- [ ] Screen playback is legible: command, counter-observation, tool names, pending status,
+  all three gate counts and committed Qwen evidence path. Browser zoom starts around 110%.
+- [ ] Full spoken stopwatch rehearsal with navigation finishes at 2:30–2:45, including
+  the two-second final hold. If longer, shorten wording/navigation; do not simply talk faster.
+- [ ] Notifications disabled; old demo tabs and unrelated windows closed.
+- [ ] Final local video folder selected **outside the repository**; enough free disk space for
+  test clips, several takes and the upload copy.
+- [ ] Script and operator cue sheet outside capture; cursor visible but kept still between cues.
 - [ ] Leave historical failures, model evidence and the human review gate untouched.
+
+Keep PR #24 **draft** until the owner has completed the browser visual playback check and
+the full timed spoken rehearsal. Record the results in your private recording notes:
+
+```text
+Recording branch/commit: ______________________
+Browser visual playback checked: ______________
+Full spoken rehearsal duration: _______________
+Microphone playback checked: __________________
+Local output folder: __________________________
+```
 
 ## During the single continuous take
 
@@ -40,10 +57,11 @@ Package: [guide and storyboard](demo-guide.md) · [narration](demo-narration.md)
 - [ ] Show and describe the **separate committed real Qwen2.5 3B PASS evidence**, with its
   source path visible. Never call the fast deterministic demo the open-weights run.
 - [ ] Leave the 2 historical model failures visible alongside the 11 current evaluation passes.
-- [ ] End with the honest limitation. Stop around 2:40, allowing a quiet final hold.
+- [ ] End with the honest limitation around 2:38; hold quietly for two seconds, stop around 2:40.
 
 If anything fails or the take runs long, correct the cause off camera and record a new whole
-take. Do not pause, splice, accelerate footage or use screenshots to stand in for MCP activity.
+take. Do not pause capture, splice, accelerate footage, add transitions or use screenshots to
+stand in for MCP activity. Normal spoken pauses are welcome.
 
 ## Playback and publication
 
@@ -53,18 +71,15 @@ take. Do not pause, splice, accelerate footage or use screenshots to stand in fo
   rushed speech or a flat, mechanical delivery. Use the creator's voice where possible.
 - [ ] Confirm the visible run ends with one pending candidate and both zero counts. Optional
   off-camera inspection: `runtime/demo_run.json` and `runtime/demo_state.json` retain the audit.
-- [ ] Upload the video to the chosen public host. Open the final URL in a signed-out/private
-  browser and play it; judges must not need an account or access request.
-- [ ] Replace the `Public demo video URL: pending` placeholders in
-  [README](../README.md#fast-judge-demo) and
-  [challenge requirements](challenge-requirements.md#non-negotiable-challenge-requirements).
-  Add a real Markdown link and the verified duration, not an example URL.
-- [ ] Only after public playback is verified, update the video row to **Present** and update
-  [submission readiness](submission-readiness.md). Until then it stays **Ready to record**.
+- [ ] Use the [YouTube package](youtube-package.md): upload complete, HD processing complete,
+  correct public link, signed-out/private playback, clear sound and readable text.
+- [ ] Follow its exact post-upload steps for README, challenge requirements and submission
+  readiness: real URL plus verified duration, then **Ready to record → Present**. Until verified,
+  leave the pending placeholders and status unchanged. Do not alter model/evaluation evidence.
 - [ ] Keep audio/video files outside the repository. Commit only the reviewed lightweight
   recording package and, later, the real public link/status updates.
-- [ ] Check the final diff and `git status`. If code or contracts changed, run the full suite and
-  Ruff before finalising:
+- [ ] Run the full suite and Ruff for the final submission-state update, then review the complete
+  diff and `git status` before committing only the intended text files:
 
   ```powershell
   .\.venv\Scripts\python.exe -m pytest -q

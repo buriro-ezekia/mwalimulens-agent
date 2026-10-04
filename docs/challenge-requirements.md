@@ -32,7 +32,7 @@ or subject pathway.
 | `ARCHITECTURE.md` | One-page agent/MCP boundary | Present |
 | `EVALS.md` with at least 8 tasks | 13-case reproducible suite + promoted `evidence/evals_run.json` | Present |
 | Include one genuine unfixed failure | Real Qwen 1.5B/3B workflow failures preserved under `evidence/failures/` with next attempt | Present |
-| Demo under 3 minutes | Fast real-MCP demo + [2:40 recording package](demo-guide.md); public video pending | Ready to record |
+| Demo under 3 minutes | Fast real-MCP demo + [2:40 recording package](demo-guide.md), [Windows production](demo-production.md) and [YouTube hand-off](youtube-package.md); public video pending | Ready to record |
 
 **Public demo video URL: pending.** Replace this with the real public link and verified duration
 after recording and checking signed-out playback. Only then mark the video requirement **Present**.

@@ -4,8 +4,11 @@ Record one continuous screen capture, including the command that runs the real M
 Aim for **2:30–2:45**, including the terminal, browser transitions and closing hold. The final
 file must be **under 3:00**. Setup happens before capture; there are no cuts or sped-up sections.
 
-Use the [spoken script](demo-narration.md), [short captions and cues](demo-cues.md), and
-[recording checklist](demo-checklist.md) together. Prefer the creator's own voice.
+Start with the [Windows production guide](demo-production.md). Use the
+[spoken script and rehearsal](demo-narration.md), [operator cue sheet](demo-operator-cues.md),
+[optional on-screen captions](demo-cues.md), and [recording checklist](demo-checklist.md).
+The [YouTube package](youtube-package.md) supplies upload text and the post-upload repository steps.
+Prefer the creator's own voice.
 
 ## What this recording proves
 
@@ -59,8 +62,9 @@ switch back to show `DEMO RUN: PASS`, then return to the new page.
 
 ## Time-coded storyboard
 
-Times include all movement and pauses. Follow the matching script sections; exact tool names
-are shown on screen rather than spelled out aloud.
+Times include all movement and pauses. These are approximate landmarks, not second-perfect
+deadlines; follow the matching script sections calmly. Exact tool names are shown on screen
+rather than spelled out aloud. The final two-second hold is inside the target duration.
 
 | Time | Surface and action | Evidence to hold visibly | Narration beat |
 |---|---|---|---|
@@ -70,7 +74,7 @@ are shown on screen rather than spelled out aloud.
 | 1:22–1:43 | **Browser → Candidate** (`#candidate`). Hold the claim, status, uncertainty and teacher question. | “Fraction performance improved across terms, while independent explanation remained mixed.” Actual status `pending_teacher_review`. | Only a candidate; uncertainty and a useful question for the teacher. |
 | 1:43–2:03 | **Browser → Human gate** (`#gate`). Keep the three counts together for the whole beat. | Pending candidates **1**; teacher decisions **0**; profile updates **0**. Human review action is not model-visible. | Teacher must approve, edit or reject. The live demo stops before any teacher decision. |
 | 2:03–2:25 | **Browser → Separate validation** (`#validation`). Keep the separate-evidence heading and source paths visible. | Committed `evidence/open_weights_run.json`: real Qwen2.5 3B PASS; `evidence/challenge_run.json`: PASS; 11 current evaluation passes and 2 preserved historical failures. | Earlier real model proof, explicitly separate from today's deterministic run. Do not open or read raw JSON during the take. |
-| 2:25–2:40 | **Browser → Limitation** (`#limitation`). Finish the last sentence, leave a short quiet hold, stop capture. | Synthetic prototype and limits of validation. | Close with the honest limitation in the script. |
+| 2:25–2:40 | **Browser → Limitation** (`#limitation`). Finish the last sentence around 2:38, hold for two quiet seconds, then stop capture around 2:40. | Synthetic prototype and limits of validation. | Close with the honest limitation in the script. |
 
 ## Timing and recovery
 
@@ -78,17 +82,21 @@ The script is paced for about 115–125 spoken words per minute. The first 25 se
 execution time: narration continues while the command runs. Rehearse on the recording machine;
 startup time and browser focus vary. The word count is a planning estimate, not a measured take.
 
-If the browser is not ready by 0:25, or a call fails, stop, resolve the cause off camera and
-restart the whole take. Do not fill the gap with a previous page or splice in a successful run.
-If the full rehearsal exceeds 2:45, remove dead navigation time and rehearse again; do not rush
-the evidence or the human gate. A stumble is a reason for a fresh continuous take, not a cut.
+Aim for the browser around 0:25; allow a little drift if the whole take still fits comfortably.
+If a call fails or startup prevents a calm finish by 2:45, stop, resolve the cause off camera
+and restart the whole take. Do not fill the gap with a previous page or splice in a successful
+run. If the full rehearsal exceeds 2:45, shorten awkward wording or navigation and rehearse
+again; do not simply speak faster. Preserve the counter-evidence and human gate. A natural
+pause is fine; any retake starts from the beginning, without cuts or transitions.
 
 No approving, editing or rejecting for visual effect. No changes to evidence files, historical
 failures or review permissions. No generated audio/video binaries belong in the repository.
 
 ## Publication hand-off
 
-The repository's video requirement stays **Ready to record**. After recording, use the
-[final checklist](demo-checklist.md) to verify the exported duration and public playback.
-Only then replace the public-video placeholders in the README and challenge evidence map and
-mark the video requirement **Present**.
+Keep PR #24 as draft until the owner completes the browser visual playback check and full
+timed spoken rehearsal. The repository's video requirement stays **Ready to record**.
+After recording, use the [final checklist](demo-checklist.md) and
+[YouTube upload/post-upload steps](youtube-package.md) to verify the exported duration and
+public playback. Only then replace the public-video placeholders in the README and challenge
+evidence map, update submission readiness and mark the video requirement **Present**.
