@@ -1,0 +1,72 @@
+{
+  "base_url": "http://localhost:11434/v1",
+  "checks": {
+    "borrowed_mcp_smoke_passed": true,
+    "evaluation_suite_passed": true,
+    "human_gate_preserved": true,
+    "ollama_preflight_passed": true,
+    "open_weights_task_passed": true
+  },
+  "components": {
+    "borrowed_mcp": {
+      "audited_tool_call_count": 1,
+      "error": null,
+      "report_path": "runtime\\challenge_borrowed_mcp_run.json",
+      "status": "pass",
+      "visible_tools": [
+        "get_file_info",
+        "list_allowed_directories",
+        "list_directory",
+        "read_multiple_files",
+        "read_text_file",
+        "search_files"
+      ]
+    },
+    "evaluations": {
+      "error": null,
+      "report_path": "runtime\\challenge_evals_run.json",
+      "status": "pass",
+      "summary": {
+        "current_fail": 0,
+        "current_pass": 11,
+        "current_regression_cases": 11,
+        "historical_fail_preserved": 2,
+        "historical_failure_cases": 2,
+        "total_cases": 13
+      }
+    },
+    "open_weights": {
+      "error": null,
+      "pending_review_count": 1,
+      "profile_update_count": 0,
+      "report_path": "runtime\\challenge_open_weights_run.json",
+      "status": "pass",
+      "teacher_review_count": 0
+    }
+  },
+  "environment": {
+    "fastmcp": "4.0.10",
+    "mcp": "2.2.0",
+    "node": "v24.16.0",
+    "npm": "11.13.0",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "pydantic_ai": "2.51.0",
+    "python": "3.14.6"
+  },
+  "finished_at": "2026-10-04T07:31:57.318937+00:00",
+  "model": "qwen2.5:3b",
+  "note": "This consolidated report contains summaries only. Component runtime reports retain the detailed auditable evidence.",
+  "preflight": {
+    "base_url": "http://localhost:11434/v1",
+    "error": null,
+    "model": "qwen2.5:3b",
+    "models_found": [
+      "qwen2.5:1.5b",
+      "qwen2.5:3b"
+    ],
+    "remediation": null,
+    "status": "pass"
+  },
+  "started_at": "2026-10-04T07:25:13.840564+00:00",
+  "status": "pass"
+}

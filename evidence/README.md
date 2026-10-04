@@ -57,3 +57,22 @@ Run:
 
 The committed `evals_run.json` records the passing 13-case evaluation: 11 current regression
 PASS cases and 2 intentionally preserved historical model FAIL cases.
+
+
+## One-command challenge run
+
+The clean-checkout bootstrap writes `runtime/challenge_run.json` plus separate component reports.
+
+Promote only a complete passing consolidated report:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.promote_challenge_run
+```
+
+Promotion to `evidence/challenge_run.json` is blocked unless the Ollama preflight, real
+open-weights task, borrowed-MCP smoke, evaluation suite and human-review boundary all pass.
+
+
+The committed `challenge_run.json` records the passing real one-command workflow using
+`qwen2.5:3b`, with Ollama preflight, open-weights task, borrowed-MCP smoke, evaluation suite and
+human-review boundary all passing.
