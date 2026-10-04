@@ -71,3 +71,8 @@ Promote only a complete passing consolidated report:
 
 Promotion to `evidence/challenge_run.json` is blocked unless the Ollama preflight, real
 open-weights task, borrowed-MCP smoke, evaluation suite and human-review boundary all pass.
+
+
+The committed `challenge_run.json` records the passing real one-command workflow using
+`qwen2.5:3b`, with Ollama preflight, open-weights task, borrowed-MCP smoke, evaluation suite and
+human-review boundary all passing.
