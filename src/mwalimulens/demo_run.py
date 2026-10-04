@@ -344,7 +344,12 @@ h1 {{ margin: 8px 0 10px; font-size: 38px; }}
 .kpi {{ background: #f6f8fc; border-radius: 14px; padding: 12px; }}
 .kpi strong {{ display: block; font-size: 22px; }}
 table {{ width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }}
-th, td {{ padding: 10px 8px; border-bottom: 1px solid #edf0f5; text-align: left; vertical-align: top; }}
+th, td {{
+  padding: 10px 8px;
+  border-bottom: 1px solid #edf0f5;
+  text-align: left;
+  vertical-align: top;
+}}
 th {{ color: #68758a; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }}
 .role {{ font-weight: 650; }}
 .role-supporting {{ color: #18794e; }}
@@ -383,10 +388,22 @@ footer {{ margin-top: 20px; color: #68758a; font-size: 13px; }}
 </section>
 
 <section class="kpis">
-  <div class="kpi"><span class="muted">Learner</span><strong>{escape(learner["display_name"])}</strong></div>
-  <div class="kpi"><span class="muted">Evidence items</span><strong>{len(report["evidence"])}</strong></div>
-  <div class="kpi"><span class="muted">Audited tool calls</span><strong>{len(report["tool_calls"])}</strong></div>
-  <div class="kpi"><span class="muted">Profile updates</span><strong>{report["profile_update_count"]}</strong></div>
+  <div class="kpi">
+    <span class="muted">Learner</span>
+    <strong>{escape(learner["display_name"])}</strong>
+  </div>
+  <div class="kpi">
+    <span class="muted">Evidence items</span>
+    <strong>{len(report["evidence"])}</strong>
+  </div>
+  <div class="kpi">
+    <span class="muted">Audited tool calls</span>
+    <strong>{len(report["tool_calls"])}</strong>
+  </div>
+  <div class="kpi">
+    <span class="muted">Profile updates</span>
+    <strong>{report["profile_update_count"]}</strong>
+  </div>
 </section>
 
 <div class="grid">
@@ -411,7 +428,10 @@ footer {{ margin-top: 20px; color: #68758a; font-size: 13px; }}
   <h2>Candidate pattern — pending review</h2>
   <p><strong>{escape(str(candidate.get("claim", "No candidate created")))}</strong></p>
   <p class="muted">{escape(str(candidate.get("uncertainty", "")))}</p>
-  <p class="muted"><strong>Teacher question:</strong> {escape(str(candidate.get("suggested_teacher_question", "")))}</p>
+  <p class="muted">
+    <strong>Teacher question:</strong>
+    {escape(str(candidate.get("suggested_teacher_question", "")))}
+  </p>
 </section>
 
 <section class="card gate">
@@ -420,18 +440,44 @@ footer {{ margin-top: 20px; color: #68758a; font-size: 13px; }}
     The agent stops here. Approve, edit and reject remain separate teacher actions.
   </p>
   <div class="validation">
-    <div><span class="muted">Pending candidates</span><br><strong>{report["pending_review_count"]}</strong></div>
-    <div><span class="muted">Teacher decisions</span><br><strong>{report["teacher_review_count"]}</strong></div>
-    <div><span class="muted">Profile updates</span><br><strong>{report["profile_update_count"]}</strong></div>
+    <div>
+      <span class="muted">Pending candidates</span><br>
+      <strong>{report["pending_review_count"]}</strong>
+    </div>
+    <div>
+      <span class="muted">Teacher decisions</span><br>
+      <strong>{report["teacher_review_count"]}</strong>
+    </div>
+    <div>
+      <span class="muted">Profile updates</span><br>
+      <strong>{report["profile_update_count"]}</strong>
+    </div>
   </div>
 </section>
 
 <section class="card">
   <h2>Independent validation</h2>
   <div class="validation">
-    <div><span class="muted">Real Qwen run</span><br><span class="pass">{escape(str(report["real_qwen_validation"]["status"]).upper())}</span><br><small>qwen2.5:3b</small></div>
-    <div><span class="muted">One-command run</span><br><span class="pass">{escape(str(report["challenge_validation"]["status"]).upper())}</span></div>
-    <div><span class="muted">Current evals</span><br><span class="pass">{eval_summary.get("current_pass", 0)} PASS</span><br><small>{eval_summary.get("historical_fail_preserved", 0)} historical failures preserved</small></div>
+    <div>
+      <span class="muted">Real Qwen run</span><br>
+      <span class="pass">
+        {escape(str(report["real_qwen_validation"]["status"]).upper())}
+      </span><br>
+      <small>qwen2.5:3b</small>
+    </div>
+    <div>
+      <span class="muted">One-command run</span><br>
+      <span class="pass">
+        {escape(str(report["challenge_validation"]["status"]).upper())}
+      </span>
+    </div>
+    <div>
+      <span class="muted">Current evals</span><br>
+      <span class="pass">{eval_summary.get("current_pass", 0)} PASS</span><br>
+      <small>
+        {eval_summary.get("historical_fail_preserved", 0)} historical failures preserved
+      </small>
+    </div>
   </div>
 </section>
 
