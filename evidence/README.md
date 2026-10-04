@@ -53,3 +53,7 @@ Run:
 .\.venv\Scripts\python.exe -m mwalimulens.evals
 .\.venv\Scripts\python.exe -m mwalimulens.promote_evals
 ```
+
+
+The committed `evals_run.json` records the passing 13-case evaluation: 11 current regression
+PASS cases and 2 intentionally preserved historical model FAIL cases.
