@@ -37,10 +37,11 @@ The repository already contains evidence for:
 
 The repository cannot prove the **under-three-minute demo video** until a real recording exists.
 
-The demo workflow is implemented and documented in `docs/demo-guide.md`, but the fast demo still
-needs one local validation run on this branch. The challenge matrix therefore remains
-**Pending demo validation** until that succeeds, and must not become **Present** until the final
-video URL is available.
+The fast demo has now passed locally with the real custom and borrowed MCP boundaries: evidence
+retrieval PASS, borrowed reference read PASS, candidate creation PASS, human gate untouched, and
+real Qwen validation PASS. The challenge matrix is therefore **Ready to record**.
+
+It must not become **Present** until the final under-three-minute video URL is available.
 
 ## Known limitations
 
