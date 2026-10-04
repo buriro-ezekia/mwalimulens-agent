@@ -86,6 +86,16 @@ def preflight_ollama(
         }
 
     models = payload.get("models", [])
+    if not isinstance(models, list):
+        return {
+            "status": "fail",
+            "base_url": settings.base_url,
+            "model": settings.model_name,
+            "models_found": [],
+            "error": "Ollama tags response field 'models' must be a list.",
+            "remediation": "Restart or update the local Ollama service, then rerun.",
+        }
+
     names = sorted(
         {
             candidate
@@ -298,13 +308,16 @@ def _command_version(command: str, flag: str) -> str | None:
     executable = shutil.which(command)
     if executable is None:
         return None
-    completed = subprocess.run(
-        [executable, flag],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        completed = subprocess.run(
+            [executable, flag],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
     value = (completed.stdout or completed.stderr).strip()
     return value or None
 
