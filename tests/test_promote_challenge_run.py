@@ -46,7 +46,6 @@ def test_failed_challenge_report_cannot_be_promoted(tmp_path) -> None:
         promote_challenge_report(source=source, destination=tmp_path / "evidence.json")
 
 
-
 def test_promotion_rejects_non_default_model(tmp_path) -> None:
     source = tmp_path / "runtime.json"
     report = {
