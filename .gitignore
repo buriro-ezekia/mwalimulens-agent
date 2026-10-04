@@ -31,3 +31,11 @@ Thumbs.db
 
 # Node.js borrowed MCP dependency
 node_modules/
+
+# Local demo narration and recordings (keep outside the repository)
+*.mp3
+*.wav
+*.mp4
+*.mkv
+*.mov
+*.webm

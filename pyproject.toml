@@ -24,6 +24,9 @@ mwalimulens-challenge = "mwalimulens.challenge_run:main"
 mwalimulens-demo = "mwalimulens.demo_run:main"
 
 [project.optional-dependencies]
+record = [
+  "obsws-python>=1.8,<2",
+]
 dev = [
   "pytest>=8.3",
   "ruff>=0.9",

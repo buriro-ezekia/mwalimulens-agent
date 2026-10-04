@@ -85,6 +85,12 @@ spoken rehearsal. Record at 1080p/30 fps with microphone narration and one conti
 **Public demo video URL: pending** — add the verified public link and duration after recording.
 The video requirement remains **Ready to record** until then.
 
+For the supplied final male narration (156.48 seconds), the
+[Windows recording automation](docs/final-recording-automation.md) coordinates OBS, the live
+command and browser sections, then stops around 2:39 and measures the file. Start with the safe
+non-recording check: `.\scripts\record-final-demo.ps1 -DryRun`. The guide covers local MP3/OBS
+setup and the final one-command launch. It never uploads or changes teacher/evidence state.
+
 ## Full reproducible challenge run
 
 For the complete local validation path:
