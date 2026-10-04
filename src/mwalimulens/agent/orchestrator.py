@@ -8,11 +8,14 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from fastmcp import Client
 from fastmcp.client.transports import StdioTransport
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPToolset
 
 from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR, DEFAULT_STATE_PATH, PROJECT_ROOT
+
+EDUCATION_MCP_CLIENT_MODE = "legacy"
 
 AGENT_MCP_TOOL_ALLOWLIST = frozenset(
     {
@@ -52,12 +55,12 @@ review or to create a learner-profile update.
 """.strip()
 
 
-def build_agent_mcp_toolset(
+def build_agent_mcp_client(
     *,
     data_dir: Path = DEFAULT_DATA_DIR,
     state_path: Path = DEFAULT_STATE_PATH,
-):
-    """Build the MCP toolset exposed to the agent, filtered before model visibility."""
+) -> Client:
+    """Build the Education MCP stdio client with explicit handshake-era negotiation."""
 
     environment = dict(os.environ)
     environment["MWALIMULENS_DATA_DIR"] = str(data_dir.resolve())
@@ -70,8 +73,25 @@ def build_agent_mcp_toolset(
         cwd=str(PROJECT_ROOT),
         keep_alive=False,
     )
-    raw_toolset = MCPToolset(
+    return Client(
         transport,
+        mode=EDUCATION_MCP_CLIENT_MODE,
+    )
+
+
+def build_agent_mcp_toolset(
+    *,
+    data_dir: Path = DEFAULT_DATA_DIR,
+    state_path: Path = DEFAULT_STATE_PATH,
+):
+    """Build the MCP toolset exposed to the agent, filtered before model visibility."""
+
+    client = build_agent_mcp_client(
+        data_dir=data_dir,
+        state_path=state_path,
+    )
+    raw_toolset = MCPToolset(
+        client,
         id="mwalimulens-education-mcp",
         tool_error_behavior="error",
     )

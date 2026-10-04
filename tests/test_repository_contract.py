@@ -14,7 +14,13 @@ def normalise_whitespace(value: str) -> str:
 
 
 def test_required_contract_files_exist() -> None:
-    for path in ("README.md", "ARCHITECTURE.md", "docs/challenge-requirements.md", "LICENSE"):
+    for path in (
+        "README.md",
+        "ARCHITECTURE.md",
+        "EVALS.md",
+        "docs/challenge-requirements.md",
+        "LICENSE",
+    ):
         assert (ROOT / path).is_file(), f"missing required contract file: {path}"
 
 

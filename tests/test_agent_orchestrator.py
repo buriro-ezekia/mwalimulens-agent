@@ -12,7 +12,9 @@ from pydantic_ai.models.test import TestModel
 from mwalimulens.agent import (
     AGENT_INSTRUCTIONS,
     AGENT_MCP_TOOL_ALLOWLIST,
+    EDUCATION_MCP_CLIENT_MODE,
     build_agent,
+    build_agent_mcp_client,
 )
 from mwalimulens.mcp_server.state import JsonStateStore
 
@@ -32,6 +34,16 @@ def test_agent_allowlist_is_exact_and_excludes_human_review() -> None:
         "flag_pattern_for_review",
     }
     assert "record_teacher_review" not in AGENT_MCP_TOOL_ALLOWLIST
+
+
+def test_education_mcp_client_is_pinned_to_legacy_handshake_mode(tmp_path) -> None:
+    client = build_agent_mcp_client(
+        data_dir=FIXTURE_DIR,
+        state_path=tmp_path / "state.json",
+    )
+
+    assert EDUCATION_MCP_CLIENT_MODE == "legacy"
+    assert client.mode == "legacy"
 
 
 def test_agent_instructions_preserve_evidence_and_human_boundaries() -> None:

@@ -48,12 +48,14 @@ Implemented in the current codebase:
 - a local Qwen/Ollama provider plus an executable open-weights challenge task and JSON evidence
   report; and
 - an official borrowed Filesystem MCP integration restricted to read-only classroom-reference
-  access, with borrowed calls written to the same audit stream.
+  access, with borrowed calls written to the same audit stream; and
+- a reproducible 13-case evaluation suite covering messy longitudinal data, human-gate
+  invariants, borrowed-MCP safety, current real-model success and preserved model failures.
 
 A real local Qwen2.5 3B run has passed all open-weights evidence and safety checks and is
 committed at `evidence/open_weights_run.json`. The official borrowed Filesystem MCP has also
 passed its real read-only smoke run, with promoted evidence committed at
-`evidence/borrowed_mcp_run.json`. The user interface remains unfinished.
+`evidence/borrowed_mcp_run.json`. The 13-case reliability evaluation has also passed and is committed at `evidence/evals_run.json`. The user interface remains unfinished.
 
 ## Run the custom Education MCP server
 
@@ -72,7 +74,8 @@ The server uses stdio by default and writes runtime audit/review state to
 
 See `docs/education-mcp.md` for the tool contract, `docs/agent-orchestrator.md` for the
 model-facing allowlist boundary, `docs/open-weights-run.md` for the local Qwen validation
-workflow, and `docs/borrowed-filesystem-mcp.md` for the borrowed-server boundary and rationale.
+workflow, `docs/borrowed-filesystem-mcp.md` for the borrowed-server boundary and rationale, and
+`EVALS.md` for the reproducible reliability evaluation matrix.
 
 ## Development workflow
 
