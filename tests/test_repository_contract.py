@@ -19,6 +19,8 @@ def test_required_contract_files_exist() -> None:
         "ARCHITECTURE.md",
         "EVALS.md",
         "docs/challenge-requirements.md",
+        "docs/demo-guide.md",
+        "docs/submission-readiness.md",
         "LICENSE",
     ):
         assert (ROOT / path).is_file(), f"missing required contract file: {path}"
@@ -28,7 +30,7 @@ def test_readme_states_product_boundary_and_theme() -> None:
     content = normalise_whitespace(read("README.md").lower())
     assert "longitudinal strength tracking" in content
     assert "teacher decides" in content
-    assert "borrowed mcp server" in content
+    assert "borrowed filesystem mcp" in content
     assert "fast judge demo" in content
     assert "real qwen2.5 3b" in content
 
