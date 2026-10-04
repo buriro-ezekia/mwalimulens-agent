@@ -76,8 +76,9 @@ dependency graph with `npm ci`, then runs:
 2. the real official Filesystem MCP smoke; and
 3. the 13-case reliability evaluation.
 
-The final summary is written to `runtime/challenge_run.json`. Detailed component reports remain
-under `runtime/` for auditability.
+The final summary is written to `runtime/challenge_run.json`. A passing real one-command run is
+committed at `evidence/challenge_run.json`. Detailed component reports remain under `runtime/`
+for auditability.
 
 If the model is missing, install it once with:
 
