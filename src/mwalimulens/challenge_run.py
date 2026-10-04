@@ -9,10 +9,11 @@ import os
 import platform
 import shutil
 import subprocess
+from collections.abc import Callable
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
@@ -100,7 +101,11 @@ def preflight_ollama(
         "base_url": settings.base_url,
         "model": settings.model_name,
         "models_found": names,
-        "error": None if model_present else f"required model is not installed: {settings.model_name}",
+        "error": (
+            None
+            if model_present
+            else f"required model is not installed: {settings.model_name}"
+        ),
         "remediation": (
             None
             if model_present
@@ -243,8 +248,8 @@ def runtime_environment() -> dict[str, Any]:
         "node": _command_version("node", "--version"),
         "npm": _command_version("npm", "--version"),
         "mcp": _package_version("mcp"),
-        "pydantic_ai": _package_version("pydantic-ai"),
-        "fastmcp": _package_version("fastmcp"),
+        "pydantic_ai": _package_version("pydantic-ai-slim"),
+        "fastmcp": _package_version("fastmcp-slim"),
     }
 
 
