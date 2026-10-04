@@ -98,7 +98,7 @@ A passing real run is committed at `evidence/challenge_run.json`.
 | Evaluation suite | PASS | `evidence/evals_run.json` |
 | One-command workflow | PASS | `evidence/challenge_run.json` |
 | Historical model failures | Preserved | `evidence/failures/` |
-| Under-three-minute video | Ready to record | `docs/demo-guide.md` |
+| Under-three-minute video | Demo workflow implemented; local validation pending | `docs/demo-guide.md` |
 
 The evaluation report contains **11 current PASS cases and 2 preserved historical FAIL cases**.
 Those failures are intentionally retained rather than rewritten after later fixes.
