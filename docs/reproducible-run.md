@@ -95,3 +95,9 @@ After a real one-command PASS, promote the consolidated report:
 
 Only a report with every required check true can become
 `evidence/challenge_run.json`.
+
+
+## Promoted evidence
+
+A real one-command run passed all required checks and is committed at
+`evidence/challenge_run.json`.
