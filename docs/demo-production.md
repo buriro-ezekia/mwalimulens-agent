@@ -5,8 +5,9 @@ For the final male narration asset and automated OBS take, use
 alternative human-voiced manual recording; its timing and microphone settings differ.
 
 Use this to prepare a **single continuous 2:30–2:45 take**, targeting 2:40 and strictly under
-3:00. The project owner records locally with their own voice. No recording or upload is performed
-by this package, and no audio/video files belong in this repository.
+3:00. This guide covers the alternative human-voiced workflow; the published submission used the
+separate validated narration automation. No recording or upload is performed by this package, and
+no audio/video files belong in this repository.
 
 Start here for setup; use the [storyboard](demo-guide.md#time-coded-storyboard) for the screen
 sequence, [narration and voice rehearsal](demo-narration.md) for speech, and the
@@ -15,12 +16,12 @@ sequence, [narration and voice rehearsal](demo-narration.md) for speech, and the
 
 ## 1. Prepare the reviewed revision
 
-Open PowerShell in the repository root. While PR #24 is draft, use its
-`codex/issue-23-recording-package` branch at the latest reviewed commit. After it is merged, use
-the corresponding `main` revision. Check before recording; do not switch away from unfinished
-local work or discard it:
+Open PowerShell in the repository root and use the reviewed `main` revision. Check the branch,
+commit and working tree before any new or replacement recording:
 
 ```powershell
+git switch main
+git pull --ff-only origin main
 git branch --show-current
 git rev-parse HEAD
 git status --short
@@ -130,8 +131,9 @@ little, and let the counter-evidence and zero counts land. If a sentence feels a
 it and re-time the script. If the rehearsal exceeds 2:45, shorten wording or navigation rather
 than speaking faster. Preserve every required proof point. Do not remove the limitation or gate.
 
-**Keep PR #24 as draft until the owner has completed both the browser visual playback check and
-the full timed spoken rehearsal.** A passing test suite is not a substitute for either check.
+For any new or replacement take, complete both the browser visual playback check and the full
+timed spoken rehearsal before recording. A passing test suite is not a substitute for either
+check. The published submission completed these owner checks on 4 October 2026.
 
 ## 5. Record the take
 
@@ -168,5 +170,6 @@ transitions. Do not rerun Qwen, alter evidence or resolve the candidate for visu
 Watch the final MP4 all the way through and complete the [recording checklist](demo-checklist.md).
 It must be strictly under 3:00, with no added title sequence or credits. Use the filename,
 description and upload verification in [the YouTube package](youtube-package.md). All local
-tests, takes and remuxed copies stay outside the repository. Keep the video requirement
-**Ready to record** until the real public link and duration have been verified.
+tests, takes and remuxed copies stay outside the repository. The current submission video is
+already **Present** at [https://youtu.be/Zh9V_Ptc4ME](https://youtu.be/Zh9V_Ptc4ME); only replace
+that link after a future take has passed the same verification checks.

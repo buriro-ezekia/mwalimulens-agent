@@ -92,11 +92,13 @@ pause is fine; any retake starts from the beginning, without cuts or transitions
 No approving, editing or rejecting for visual effect. No changes to evidence files, historical
 failures or review permissions. No generated audio/video binaries belong in the repository.
 
-## Publication hand-off
+## Publication status
 
-Keep PR #24 as draft until the owner completes the browser visual playback check and full
-timed spoken rehearsal. The repository's video requirement stays **Ready to record**.
-After recording, use the [final checklist](demo-checklist.md) and
-[YouTube upload/post-upload steps](youtube-package.md) to verify the exported duration and
-public playback. Only then replace the public-video placeholders in the README and challenge
-evidence map, update submission readiness and mark the video requirement **Present**.
+The final continuous demo is published at
+[https://youtu.be/Zh9V_Ptc4ME](https://youtu.be/Zh9V_Ptc4ME), with verified duration
+**2:39.03**. The submission evidence marks the under-three-minute video requirement **Present**;
+1080p playback and captions were verified on 4 October 2026.
+
+The recording instructions above are retained for reproducibility and for any future replacement
+take. A replacement should not supersede the published link until the same playback, duration and
+evidence checks have passed.

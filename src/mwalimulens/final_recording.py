@@ -429,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nAUTOMATED CHECKS PASSED\nRecording: {output}\nMeasured duration: {duration:.2f}s")
         print(
             "Under 3:00. Watch the WHOLE take to check framing, sound and visible evidence. "
-            "No upload was performed; repository video status remains Ready to record."
+            "No upload or repository status change was performed."
         )
         return 0
     except (Exception, KeyboardInterrupt) as exc:

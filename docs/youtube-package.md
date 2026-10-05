@@ -5,6 +5,10 @@ Use this copy after recording and checking the real continuous take. Follow the
 [recording checklist](demo-checklist.md). Target **2:30–2:45**; the complete uploaded video
 must be **strictly under 3:00**. Keep the recording outside the repository.
 
+Current published submission: [https://youtu.be/Zh9V_Ptc4ME](https://youtu.be/Zh9V_Ptc4ME),
+verified duration **2:39.03**, 1080p, with captions. The instructions below are retained for any
+future replacement upload.
+
 ## Title options
 
 1. MwalimuLens Demo | Learner Evidence, Teacher Judgement
@@ -79,63 +83,33 @@ requesting access before updating the repository.
 - [ ] Copy the actual watch/share URL, not a Studio editing URL, and reopen the copied link.
 
 ```text
-Final YouTube URL: ______________________
-Verified duration: ______________________
+Current YouTube URL: https://youtu.be/Zh9V_Ptc4ME
+Verified duration: 2:39.03
+Replacement YouTube URL: ______________________
+Replacement verified duration: ________________
 ```
 
-Leave both fields blank until verified. Do not invent a URL or substitute the target duration
-for the measured duration. No audio/video binaries belong in a commit.
+Leave replacement fields blank until a replacement is verified. Do not invent a URL or substitute
+the target duration for the measured duration. No audio/video binaries belong in a commit.
 
 ## Post-upload repository update
 
-Do this only after every upload check passes and a real, publicly accessible final video URL
-exists. Until then, the demo requirement remains **Ready to record**.
+The current submission already completed this step. Use the process below only for a verified
+replacement video.
 
-1. In [README.md](../README.md), replace the `Public demo video URL: pending` placeholder with
-   a Markdown link to the actual video and its verified duration. Update the adjacent readiness
-   sentence and the **Under-three-minute video** evidence row to **Present**, with the same
-   link and duration.
-2. In [docs/challenge-requirements.md](challenge-requirements.md), replace its pending URL
-   placeholder with the same real link and verified duration. Update the **Demo under 3 minutes**
-   evidence row from **Ready to record** to **Present**. Replace the pending instructions with
-   a factual note that signed-out playback was checked, including the check date.
-3. In [docs/submission-readiness.md](submission-readiness.md), update the audit date and change
-   the video blocker/readiness wording to reflect verified completion. Add the identical URL,
-   measured duration and playback-check date. Replace the pending owner-check statement with
-   the actual visual-check date and spoken-rehearsal duration once those checks are complete.
-   Preserve the project's known limitations; do not claim a PR status change that has not happened.
-4. Leave promoted model/evaluation evidence, historical failures, source code and review-gate
-   semantics unchanged. This final submission-state update changes only those three text files.
-5. Run both checks from the repository root and resolve any failures before committing:
+1. Update the existing public-demo link and verified duration consistently in [README.md](../README.md),
+   [docs/challenge-requirements.md](challenge-requirements.md) and
+   [docs/submission-readiness.md](submission-readiness.md).
+2. Record the replacement playback-check date and retain the current known limitations.
+3. Leave promoted model/evaluation evidence, historical failures, source code and review-gate
+   semantics unchanged.
+4. Run the deterministic suite and Ruff before committing:
 
    ```powershell
    .\.venv\Scripts\python.exe -m pytest -q
    .\.venv\Scripts\python.exe -m ruff check .
    ```
 
-6. Review the changes, confirm that all three files use the same verified link and duration,
-   and check that neither pending URL placeholder remains in the updated submission files:
-
-   ```powershell
-   git status --short
-   git diff --check
-   git diff -- README.md docs/challenge-requirements.md docs/submission-readiness.md
-   rg -n 'Public demo video URL: pending' README.md docs/challenge-requirements.md docs/submission-readiness.md
-   ```
-
-   No `rg` matches is the expected result (exit code 1). Review any unrelated working-tree
-   changes separately; do not include generated media or evidence changes.
-7. Stage only the three submission text files, then inspect the staged diff before committing:
-
-   ```powershell
-   git add -- README.md docs/challenge-requirements.md docs/submission-readiness.md
-   git diff --cached --name-only
-   git diff --cached --check
-   git diff --cached
-   git commit -m "docs: add verified public demo video"
-   ```
-
-   Before the commit, the staged file list must contain only those three files. If other work
-   was already staged, resolve that separately first. These steps do not push, merge or change
-   PR #24's draft status. Keep it draft until the owner has completed the browser visual
-   playback check and the full timed spoken rehearsal.
+5. Review the diff and working tree. Keep media files outside the repository and commit only the
+   intended text updates. Do not replace the currently published demo until the replacement has
+   passed duration, HD, captions and signed-out playback checks.

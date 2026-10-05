@@ -2,6 +2,8 @@
 
 Keep outside capture. Approximate landmarks; do not rush to catch a second.
 Full setup: [production guide](demo-production.md). Spoken words: [narration](demo-narration.md).
+This cue sheet is for the manual human-voiced workflow. For the validated prerecorded narration
+workflow, use [final recording automation](final-recording-automation.md) and keep the microphone muted.
 
 ```text
 BEFORE       Mic on · command ready · notes off screen

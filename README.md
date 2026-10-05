@@ -40,6 +40,25 @@ The model cannot:
 
 The human review boundary is enforced in code, not left to prompt wording.
 
+## Target users
+
+The primary users are teachers who need to review learner progress across multiple assessments and
+terms without reducing a learner to a single score. Learners benefit indirectly from more
+evidence-grounded and less premature educational judgements. The current challenge build uses
+synthetic learner data and is not a production school information system.
+
+## Technology stack
+
+| Layer | Technology |
+|---|---|
+| Agent orchestration | PydanticAI 2.51.x |
+| Open-weights model | Qwen2.5 3B via local Ollama |
+| Custom MCP | Python MCP SDK v2 over stdio |
+| Borrowed MCP | `@modelcontextprotocol/server-filesystem@2026.8.31` via Node.js |
+| MCP client/filtering | FastMCP 4 client tooling with explicit model-visible allowlists |
+| Data/state | Synthetic JSON fixtures and local audited JSON runtime state |
+| Validation | pytest, Ruff, promoted JSON evidence reports |
+
 ## Fast judge demo
 
 After cloning the repository, prepare and validate the demo off camera:
@@ -230,6 +249,15 @@ MwalimuLens is a challenge prototype, not a validated production decision system
 
 These limits are intentional. The project is designed to make uncertainty and human responsibility
 visible rather than hide them.
+
+## Future improvements
+
+Future work should begin with structured teacher testing in real school contexts before any use of
+real learner records. Priorities include stronger authentication and role-based access, production
+persistence with appropriate privacy controls, broader curriculum and language coverage, larger
+cross-school evaluations, and deployment patterns that remain practical where connectivity and
+compute are constrained. These are future directions, not capabilities claimed by the challenge
+prototype.
 
 ## Further documentation
 

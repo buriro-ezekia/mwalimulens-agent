@@ -4,6 +4,10 @@ Package: [Windows production](demo-production.md) · [storyboard](demo-guide.md)
 [narration/rehearsal](demo-narration.md) · [operator cues](demo-operator-cues.md) ·
 [optional captions](demo-cues.md) · [YouTube upload](youtube-package.md).
 
+Current submission video: [https://youtu.be/Zh9V_Ptc4ME](https://youtu.be/Zh9V_Ptc4ME),
+verified at **2:39.03**, 1080p, with captions. The checklist remains useful for reproducing or
+replacing that take.
+
 ## Before capture
 
 - [ ] Correct reviewed branch/commit: check `git branch --show-current` and `git rev-parse HEAD`.
@@ -23,8 +27,8 @@ Package: [Windows production](demo-production.md) · [storyboard](demo-guide.md)
 - [ ] Script and operator cue sheet outside capture; cursor visible but kept still between cues.
 - [ ] Leave historical failures, model evidence and the human review gate untouched.
 
-Keep PR #24 **draft** until the owner has completed the browser visual playback check and
-the full timed spoken rehearsal. Record the results in your private recording notes:
+For any new or replacement take, complete the browser visual playback check and full timed spoken
+rehearsal first. Record the results in your private recording notes:
 
 ```text
 Recording branch/commit: ______________________
@@ -73,9 +77,10 @@ stand in for MCP activity. Normal spoken pauses are welcome.
   off-camera inspection: `runtime/demo_run.json` and `runtime/demo_state.json` retain the audit.
 - [ ] Use the [YouTube package](youtube-package.md): upload complete, HD processing complete,
   correct public link, signed-out/private playback, clear sound and readable text.
-- [ ] Follow its exact post-upload steps for README, challenge requirements and submission
-  readiness: real URL plus verified duration, then **Ready to record → Present**. Until verified,
-  leave the pending placeholders and status unchanged. Do not alter model/evaluation evidence.
+- [ ] For a replacement upload, update the README, challenge requirements and submission
+  readiness only after the new public URL, duration and signed-out playback are verified. Until
+  then, keep the currently published demo as the authoritative **Present** evidence. Do not alter
+  model/evaluation evidence.
 - [ ] Keep audio/video files outside the repository. Commit only the reviewed lightweight
   recording package and, later, the real public link/status updates.
 - [ ] Run the full suite and Ruff for the final submission-state update, then review the complete

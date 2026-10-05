@@ -4,6 +4,9 @@ Run `scripts/record-final-demo.ps1` to coordinate one genuine live OBS capture. 
 supplied narration, executes the real fast MCP command, guides the generated browser page and
 stops around **2:39**. It never uploads, edits footage or updates submission status.
 
+The current published demo is [https://youtu.be/Zh9V_Ptc4ME](https://youtu.be/Zh9V_Ptc4ME),
+verified at **2:39.03**. This automation remains the reproducible path for a future replacement.
+
 The final narration is the owner-supplied **“MwalimuLens final male 2m35 narration”** asset.
 Its verified duration is **156.48 seconds (2:36.48)** despite the asset's short name. This
 automation uses that asset and the timetable below, not the earlier human-read script's timing.
@@ -58,7 +61,7 @@ scenes or recording settings. Use these exact names:
 |---|---|
 | Scene | `MwalimuLens Final`, selected as the current scene; Studio Mode off. |
 | Display source | `MwalimuLens Display`, **Display Capture**, showing the monitor used for both terminal and browser. Cursor enabled. Place it above the narration in the source stack. |
-| Framing | Fit Display Capture to the whole canvas: position at the top-left, no crop, rotation, flip or bounding box. Use Transform → Fit to Screen, then inspect Edit Transform. |
+| Framing | Display Capture must resolve to the complete 1920 × 1080 canvas at the top-left, with zero crop, zero rotation, positive X/Y scale and **Bounds: None**. On a source display whose aspect ratio is not exactly 16:9, ordinary Fit to Screen may leave a sub-pixel gap; use exact scaling and confirm with preflight. |
 | Narration source | `MwalimuLens Narration`, **Media Source**, Local File set to the supplied MP3. Enabled in the scene; beneath the display so embedded cover art cannot cover the live page. |
 | Media controls | Loop off; Restart playback when source becomes active off; Close file when inactive off; speed 100%. Play briefly, then pause so OBS has loaded its duration. |
 | Video | Settings → Video: canvas and output both **1920 × 1080**, **30 fps**. |
@@ -152,10 +155,10 @@ Watch the whole result to verify sound, legibility, terminal PASS, every require
 and the ending. Keep the narration and all recordings outside the repository. For MKV, use OBS
 File → Remux Recordings to create an MP4 without cutting/re-encoding the take, then check it again.
 
-Upload yourself using the [YouTube package](youtube-package.md). Only after the real public URL,
-HD processing, duration and signed-out playback are verified should the three submission
-documents change from **Ready to record** to **Present**. All promoted evidence and historical
-failures remain unchanged. The deterministic capture never becomes the Qwen model evidence.
+Upload a replacement using the [YouTube package](youtube-package.md). Do not replace the current
+published demo in submission documents until the replacement public URL, HD processing, duration,
+captions and signed-out playback are verified. All promoted evidence and historical failures remain
+unchanged. The deterministic capture never becomes the Qwen model evidence.
 
 ## Non-recording checks
 
