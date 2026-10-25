@@ -1,5 +1,10 @@
 # Nairobi teacher-review sandbox (synthetic only)
 
+**Legacy terminal workflow.** The primary teacher-facing application is now the
+[Learner Progress Review browser workspace](nairobi-teacher-workspace.md), which supports
+Approve, Revise and Reject directly in the browser. The terminal workflow below remains
+available as an independent, synthetic-only regression demonstration.
+
 **Status:** post-selection experimental functionality, not part of the frozen challenge submission.
 
 This separate demonstration exercises the existing human-only EducationToolService.record_teacher_review

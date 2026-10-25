@@ -44,23 +44,30 @@ replace historical failures, or re-label a deterministic run as live Qwen infere
 
 ## Development progress — 25 October 2026
 
-- **Issue #27, initial implementation:** a separate synthetic-only local review sandbox now
-  uses the existing human-only service to show before/after approve, edit and reject outcomes,
-  with an explicit confirmation prompt, isolated JSON state and a read-only HTML view.
-  The candidate is seeded from fictional evidence rather than inferred by a model in this run.
-- **Regression coverage added:** ten new pytest cases exercise pending, approval, editing,
-  rejection, cancellation, isolation, audit records and HTML escaping. The full Windows
-  test suite and Ruff still require execution on the Nairobi branch; no new passing
-  test count is claimed yet.
-- **Impact preparation:** a structured [teacher feedback protocol](nairobi-teacher-feedback.md)
-  is available for exploratory walkthroughs using synthetic evidence only. No classroom
-  impact or practitioner feedback is claimed.
-- **Issues #28 and #29:** repeated Qwen reliability evaluation and offline CPU rehearsal
-  remain outstanding.
+- **Issue #27, teacher-facing application:** a responsive
+  [Learner Progress Review](nairobi-teacher-workspace.md) browser workspace now displays
+  chronological evidence, supporting and contradictory observations, uncertainty, a
+  simulated teacher's decision and an expandable audit trail. Approve/Revise/Reject,
+  rationale and explicit confirmation are handled in the browser without terminal input.
+- **Genuine MCP integration:** the workspace can start a fresh deterministic agent run
+  through the existing Education and borrowed read-only Filesystem MCP servers. The
+  candidate is then reviewed through the existing human-only service. This is not
+  live Qwen inference. The original seeded offline practice case remains available.
+- **Safety:** local loopback-only HTTP, form token, Origin/Host checks, one-use confirmation,
+  HTML escaping, isolated synthetic state, no public endpoint and no authenticated
+  reviewer claim. No changes to the model's MCP tool allowlist.
+- **Validation:** 18 targeted HTTP and workflow tests passed in an isolated local test
+  environment; Python syntax and desktop/mobile HTML rendering were checked. Full
+  Windows integration tests, Ruff and actual MCP/browser rehearsal remain outstanding.
+- **Practitioner impact:** the [teacher feedback protocol](nairobi-teacher-feedback.md)
+  is ready for exploratory usability feedback. No classroom impact or practitioner
+  validation is claimed.
+- **Issues #28 and #29:** repeated Qwen evaluation and offline CPU-stage rehearsal
+  remain separate outstanding gates.
 
-The new feature does not authenticate teachers, create a public review endpoint or replace
-the original submission demonstration. Do not close Issue #27 until its local acceptance
-checks and manual browser review pass.
+The original submission commit, public video, promoted model evidence and historical
+failures remain unchanged. Keep Issue #27 and Draft PR #30 open until the Windows
+acceptance checks pass.
 
 ## Prioritised work and acceptance gates
 

@@ -263,25 +263,41 @@ prototype.
 
 Development for the Nairobi event takes place on the separate
 [`nairobi-refinement-2026` branch](https://github.com/buriro-ezekia/mwalimulens-agent/tree/nairobi-refinement-2026).
-The original challenge submission is preserved at commit
+The original challenge submission remains preserved at
 `6215b9efb79ffd022a835dabba386c5ccb8226e4`.
 
-An **experimental synthetic-only teacher-review sandbox** now exercises the existing
-human-only approve/edit/reject service method. It produces before/after browser evidence and
-a local audit trail; the reviewer is simulated, not authenticated, and the seeded candidate
-does not represent a fresh LLM or MCP-client run. It must not be used with real learner data.
+### Learner Progress Review — browser workspace
 
-Run on the Nairobi branch:
+The new [teacher workspace](docs/nairobi-teacher-workspace.md) brings the fictional learner
+timeline, supporting and counter-evidence, uncertainty, teacher decision and audit trail
+into a single responsive, offline-friendly local browser interface. Teachers can
+**Approve, Revise or Reject** through the browser, inspect a confirmation page and see
+the resulting synthetic profile note and audited state.
+
+Run from the Nairobi branch:
 
 ```powershell
-.\.venv\Scripts\python.exe -m mwalimulens.teacher_review_demo
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal
 ```
 
-See [Nairobi readiness](docs/nairobi-readiness.md),
-[teacher-review sandbox](docs/nairobi-teacher-review.md) and
-[teacher feedback protocol](docs/nairobi-teacher-feedback.md).
-These are post-selection developments, not part of the original submitted evidence.
-Local validation of this new branch is still required.
+The default view uses a **seeded fictional candidate** and makes no model-inference claim.
+Select **Run MCP evidence analysis** in the browser to execute the existing deterministic
+agent against the real Education and borrowed Filesystem MCP servers, then review the
+resulting candidate in the same browser workflow. This is **not** a live Qwen run; separately
+committed Qwen evidence is clearly identified in the technical section.
+
+The app binds only to local `127.0.0.1`, uses disposable synthetic state and a simulated
+reviewer identity. It is **not authenticated** and must not be exposed publicly or used
+with real learner data. The model cannot call the human-only review action.
+
+The earlier [terminal-driven review sandbox](docs/nairobi-teacher-review.md) remains available
+for reproducibility. The [teacher feedback protocol](docs/nairobi-teacher-feedback.md) supports
+exploratory usability assessment with fictional examples.
+
+The new browser-workspace HTTP contract has **18 targeted local tests passing** in an isolated
+test environment. Full repository pytest, Ruff and a Windows MCP/browser rehearsal are
+still required before claiming Nairobi demonstration readiness. These are post-selection
+developments, not part of the original submitted evidence.
 
 ## Further documentation
 

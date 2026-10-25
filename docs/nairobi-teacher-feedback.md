@@ -6,13 +6,14 @@ feedback, **not** an educational impact evaluation or classroom validation.
 
 ## Preparation
 
-Use only the fictional L001 / MATH-FRACTIONS case in the separate
-[Nairobi teacher-review sandbox](nairobi-teacher-review.md). Show the original assessment
+Use only the fictional L001 / MATH-FRACTIONS case in the
+[Learner Progress Review browser workspace](nairobi-teacher-workspace.md). Show the assessment
 trend, EV-008 counter-observation, uncertainty and proposed teacher question. Do not show
 real learner records or ask participants to describe identifiable learners.
 
-Explain that the reviewer identity is simulated, the AI candidate is seeded for the
-isolated review demo, and the prototype is not approved for classroom deployment.
+Explain that reviewer identity is simulated. The default practice candidate is seeded;
+the optional fast MCP mode makes genuine MCP calls with deterministic orchestration, not
+live Qwen inference. The prototype is not approved for classroom deployment.
 
 ## Short observation protocol (15–20 minutes)
 
