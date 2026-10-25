@@ -19,6 +19,21 @@ The required Qwen model should be `qwen2.5:3b`. Download or install any missing
 software **before** the offline rehearsal. Never put credentials or real learner data
 in the demonstration repository.
 
+## Automated local preflight
+
+Run the following with the local environment prepared:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.nairobi_preflight --run-mcp --check-model
+```
+
+The preflight checks installed Python/Node components, synthetic fixtures, the borrowed
+Filesystem MCP, a real fast MCP task and whether the local Ollama model is available.
+It writes a JSON report under `runtime/nairobi_preflight/`. A result of
+`automated_pass` means only the **automated** checks passed; it does not prove that
+Wi-Fi was disconnected or that a real Qwen inference completed. A failure is retained
+and reported rather than silently bypassed.
+
 ## Offline test (disconnect Wi-Fi)
 
 1. Disconnect the laptop from Wi-Fi and any other internet connection.
