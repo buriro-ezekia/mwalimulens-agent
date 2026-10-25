@@ -294,9 +294,20 @@ The earlier [terminal-driven review sandbox](docs/nairobi-teacher-review.md) rem
 for reproducibility. The [teacher feedback protocol](docs/nairobi-teacher-feedback.md) supports
 exploratory usability assessment with fictional examples.
 
-The new browser-workspace HTTP contract has **18 targeted local tests passing** in an isolated
-test environment. Full repository pytest, Ruff and a Windows MCP/browser rehearsal are
-still required before claiming Nairobi demonstration readiness. These are post-selection
+The Nairobi branch also provides a
+[repeated local Qwen evaluation harness](docs/nairobi-reliability.md) and an
+[offline presentation rehearsal checklist](docs/nairobi-offline-rehearsal.md).
+Run the Qwen harness with `python -m mwalimulens.nairobi_reliability --runs 3` to
+record every successful, failed or timed-out attempt separately. This first benchmark
+repeats **one synthetic learner task**, not multiple classroom scenarios.
+
+For automated local prerequisite and MCP checks, run
+`python -m mwalimulens.nairobi_preflight --run-mcp --check-model`. A passing
+automated check does **not** replace a manually disconnected Wi-Fi rehearsal.
+
+The three new Nairobi modules have **35 targeted isolated tests passing** in the local
+development environment. Full repository pytest, Ruff, actual Windows MCP/browser
+integration and real repeated Qwen runs remain outstanding. These are post-selection
 developments, not part of the original submitted evidence.
 
 ## Further documentation

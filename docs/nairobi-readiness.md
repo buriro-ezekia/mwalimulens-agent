@@ -62,8 +62,21 @@ replace historical failures, or re-label a deterministic run as live Qwen infere
 - **Practitioner impact:** the [teacher feedback protocol](nairobi-teacher-feedback.md)
   is ready for exploratory usability feedback. No classroom impact or practitioner
   validation is claimed.
-- **Issues #28 and #29:** repeated Qwen evaluation and offline CPU-stage rehearsal
-  remain separate outstanding gates.
+- **Issue #28, repeatability harness:** an opt-in Qwen2.5 3B campaign runner now
+  executes the original L001 / MATH-FRACTIONS task in separate local processes with
+  independent state, explicit timeout, complete run-level reports and descriptive
+  pass/fail, recovery, tool-failure and latency metrics. The harness does **not**
+  overwrite committed evidence. Live repeated Qwen results have not yet been run
+  on the user's CPU-only Windows laptop. The current harness covers one synthetic
+  scenario; broader scenario-specific validation remains future work.
+- **Issue #29, stage readiness:** an automated local prerequisite and genuine MCP
+  [preflight](nairobi-offline-rehearsal.md) now produces an isolated JSON report,
+  and a manual disconnected-Wi-Fi rehearsal checklist defines the presentation
+  gate. Automated success does not prove internet disconnection or live Qwen speed.
+- **Validation:** 35 new targeted isolated tests passed locally across the teacher
+  workspace, repeatability harness and preflight; Python syntax and responsive
+  interface rendering were checked. Full Windows repository pytest, Ruff, actual
+  MCP integration, live Qwen runs and offline rehearsal remain outstanding.
 
 The original submission commit, public video, promoted model evidence and historical
 failures remain unchanged. Keep Issue #27 and Draft PR #30 open until the Windows
