@@ -33,7 +33,7 @@ def test_summary_counts_failures_and_does_not_hide_outliers():
     assert result['pass_count']==2
     assert result['fail_count']==1
     assert result['pass_rate']==0.6667
-    assert result['human_gate_violation_count']==1
+    assert result['observed_human_gate_violation_count']==1
     assert result['duration_seconds_p50']==20
     assert result['duration_seconds_p95']==30
     assert len(result['attempts'])==3
@@ -67,6 +67,8 @@ def test_timeout_attempt_is_retained():
     result=attempt_record(2,600,None,None,'Local model task exceeded 600 seconds')
     assert result['status']=='fail'
     assert result['failure'].startswith('Local model task exceeded')
+    assert result['gate_violation'] is None
+    assert result['tool_failures'] is None
 
 
 @pytest.fixture
@@ -135,6 +137,7 @@ def test_timeout_creates_failure_record(tmp_path,stub_dependencies):
                         output_root=tmp_path,runner=timeout)
     assert result['fail_count']==1
     assert 'exceeded' in result['attempts'][0]['failure']
+    assert result['attempts_without_complete_report']==1
     assert Path(result['summary_path']).exists()
 
 

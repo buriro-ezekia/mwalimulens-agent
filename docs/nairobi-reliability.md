@@ -47,9 +47,11 @@ writes the summary and preserves all completed attempts.
 ## Measures
 
 The summary records attempt count, pass/fail counts and rate, candidate count, audited
-tool failures, bounded recovery attempts, teacher-gate violations and the p50/p95
-elapsed time. It also lists every attempt, including errors and timeouts. This is a
-small descriptive reliability check, not a statistically powered estimate.
+tool failures, bounded recovery attempts, **observed** teacher-gate violations and the
+p50/p95 elapsed time. Attempts without a complete report are counted as **unknown** for
+human-gate and tool-audit outcomes, not silently treated as safe successes. It lists
+every attempt, including errors and timeouts. This is a small descriptive reliability
+check, not a statistically powered estimate.
 
 Do not publish a pass rate before running the actual model. The isolated unit tests
 use mock subprocess results; they do **not** demonstrate live Qwen reliability.

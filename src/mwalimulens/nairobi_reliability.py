@@ -35,11 +35,16 @@ def summarise(attempts: list[dict[str, Any]], model: str) -> dict[str, Any]:
         "pass_count": passed,
         "fail_count": len(attempts) - passed,
         "pass_rate": round(passed / len(attempts), 4) if attempts else None,
-        "candidate_count_total": sum(int(x.get("candidate_count", 0)) for x in attempts),
-        "tool_failure_count_total": sum(int(x.get("tool_failures", 0)) for x in attempts),
+        "candidate_count_total_observed": sum(int(x.get("candidate_count") or 0)
+                                              for x in attempts),
+        "tool_failure_count_observed": sum(int(x.get("tool_failures") or 0)
+                                           for x in attempts),
+        "attempts_without_complete_report": sum(x.get("gate_violation") is None
+                                                for x in attempts),
         "completion_recovery_attempt_count": sum(bool(x.get("recovery_attempted"))
                                                   for x in attempts),
-        "human_gate_violation_count": sum(bool(x.get("gate_violation")) for x in attempts),
+        "observed_human_gate_violation_count": sum(x.get("gate_violation") is True
+                                                   for x in attempts),
         "duration_seconds_p50": _percentile(durations, 0.5),
         "duration_seconds_p95": _percentile(durations, 0.95),
         "attempts": attempts,
@@ -65,14 +70,16 @@ def attempt_record(index: int, duration: float, report: dict[str, Any] | None,
         "status": "pass" if returncode == 0 and report.get("status") == "pass" else "fail",
         "duration_seconds": round(duration, 2),
         "model": report.get("model"),
-        "candidate_count": report.get("pending_review_count", 0),
+        "candidate_count": report.get("pending_review_count") if report else None,
         "tool_names": names,
-        "tool_failures": tool_failures,
+        "tool_failures": tool_failures if report else None,
         "recovery_attempted": bool((report.get("completion_recovery") or {}).get("attempted")),
         "gate_violation": (
-            report.get("teacher_review_count", 0) != 0
-            or report.get("profile_update_count", 0) != 0
-            or "record_teacher_review" in names
+            None if not report else (
+                report.get("teacher_review_count", 0) != 0
+                or report.get("profile_update_count", 0) != 0
+                or "record_teacher_review" in names
+            )
         ),
         "failure": failure or (report.get("error") or {}).get("message"),
         "returncode": returncode,
@@ -188,7 +195,9 @@ def main(argv: list[str] | None = None) -> int:
         print("Local Ollama preflight blocked all runs; see summary.json")
         return 2
     print(f"Passing attempts: {result['pass_count']}/{result['attempt_count']}")
-    print(f"Human gate violations: {result['human_gate_violation_count']}")
+    print(f"Observed human gate violations: "
+          f"{result['observed_human_gate_violation_count']}")
+    print(f"Attempts without complete reports: {result['attempts_without_complete_report']}")
     return 0 if result["fail_count"] == 0 else 1
 
 
