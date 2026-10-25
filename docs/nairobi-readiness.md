@@ -42,6 +42,26 @@ replace historical failures, or re-label a deterministic run as live Qwen infere
 - The original local validation reported 322 pytest tests passing, Ruff passing and a clean
   working tree at the frozen commit. All new changes require their own verification.
 
+## Development progress — 25 October 2026
+
+- **Issue #27, initial implementation:** a separate synthetic-only local review sandbox now
+  uses the existing human-only service to show before/after approve, edit and reject outcomes,
+  with an explicit confirmation prompt, isolated JSON state and a read-only HTML view.
+  The candidate is seeded from fictional evidence rather than inferred by a model in this run.
+- **Regression coverage added:** ten new pytest cases exercise pending, approval, editing,
+  rejection, cancellation, isolation, audit records and HTML escaping. The full Windows
+  test suite and Ruff still require execution on the Nairobi branch; no new passing
+  test count is claimed yet.
+- **Impact preparation:** a structured [teacher feedback protocol](nairobi-teacher-feedback.md)
+  is available for exploratory walkthroughs using synthetic evidence only. No classroom
+  impact or practitioner feedback is claimed.
+- **Issues #28 and #29:** repeated Qwen reliability evaluation and offline CPU rehearsal
+  remain outstanding.
+
+The new feature does not authenticate teachers, create a public review endpoint or replace
+the original submission demonstration. Do not close Issue #27 until its local acceptance
+checks and manual browser review pass.
+
 ## Prioritised work and acceptance gates
 
 ### P0 — Teacher review that judges can inspect safely

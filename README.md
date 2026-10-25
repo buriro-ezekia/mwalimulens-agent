@@ -259,6 +259,30 @@ cross-school evaluations, and deployment patterns that remain practical where co
 compute are constrained. These are future directions, not capabilities claimed by the challenge
 prototype.
 
+## Nairobi refinement (post-selection)
+
+Development for the Nairobi event takes place on the separate
+[`nairobi-refinement-2026` branch](https://github.com/buriro-ezekia/mwalimulens-agent/tree/nairobi-refinement-2026).
+The original challenge submission is preserved at commit
+`6215b9efb79ffd022a835dabba386c5ccb8226e4`.
+
+An **experimental synthetic-only teacher-review sandbox** now exercises the existing
+human-only approve/edit/reject service method. It produces before/after browser evidence and
+a local audit trail; the reviewer is simulated, not authenticated, and the seeded candidate
+does not represent a fresh LLM or MCP-client run. It must not be used with real learner data.
+
+Run on the Nairobi branch:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_review_demo
+```
+
+See [Nairobi readiness](docs/nairobi-readiness.md),
+[teacher-review sandbox](docs/nairobi-teacher-review.md) and
+[teacher feedback protocol](docs/nairobi-teacher-feedback.md).
+These are post-selection developments, not part of the original submitted evidence.
+Local validation of this new branch is still required.
+
 ## Further documentation
 
 - `ARCHITECTURE.md` — system design and decision boundaries
