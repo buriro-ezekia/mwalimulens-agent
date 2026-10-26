@@ -321,6 +321,14 @@ evaluations separately; no live-model result is implied by this runner.
 .\.venv\Scripts\python.exe -m mwalimulens.product_acceptance --with-mcp
 ```
 
+## Workflow performance measurement
+
+The local Qwen runner now records agent construction time, initial/recovery
+agent-run duration, overall execution time and service-side Education MCP tool
+durations. It explicitly distinguishes the combined model-and-MCP span from
+model-only inference time, which is not yet measured. See the
+[performance instrumentation guide](docs/workflow-timing.md).
+
 ## Continuous integration
 
 The [CircleCI configuration](.circleci/config.yml) runs the full Python test suite,
