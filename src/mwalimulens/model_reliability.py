@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT = ROOT / "runtime" / "nairobi_reliability"
+DEFAULT_OUTPUT = ROOT / "runtime" / "model_reliability"
 
 
 def _percentile(values: list[float], proportion: float) -> float | None:
@@ -117,7 +117,7 @@ def run_campaign(*, runs: int, timeout: int, model: str,
         attempt_dir.mkdir()
         report_path = attempt_dir / "report.json"
         state_path = attempt_dir / "state.json"
-        command = [sys.executable, "-m", "mwalimulens.nairobi_reliability", "--single-run",
+        command = [sys.executable, "-m", "mwalimulens.model_reliability", "--single-run",
                    "--model", model, "--report", str(report_path), "--state", str(state_path)]
         started = time.monotonic()
         failure = None

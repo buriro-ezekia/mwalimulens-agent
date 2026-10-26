@@ -259,22 +259,22 @@ cross-school evaluations, and deployment patterns that remain practical where co
 compute are constrained. These are future directions, not capabilities claimed by the challenge
 prototype.
 
-## Nairobi refinement (post-selection)
+## Product development (post-selection)
 
-Development for the Nairobi event takes place on the separate
-[`nairobi-refinement-2026` branch](https://github.com/buriro-ezekia/mwalimulens-agent/tree/nairobi-refinement-2026).
+Development for the product event takes place on the separate
+[`product-development` branch](https://github.com/buriro-ezekia/mwalimulens-agent/tree/product-development).
 The original challenge submission remains preserved at
 `6215b9efb79ffd022a835dabba386c5ccb8226e4`.
 
 ### Learner Progress Review — browser workspace
 
-The new [teacher workspace](docs/nairobi-teacher-workspace.md) brings the fictional learner
+The new [teacher workspace](docs/teacher-workspace.md) brings the fictional learner
 timeline, supporting and counter-evidence, uncertainty, teacher decision and audit trail
 into a single responsive, offline-friendly local browser interface. Teachers can
 **Approve, Revise or Reject** through the browser, inspect a confirmation page and see
 the resulting synthetic profile note and audited state.
 
-Run from the Nairobi branch:
+Run from the product-development branch:
 
 ```powershell
 .\.venv\Scripts\python.exe -m mwalimulens.teacher_portal
@@ -290,22 +290,22 @@ The app binds only to local `127.0.0.1`, uses disposable synthetic state and a s
 reviewer identity. It is **not authenticated** and must not be exposed publicly or used
 with real learner data. The model cannot call the human-only review action.
 
-The earlier [terminal-driven review sandbox](docs/nairobi-teacher-review.md) remains available
-for reproducibility. The [teacher feedback protocol](docs/nairobi-teacher-feedback.md) supports
+The earlier [terminal-driven review sandbox](docs/teacher-review.md) remains available
+for reproducibility. The [teacher feedback protocol](docs/teacher-feedback.md) supports
 exploratory usability assessment with fictional examples.
 
-The Nairobi branch also provides a
-[repeated local Qwen evaluation harness](docs/nairobi-reliability.md) and an
-[offline presentation rehearsal checklist](docs/nairobi-offline-rehearsal.md).
-Run the Qwen harness with `python -m mwalimulens.nairobi_reliability --runs 3` to
+The product-development branch also provides a
+[repeated local Qwen evaluation harness](docs/model-reliability.md) and an
+[offline presentation rehearsal checklist](docs/offline-demo.md).
+Run the Qwen harness with `python -m mwalimulens.model_reliability --runs 3` to
 record every successful, failed or timed-out attempt separately. This first benchmark
 repeats **one synthetic learner task**, not multiple classroom scenarios.
 
 For automated local prerequisite and MCP checks, run
-`python -m mwalimulens.nairobi_preflight --run-mcp --check-model`. A passing
+`python -m mwalimulens.offline_preflight --run-mcp --check-model`. A passing
 automated check does **not** replace a manually disconnected Wi-Fi rehearsal.
 
-The three new Nairobi modules have **35 targeted isolated tests passing** in the local
+The three new product modules have **35 targeted isolated tests passing** in the local
 development environment. Full repository pytest, Ruff, actual Windows MCP/browser
 integration and real repeated Qwen runs remain outstanding. These are post-selection
 developments, not part of the original submitted evidence.

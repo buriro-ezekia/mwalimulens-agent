@@ -5,7 +5,7 @@ import json
 import types
 from pathlib import Path
 
-from mwalimulens.nairobi_preflight import (
+from mwalimulens.offline_preflight import (
     check_prerequisites,
     inspect_mcp_case,
     run_preflight,
@@ -49,7 +49,7 @@ def test_prerequisite_checks_detect_missing_files_and_node(tmp_path):
 
 
 def test_skipped_checks_cannot_be_reported_as_pass(tmp_path,monkeypatch):
-    import mwalimulens.nairobi_preflight as mod
+    import mwalimulens.offline_preflight as mod
     monkeypatch.setattr(mod,'check_prerequisites',lambda:{'all_present':True})
     result=run_preflight(output_root=tmp_path,run_mcp=False,check_model=False)
     assert result['status']=='incomplete_or_failed'
@@ -60,7 +60,7 @@ def test_skipped_checks_cannot_be_reported_as_pass(tmp_path,monkeypatch):
 
 
 def test_automated_mcp_checks_can_pass_without_offline_claim(tmp_path,monkeypatch):
-    import mwalimulens.nairobi_preflight as mod
+    import mwalimulens.offline_preflight as mod
     import mwalimulens.teacher_portal as portal
     monkeypatch.setattr(mod,'check_prerequisites',lambda:{'all_present':True})
     monkeypatch.setattr(portal,'create_case',lambda root,mode:types.SimpleNamespace(
@@ -74,7 +74,7 @@ def test_automated_mcp_checks_can_pass_without_offline_claim(tmp_path,monkeypatc
 
 
 def test_failed_mcp_keeps_report_and_does_not_claim_pass(tmp_path,monkeypatch):
-    import mwalimulens.nairobi_preflight as mod
+    import mwalimulens.offline_preflight as mod
     import mwalimulens.teacher_portal as portal
     monkeypatch.setattr(mod,'check_prerequisites',lambda:{'all_present':True})
     def fail(_root,_mode):

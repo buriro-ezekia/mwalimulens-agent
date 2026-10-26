@@ -1,4 +1,4 @@
-# Nairobi teacher feedback protocol — synthetic walkthrough
+# Teacher feedback protocol — synthetic walkthrough
 
 **Purpose:** gather early practitioner feedback on whether MwalimuLens presents evidence
 clearly enough to support a teacher's professional judgement. This is exploratory usability
@@ -7,7 +7,7 @@ feedback, **not** an educational impact evaluation or classroom validation.
 ## Preparation
 
 Use only the fictional L001 / MATH-FRACTIONS case in the
-[Learner Progress Review browser workspace](nairobi-teacher-workspace.md). Show the assessment
+[Learner Progress Review browser workspace](teacher-workspace.md). Show the assessment
 trend, EV-008 counter-observation, uncertainty and proposed teacher question. Do not show
 real learner records or ask participants to describe identifiable learners.
 

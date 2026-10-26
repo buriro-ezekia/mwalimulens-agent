@@ -1,4 +1,4 @@
-"""Synthetic-only Nairobi review demonstration and human decision boundaries."""
+"""Synthetic-only teacher review demonstration and human decision boundaries."""
 
 from __future__ import annotations
 

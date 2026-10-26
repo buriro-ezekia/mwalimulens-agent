@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from mwalimulens.nairobi_reliability import (
+from mwalimulens.model_reliability import (
     attempt_record,
     main,
     run_campaign,

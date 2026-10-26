@@ -1,4 +1,4 @@
-# Nairobi real-model repeatability evaluation
+# Local real-model repeatability evaluation
 
 This is **post-selection experimental evaluation**. It does not replace the original
 committed Qwen evidence, the challenge evaluation suite or historical failure reports.
@@ -15,12 +15,12 @@ Those remain separate research and validation tasks.
 
 ## Run on Windows
 
-From the `nairobi-refinement-2026` branch, after starting Ollama and confirming
+From the `product-development` branch, after starting Ollama and confirming
 `qwen2.5:3b` is installed:
 
 ```powershell
-.\.venv\Scripts\python.exe -m mwalimulens.nairobi_reliability --dry-run
-.\.venv\Scripts\python.exe -m mwalimulens.nairobi_reliability --runs 3 --timeout 600
+.\.venv\Scripts\python.exe -m mwalimulens.model_reliability --dry-run
+.\.venv\Scripts\python.exe -m mwalimulens.model_reliability --runs 3 --timeout 600
 ```
 
 The harness performs an Ollama preflight against the **local** endpoint before running.
@@ -31,7 +31,7 @@ completion-recovery policy still applies within each run; this is disclosed in t
 The output is saved under:
 
 ```text
-runtime/nairobi_reliability/campaign-*/
+runtime/model_reliability/campaign-*/
     summary.json
     attempt-001/report.json
     attempt-001/state.json
@@ -59,7 +59,7 @@ use mock subprocess results; they do **not** demonstrate live Qwen reliability.
 ## Validation
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q tests/test_nairobi_reliability.py
+.\.venv\Scripts\python.exe -m pytest -q tests/test_model_reliability.py
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m ruff check .
 ```

@@ -1,4 +1,4 @@
-"""Offline, synthetic-only human review sandbox for the Nairobi demonstration.
+"""Offline, synthetic-only human review sandbox for the product demonstration.
 
 This is not an authenticated teacher portal, a model tool or a live MCP run.
 """
@@ -20,7 +20,7 @@ from mwalimulens.mcp_server.service import EducationToolService
 from mwalimulens.mcp_server.state import JsonStateStore
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT = ROOT / "runtime" / "nairobi_review_sandbox"
+DEFAULT_OUTPUT = ROOT / "runtime" / "teacher_review_sandbox"
 SIMULATED_REVIEWER = "simulated-teacher-not-authenticated"
 
 # Fictional evidence IDs are validated by the existing EducationToolService.
@@ -119,7 +119,7 @@ th, td {{ padding: 10px; border-bottom: 1px solid #e1e6ed;
 th {{ background: #eef2f8; }} .scroll {{ overflow-x: auto; }}
 code {{ overflow-wrap: anywhere; }} footer {{ margin-top: 22px; color: #526078; }}
 </style></head><body><main>
-<header><p>MWALIMULENS · NAIROBI REFINEMENT · SYNTHETIC ONLY</p>
+<header><p>MWALIMULENS · PRODUCT DEVELOPMENT · SYNTHETIC ONLY</p>
 <h1>Teacher decision gate</h1>
 <p>Evidence and a provisional candidate are displayed for a simulated human decision.
 This static page reflects the actual local state; it cannot approve or reject anything.</p>

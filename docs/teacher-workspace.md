@@ -1,12 +1,12 @@
-# MwalimuLens teacher workspace — Nairobi refinement
+# MwalimuLens teacher workspace — Product development
 
-The Nairobi teacher workspace brings evidence review, a human decision and the resulting
+The Teacher workspace brings evidence review, a human decision and the resulting
 local audit trail into one responsive browser interface. It is **post-selection development**
 and does not alter the original challenge submission, published video or promoted evidence.
 
 ## Start on Windows
 
-From the `nairobi-refinement-2026` branch, with the project's virtual environment installed:
+From the `product-development` branch, with the project's virtual environment installed:
 
 ```powershell
 .\.venv\Scripts\python.exe -m mwalimulens.teacher_portal
@@ -68,7 +68,7 @@ git status --short
 The first command exercises HTTP request boundaries, simulated review decisions, cancellation,
 CSRF protection, input validation, HTML escaping, duplicate submissions and case isolation.
 The full tests and Ruff must pass on the target Windows environment before this is treated as
-Nairobi-demo-ready. Review the interface manually at normal browser zoom and on a narrow
+ready for a verified product demonstration. Review the interface manually at normal browser zoom and on a narrow
 viewport. Keep the development PR in draft until that verification is complete.
 
 ## Educational usability and impact
@@ -77,11 +77,11 @@ The interface prioritises an understandable learner-progress summary, evidence c
 contradictory observations, uncertainty and the teacher's decision. Technical tool traces are
 available under an expandable section rather than dominating the first screen.
 
-Use the [synthetic teacher feedback protocol](nairobi-teacher-feedback.md) to record exploratory
+Use the [synthetic teacher feedback protocol](teacher-feedback.md) to record exploratory
 practitioner observations. No real-classroom learning improvement, teacher efficiency gain or
 cross-school generalisability is claimed until it has been evaluated.
 
-## Outstanding Nairobi gates
+## Outstanding verification gates
 
 The next steps are repeated real Qwen2.5 3B evaluation, practitioner feedback using fictional
 cases, and an offline presentation rehearsal. Before any real learner pilot, verified teacher

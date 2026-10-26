@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT = ROOT / "runtime" / "nairobi_preflight"
+DEFAULT_OUTPUT = ROOT / "runtime" / "offline_preflight"
 
 
 def check_prerequisites(root: Path = ROOT, *, which=shutil.which) -> dict[str, bool]:
@@ -114,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     result = run_preflight(output_root=args.output_dir,
                            run_mcp=args.run_mcp, check_model=args.check_model)
-    print(f"Nairobi preflight: {result['status']}")
+    print(f"product preflight: {result['status']}")
     print(f"Local report: {result['report_path']}")
     print("Offline connectivity still requires a manual disconnected rehearsal.")
     return 0 if result["status"] == "automated_pass" else 2

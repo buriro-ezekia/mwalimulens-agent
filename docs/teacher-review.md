@@ -1,7 +1,7 @@
-# Nairobi teacher-review sandbox (synthetic only)
+# Teacher-review sandbox (synthetic only)
 
 **Legacy terminal workflow.** The primary teacher-facing application is now the
-[Learner Progress Review browser workspace](nairobi-teacher-workspace.md), which supports
+[Learner Progress Review browser workspace](teacher-workspace.md), which supports
 Approve, Revise and Reject directly in the browser. The terminal workflow below remains
 available as an independent, synthetic-only regression demonstration.
 
@@ -17,14 +17,14 @@ The published 2:39 video remains the authoritative original submission recording
 
 ## Run on Windows
 
-From the nairobi-refinement-2026 branch, with the existing virtual environment:
+From the product-development branch, with the existing virtual environment:
 
 ~~~powershell
 .\.venv\Scripts\python.exe -m mwalimulens.teacher_review_demo
 ~~~
 
 The command creates a **new** disposable synthetic-state directory under
-runtime/nairobi_review_sandbox/review-*/ for each run. The before.html page opens in your
+runtime/teacher_review_sandbox/review-*/ for each run. The before.html page opens in your
 browser, showing the claim, supporting evidence, counter-evidence, uncertainty and the pending
 human gate. Return to PowerShell to choose approve, edit, reject or cancel, enter a reason,
 and type the exact word REVIEW to confirm. A confirmed decision is recorded through the real
@@ -78,5 +78,5 @@ machine and a human has checked the actual browser before/after pages.
 
 For genuine school deployment, teacher authentication, role-based authorisation, data
 protection, consent and audit retention must be designed and independently tested. This
-sandbox does not satisfy those requirements. The next Nairobi tasks are repeated local Qwen
+sandbox does not satisfy those requirements. The next product priorities are repeated local Qwen
 reliability evaluations and an offline presentation rehearsal.

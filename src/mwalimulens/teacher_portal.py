@@ -20,7 +20,7 @@ from typing import Any
 from urllib.parse import parse_qs
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUTPUT = ROOT / "runtime" / "nairobi_teacher_portal"
+DEFAULT_OUTPUT = ROOT / "runtime" / "teacher_portal"
 REVIEWER = "simulated-teacher-not-authenticated"
 MAX_POST_BYTES = 8192
 CONFIRM_TTL = 600

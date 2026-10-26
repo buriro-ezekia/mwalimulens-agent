@@ -1,4 +1,4 @@
-# Nairobi offline demonstration rehearsal
+# Offline demonstration rehearsal
 
 **Purpose:** prepare a robust, honest presentation on the CPU-only Windows laptop.
 This checklist is not proof that a full offline rehearsal has already passed.
@@ -24,12 +24,12 @@ in the demonstration repository.
 Run the following with the local environment prepared:
 
 ```powershell
-.\.venv\Scripts\python.exe -m mwalimulens.nairobi_preflight --run-mcp --check-model
+.\.venv\Scripts\python.exe -m mwalimulens.offline_preflight --run-mcp --check-model
 ```
 
 The preflight checks installed Python/Node components, synthetic fixtures, the borrowed
 Filesystem MCP, a real fast MCP task and whether the local Ollama model is available.
-It writes a JSON report under `runtime/nairobi_preflight/`. A result of
+It writes a JSON report under `runtime/offline_preflight/`. A result of
 `automated_pass` means only the **automated** checks passed; it does not prove that
 Wi-Fi was disconnected or that a real Qwen inference completed. A failure is retained
 and reported rather than silently bypassed.
@@ -61,7 +61,7 @@ and reported rather than silently bypassed.
 ## Fallback and stage delivery
 
 Keep the original verified 2:39 YouTube demo as historical submission evidence. Prepare
-an additional local, clearly labelled video of the Nairobi version only **after** the
+an additional local, clearly labelled video of the product version only **after** the
 new workflow has passed manual checks. Playback is a fallback, not a live run.
 
 For the stage, use the following narrative sequence: the classroom problem, longitudinal
@@ -83,5 +83,5 @@ failed model attempts or claim real-school validation.
 | Mobile/narrow-screen legibility | Pending | |
 | Recorded fallback verified | Pending | |
 
-The Nairobi demonstration is ready only after the observed results are recorded.
+The product demonstration is ready only after the observed results are recorded.
 No real learner records or unauthenticated production write endpoints are permitted.
