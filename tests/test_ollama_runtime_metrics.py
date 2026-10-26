@@ -159,8 +159,6 @@ def test_run_report_exposes_only_request_metadata(tmp_path) -> None:
 
 
 def test_runner_captures_preload_and_model_request_metrics(tmp_path, monkeypatch) -> None:
-    from types import SimpleNamespace
-
     from mwalimulens.agent import open_weights_run
 
     observed = []
