@@ -169,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.state is None or args.report is None:
             parser.error("--single-run requires --state and --report")
         import asyncio
+
         from mwalimulens.agent.ollama import OllamaSettings
         from mwalimulens.agent.open_weights_run import run_open_weights_task
 
