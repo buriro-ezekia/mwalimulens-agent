@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
@@ -35,6 +36,7 @@ class EducationToolService:
         """Return one learner's evidence ordered by when each event occurred."""
 
         inputs = {"learner_id": learner_id}
+        tool_started = perf_counter()
         try:
             learner = self.dataset.learner(learner_id)
             evidence = self.dataset.timeline(learner_id)
@@ -50,10 +52,10 @@ class EducationToolService:
                 "evidence": [_evidence_payload(item) for item in evidence],
             }
         except Exception as exc:
-            self._audit_error("get_learner_timeline", inputs, exc)
+            self._audit_error("get_learner_timeline", inputs, exc, tool_started)
             raise
 
-        self._audit_success("get_learner_timeline", inputs, output)
+        self._audit_success("get_learner_timeline", inputs, output, tool_started)
         return output
 
     def get_competency_evidence(
@@ -64,6 +66,7 @@ class EducationToolService:
         """Return evidence for one learner and competency in event chronology."""
 
         inputs = {"learner_id": learner_id, "competency_code": competency_code}
+        tool_started = perf_counter()
         try:
             evidence = self.dataset.competency_evidence(learner_id, competency_code)
             output = {
@@ -73,10 +76,10 @@ class EducationToolService:
                 "evidence": [_evidence_payload(item) for item in evidence],
             }
         except Exception as exc:
-            self._audit_error("get_competency_evidence", inputs, exc)
+            self._audit_error("get_competency_evidence", inputs, exc, tool_started)
             raise
 
-        self._audit_success("get_competency_evidence", inputs, output)
+        self._audit_success("get_competency_evidence", inputs, output, tool_started)
         return output
 
     def flag_pattern_for_review(
@@ -100,6 +103,7 @@ class EducationToolService:
             "uncertainty": uncertainty,
             "suggested_teacher_question": suggested_teacher_question,
         }
+        tool_started = perf_counter()
 
         try:
             self.dataset.learner(learner_id)
@@ -151,10 +155,11 @@ class EducationToolService:
                 inputs=inputs,
                 output=review,
                 timestamp=created_at,
+                duration_seconds=round(perf_counter() - tool_started, 6),
             )
             self.state_store.record_pending_review_and_tool_call(review, event)
         except Exception as exc:
-            self._audit_error("flag_pattern_for_review", inputs, exc)
+            self._audit_error("flag_pattern_for_review", inputs, exc, tool_started)
             raise
 
         return review
@@ -176,6 +181,7 @@ class EducationToolService:
             "reason": reason,
             "edited_claim": edited_claim,
         }
+        tool_started = perf_counter()
 
         try:
             review_id = _require_text(review_id, "review_id")
@@ -237,6 +243,7 @@ class EducationToolService:
                 inputs=inputs,
                 output=output,
                 timestamp=reviewed_at,
+                duration_seconds=round(perf_counter() - tool_started, 6),
             )
             self.state_store.record_teacher_review_action(
                 review_id=review_id,
@@ -245,7 +252,7 @@ class EducationToolService:
                 event=event,
             )
         except Exception as exc:
-            self._audit_error("record_teacher_review", inputs, exc)
+            self._audit_error("record_teacher_review", inputs, exc, tool_started)
             raise
 
         return output
@@ -278,6 +285,7 @@ class EducationToolService:
         tool_name: str,
         inputs: dict[str, Any],
         output: dict[str, Any],
+        tool_started: float,
     ) -> None:
         self.state_store.record_tool_call(
             self._success_event(
@@ -285,6 +293,7 @@ class EducationToolService:
                 inputs=inputs,
                 output=output,
                 timestamp=self._timestamp(),
+                duration_seconds=round(perf_counter() - tool_started, 6),
             )
         )
 
@@ -295,12 +304,14 @@ class EducationToolService:
         inputs: dict[str, Any],
         output: dict[str, Any],
         timestamp: str,
+        duration_seconds: float | None = None,
     ) -> dict[str, Any]:
         return {
             "call_id": self._id_factory("call"),
             "tool_name": tool_name,
             "status": "success",
             "timestamp": timestamp,
+            "duration_seconds": duration_seconds,
             "inputs": inputs,
             "output": output,
             "error": None,
@@ -311,12 +322,14 @@ class EducationToolService:
         tool_name: str,
         inputs: dict[str, Any],
         exc: Exception,
+        tool_started: float,
     ) -> None:
         event = {
             "call_id": self._id_factory("call"),
             "tool_name": tool_name,
             "status": "error",
             "timestamp": self._timestamp(),
+            "duration_seconds": round(perf_counter() - tool_started, 6),
             "inputs": inputs,
             "output": None,
             "error": {
