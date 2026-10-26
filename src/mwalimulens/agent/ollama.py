@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 import os
 import re
-from time import perf_counter
-from urllib.request import Request, urlopen
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
