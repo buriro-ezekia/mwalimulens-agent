@@ -321,6 +321,20 @@ evaluations separately; no live-model result is implied by this runner.
 .\.venv\Scripts\python.exe -m mwalimulens.product_acceptance --with-mcp
 ```
 
+## CPU inference diagnostics
+
+Use optional native Ollama preloading and model-request telemetry for the
+local Qwen workflow:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.agent.open_weights_run --keep-alive 30m
+```
+
+This records observed request wall times and provider token usage without
+changing teacher authority or claiming pure token-generation timings.
+See the [CPU inference guide](docs/ollama-performance.md) for setup,
+per-attempt reliability reporting and measured-baseline comparisons.
+
 ## Workflow performance measurement
 
 The local Qwen runner now records agent construction time, initial/recovery
