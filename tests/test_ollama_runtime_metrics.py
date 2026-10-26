@@ -156,3 +156,59 @@ def test_run_report_exposes_only_request_metadata(tmp_path) -> None:
     assert report["teacher_review_count"] == 0
     assert report["profile_update_count"] == 0
     assert report["status"] == "fail"
+
+
+def test_runner_captures_preload_and_model_request_metrics(tmp_path, monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from mwalimulens.agent import open_weights_run
+
+    observed = []
+
+    class FakeAgent:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def run(self, _prompt, **_kwargs):
+            observed.append("ran")
+            request_records[0].append({
+                "request": 1,
+                "status": "pass",
+                "seconds": 10.0,
+                "input_tokens": 40,
+                "output_tokens": 20,
+                "total_tokens": 60,
+            })
+            return SimpleNamespace(output="Evidence pending.")
+
+    request_records = []
+
+    def fake_builder(*, records, **_kwargs):
+        assert records is not None
+        request_records.append(records)
+        return FakeAgent()
+
+    monkeypatch.setattr(open_weights_run, "build_ollama_agent", fake_builder)
+    monkeypatch.setattr(
+        open_weights_run, "prewarm_ollama",
+        lambda settings: {
+            "attempted": True,
+            "status": "pass",
+            "seconds": 0.5,
+            "requested_keep_alive": settings.keep_alive,
+        },
+    )
+    report = asyncio.run(open_weights_run.run_open_weights_task(
+        settings=OllamaSettings(keep_alive="30m"),
+        state_path=tmp_path / "state.json",
+        report_path=tmp_path / "report.json",
+    ))
+    assert observed == ["ran"]
+    assert report["preload"]["status"] == "pass"
+    assert report["model_request_count_observed"] == 1
+    assert report["model_requests"][0]["input_tokens"] == 40
+    assert report["status"] == "fail"
+    assert report["teacher_review_count"] == 0
