@@ -10,7 +10,10 @@ from pathlib import Path
 import pytest
 
 from mwalimulens.nairobi_reliability import (
-    attempt_record, main, run_campaign, summarise,
+    attempt_record,
+    main,
+    run_campaign,
+    summarise,
 )
 
 
