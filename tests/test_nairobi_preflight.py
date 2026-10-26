@@ -6,7 +6,9 @@ import types
 from pathlib import Path
 
 from mwalimulens.nairobi_preflight import (
-    check_prerequisites, inspect_mcp_case, run_preflight,
+    check_prerequisites,
+    inspect_mcp_case,
+    run_preflight,
 )
 
 
