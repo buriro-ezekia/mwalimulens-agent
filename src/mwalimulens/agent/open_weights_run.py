@@ -51,6 +51,25 @@ Do not ask the user for permission again. Do not call or attempt any teacher-rev
 invent evidence IDs.
 """.strip()
 
+CONCISE_OPEN_WEIGHTS_TASK = """
+Assess fictional learner L001 on MATH-FRACTIONS across terms using MCP evidence.
+
+Retrieve competency evidence before forming a conclusion. If it supports a bounded
+longitudinal pattern, call flag_pattern_for_review with at least two exact supporting
+evidence IDs, relevant counter-evidence IDs, explicit uncertainty and one useful
+teacher question. Preserve mixed evidence; never invent IDs or infer a permanent trait.
+If evidence is insufficient, abstain without calling the action tool.
+
+Keep the final response concise. Do not repeat all retrieved observations in prose.
+The candidate remains pending teacher review; never approve, edit, reject, rank,
+permanently label, assign a pathway or modify a learner profile.
+""".strip()
+
+PROMPT_STYLES = {
+    "baseline": None,
+    "concise": CONCISE_OPEN_WEIGHTS_TASK,
+}
+
 DEFAULT_OPEN_WEIGHTS_TASK = """
 Assess learner L001's longitudinal MATH-FRACTIONS evidence.
 
@@ -72,6 +91,7 @@ async def run_open_weights_task(
     *,
     settings: OllamaSettings | None = None,
     prompt: str = DEFAULT_OPEN_WEIGHTS_TASK,
+    prompt_style: str = "baseline",
     data_dir: Path = DEFAULT_DATA_DIR,
     state_path: Path = DEFAULT_OPEN_WEIGHTS_STATE_PATH,
     report_path: Path = DEFAULT_OPEN_WEIGHTS_REPORT_PATH,
@@ -79,6 +99,12 @@ async def run_open_weights_task(
     """Run one local Qwen task and always persist judge-inspectable evidence."""
 
     settings = settings or OllamaSettings.from_env()
+    if prompt_style not in PROMPT_STYLES:
+        raise ValueError("Unknown prompt style")
+    if prompt_style == "concise":
+        if prompt != DEFAULT_OPEN_WEIGHTS_TASK:
+            raise ValueError("Concise mode cannot override a custom prompt")
+        prompt = CONCISE_OPEN_WEIGHTS_TASK
     state_path = state_path.resolve()
     report_path = report_path.resolve()
 
@@ -113,6 +139,9 @@ async def run_open_weights_task(
             data_dir=data_dir,
             state_path=state_path,
             records=model_requests,
+            audit_snapshot=lambda: tuple(
+                item.get("tool_name") for item in state_store.tool_calls()
+            ),
         )
         timings["agent_build_seconds"] = round(perf_counter() - build_clock, 3)
         async with agent:
@@ -173,6 +202,7 @@ async def run_open_weights_task(
         timings=timings,
         model_requests=model_requests,
         preload=preload,
+        prompt_style=prompt_style,
     )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -197,6 +227,7 @@ def build_open_weights_report(
     timings: dict[str, float | None] | None = None,
     model_requests: list[dict[str, Any]] | None = None,
     preload: dict[str, Any] | None = None,
+    prompt_style: str = "baseline",
 ) -> dict[str, Any]:
     """Build a compact report from auditable state; never store hidden reasoning."""
 
@@ -289,6 +320,7 @@ def build_open_weights_report(
         },
         "model_requests": list(model_requests or []),
         "model_request_count_observed": len(model_requests or []),
+        "prompt_style": prompt_style,
         "timing": {
             **(timings or {}),
             "agent_run_includes_model_and_mcp": True,
@@ -360,6 +392,10 @@ def main() -> int:
         help="Ollama OpenAI-compatible base URL; defaults to http://localhost:11434/v1.",
     )
     parser.add_argument(
+        "--prompt-style", choices=sorted(PROMPT_STYLES), default="baseline",
+        help="Opt-in concise analysis prompt; baseline remains default.",
+    )
+    parser.add_argument(
         "--keep-alive",
         default=None,
         help="Optional local Ollama preload duration, e.g. 30m (max 1h).",
@@ -383,6 +419,7 @@ def main() -> int:
         run_open_weights_task(
             settings=settings,
             report_path=args.report,
+            prompt_style=args.prompt_style,
         )
     )
     print(json.dumps(report, indent=2, ensure_ascii=False))
