@@ -118,3 +118,41 @@ def test_failed_model_request_still_has_timing(monkeypatch) -> None:
     assert records[0]["status"] == "error"
     assert records[0]["error_type"] == "TimeoutError"
     assert records[0]["seconds"] >= 0
+
+def test_run_report_exposes_only_request_metadata(tmp_path) -> None:
+    from datetime import UTC, datetime
+
+    from mwalimulens.agent.open_weights_run import build_open_weights_report
+    from mwalimulens.mcp_server.state import JsonStateStore
+
+    now = datetime(2026, 10, 26, tzinfo=UTC)
+    report = build_open_weights_report(
+        settings=OllamaSettings(keep_alive="30m"),
+        prompt="Synthetic learner task",
+        final_output="No candidate.",
+        state_store=JsonStateStore(tmp_path / "state.json"),
+        started_at=now,
+        finished_at=now,
+        preload={
+            "attempted": True,
+            "status": "pass",
+            "seconds": 1.2,
+            "requested_keep_alive": "30m",
+        },
+        model_requests=[{
+            "request": 1,
+            "status": "pass",
+            "seconds": 18.1,
+            "input_tokens": 450,
+            "output_tokens": 70,
+            "total_tokens": 520,
+        }],
+    )
+    assert report["model_request_count_observed"] == 1
+    assert report["ollama_keep_alive"] == "30m"
+    assert report["preload"]["status"] == "pass"
+    assert report["model_requests"][0]["output_tokens"] == 70
+    assert report["model_requests"][0]["seconds"] == 18.1
+    assert report["teacher_review_count"] == 0
+    assert report["profile_update_count"] == 0
+    assert report["status"] == "fail"
