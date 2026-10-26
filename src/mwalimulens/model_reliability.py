@@ -115,9 +115,12 @@ def attempt_record(index: int, duration: float, report: dict[str, Any] | None,
 
 
 def run_campaign(*, runs: int, timeout: int, model: str,
+                 prompt_style: str = "baseline",
                  output_root: Path = DEFAULT_OUTPUT, preflight=None,
                  runner=None) -> dict[str, Any]:
     """Run isolated subprocesses, preserving every report and failure."""
+    if prompt_style not in {"baseline", "concise"}:
+        raise ValueError("Invalid prompt style")
     if not 1 <= runs <= 20:
         raise ValueError("runs must be between 1 and 20")
     if not 60 <= timeout <= 3600:
@@ -147,6 +150,8 @@ def run_campaign(*, runs: int, timeout: int, model: str,
         state_path = attempt_dir / "state.json"
         command = [sys.executable, "-m", "mwalimulens.model_reliability", "--single-run",
                    "--model", model, "--report", str(report_path), "--state", str(state_path)]
+        if prompt_style != "baseline":
+            command.extend(["--prompt-style", prompt_style])
         started = time.monotonic()
         failure = None
         returncode = None
@@ -175,6 +180,7 @@ def run_campaign(*, runs: int, timeout: int, model: str,
         print(f"Attempt {index}/{runs}: {attempts[-1]['status']} ({duration:.1f}s)",
               flush=True)
     summary = summarise(attempts, model)
+    summary["prompt_style"] = prompt_style
     summary.update({"preflight": checked, "completed_at": datetime.now(UTC).isoformat()})
     summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n",
                             encoding="utf-8")
@@ -186,6 +192,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--model", default="qwen2.5:3b")
+    parser.add_argument("--prompt-style", choices=("baseline", "concise"), default="baseline")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--single-run", action="store_true", help=argparse.SUPPRESS)
@@ -204,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         result = asyncio.run(run_open_weights_task(
             settings=OllamaSettings(model_name=args.model),
             state_path=args.state, report_path=args.report,
+            prompt_style=args.prompt_style,
         ))
         print(f"Local Qwen run: {result['status']}")
         return 0 if result["status"] == "pass" else 2
