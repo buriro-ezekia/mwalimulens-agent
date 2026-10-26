@@ -321,6 +321,15 @@ evaluations separately; no live-model result is implied by this runner.
 .\.venv\Scripts\python.exe -m mwalimulens.product_acceptance --with-mcp
 ```
 
+## Evidence-preserving latency experiment
+
+Individual model requests can now be aligned with the Education MCP tool audit.
+An opt-in `--prompt-style concise` experiment aims to reduce unnecessary
+generation while preserving evidence IDs and the human review gate. The
+original `baseline` prompt remains the default. See the
+[request sequence and optimisation guide](docs/request-sequence-optimisation.md)
+for controlled testing and decision criteria.
+
 ## CPU inference diagnostics
 
 Use optional native Ollama preloading and model-request telemetry for the
