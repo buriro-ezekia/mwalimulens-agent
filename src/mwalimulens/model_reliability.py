@@ -47,6 +47,15 @@ def summarise(attempts: list[dict[str, Any]], model: str) -> dict[str, Any]:
                                                    for x in attempts),
         "duration_seconds_p50": _percentile(durations, 0.5),
         "duration_seconds_p95": _percentile(durations, 0.95),
+        "model_request_count_total_observed": sum(
+            int(x.get("model_request_count") or 0) for x in attempts
+        ),
+        "model_input_tokens_total_known": sum(
+            int(x.get("model_input_tokens") or 0) for x in attempts
+        ),
+        "model_output_tokens_total_known": sum(
+            int(x.get("model_output_tokens") or 0) for x in attempts
+        ),
         "attempts": attempts,
         "limitations": [
             "Only one fictional task is repeated; this is not multi-curriculum validation.",
@@ -65,11 +74,30 @@ def attempt_record(index: int, duration: float, report: dict[str, Any] | None,
         item.get("status") != "success" for item in calls if isinstance(item, dict)
     )
     names = report.get("audited_tool_names") or []
+    requests = [
+        item for item in report.get("model_requests", []) if isinstance(item, dict)
+    ]
+    input_values = [
+        item["input_tokens"] for item in requests
+        if isinstance(item.get("input_tokens"), int)
+    ]
+    output_values = [
+        item["output_tokens"] for item in requests
+        if isinstance(item.get("output_tokens"), int)
+    ]
     return {
         "attempt": index,
         "status": "pass" if returncode == 0 and report.get("status") == "pass" else "fail",
         "duration_seconds": round(duration, 2),
         "model": report.get("model"),
+        "model_request_count": len(requests) if report else None,
+        "model_input_tokens": sum(input_values) if input_values else None,
+        "model_output_tokens": sum(output_values) if output_values else None,
+        "model_request_wall_seconds": (
+            round(sum(float(item.get("seconds") or 0) for item in requests), 3)
+            if requests else None
+        ),
+        "preload_status": (report.get("preload") or {}).get("status"),
         "candidate_count": report.get("pending_review_count") if report else None,
         "tool_names": names,
         "tool_failures": tool_failures if report else None,
