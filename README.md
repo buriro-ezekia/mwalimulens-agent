@@ -309,6 +309,18 @@ automated check does **not** replace a manually disconnected Wi-Fi rehearsal.
 naming cleanup. The renamed modules require a fresh verification run. Real MCP browser
 integration, repeated Qwen results and an offline rehearsal must be validated separately.
 
+## Functional acceptance
+
+The [product acceptance runner](docs/functional-acceptance.md) checks independent
+Approve/Revise/Reject decisions against synthetic learner evidence, including
+audited consequences. Add `--with-mcp` to verify genuine Education and borrowed
+Filesystem MCP calls using the fast deterministic agent. Run repeated local Qwen
+evaluations separately; no live-model result is implied by this runner.
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.product_acceptance --with-mcp
+```
+
 ## Continuous integration
 
 The [CircleCI configuration](.circleci/config.yml) runs the full Python test suite,
