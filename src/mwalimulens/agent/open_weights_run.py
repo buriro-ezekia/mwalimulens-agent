@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from time import perf_counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -84,6 +85,12 @@ async def run_open_weights_task(
     state_path.unlink(missing_ok=True)
 
     started_at = datetime.now(UTC)
+    started_clock = perf_counter()
+    timings: dict[str, float | None] = {
+        "agent_build_seconds": None,
+        "initial_agent_run_seconds": None,
+        "recovery_agent_run_seconds": None,
+    }
     initial_output = ""
     final_output = ""
     recovery_attempted = False
@@ -92,26 +99,40 @@ async def run_open_weights_task(
     state_store = JsonStateStore(state_path)
 
     try:
+        build_clock = perf_counter()
         agent = build_ollama_agent(
             settings=settings,
             data_dir=data_dir,
             state_path=state_path,
         )
+        timings["agent_build_seconds"] = round(perf_counter() - build_clock, 3)
         async with agent:
-            result = await agent.run(
+            initial_clock = perf_counter()
+            try:
+                result = await agent.run(
                 prompt,
                 model_settings={"temperature": 0},
-            )
+                )
+            finally:
+                timings["initial_agent_run_seconds"] = round(
+                    perf_counter() - initial_clock, 3
+                )
             initial_output = str(result.output)
             final_output = initial_output
 
             if _should_attempt_completion_recovery(state_store):
                 recovery_attempted = True
-                recovery_result = await agent.run(
-                    COMPLETION_RECOVERY_PROMPT,
-                    message_history=result.all_messages(),
-                    model_settings={"temperature": 0},
-                )
+                recovery_clock = perf_counter()
+                try:
+                    recovery_result = await agent.run(
+                        COMPLETION_RECOVERY_PROMPT,
+                        message_history=result.all_messages(),
+                        model_settings={"temperature": 0},
+                    )
+                finally:
+                    timings["recovery_agent_run_seconds"] = round(
+                        perf_counter() - recovery_clock, 3
+                    )
                 recovery_output = str(recovery_result.output)
                 final_output = recovery_output
     except Exception as exc:
@@ -120,6 +141,7 @@ async def run_open_weights_task(
             "message": str(exc),
         }
 
+    timings["total_wall_seconds"] = round(perf_counter() - started_clock, 3)
     finished_at = datetime.now(UTC)
     report = build_open_weights_report(
         settings=settings,
@@ -132,6 +154,7 @@ async def run_open_weights_task(
         started_at=started_at,
         finished_at=finished_at,
         error=error,
+        timings=timings,
     )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -153,6 +176,7 @@ def build_open_weights_report(
     recovery_attempted: bool = False,
     recovery_output: str | None = None,
     error: dict[str, str] | None = None,
+    timings: dict[str, float | None] | None = None,
 ) -> dict[str, Any]:
     """Build a compact report from auditable state; never store hidden reasoning."""
 
@@ -230,6 +254,7 @@ def build_open_weights_report(
                 "tool_name": item.get("tool_name"),
                 "status": item.get("status"),
                 "timestamp": item.get("timestamp"),
+                "duration_seconds": item.get("duration_seconds"),
             }
             for item in tool_calls
         ],
@@ -238,6 +263,16 @@ def build_open_weights_report(
         "teacher_review_count": len(teacher_reviews),
         "profile_update_count": len(profile_updates),
         "checks": checks,
+        "timing": {
+            **(timings or {}),
+            "agent_run_includes_model_and_mcp": True,
+            "model_only_seconds": None,
+            "model_load_seconds": None,
+            "measurement_note": (
+                "Agent-run time includes model inference, MCP tool execution and "
+                "orchestration. Model-only and loading time are not yet measured."
+            ),
+        },
         "error": error,
         "note": "No chain-of-thought is stored in this run report.",
     }
