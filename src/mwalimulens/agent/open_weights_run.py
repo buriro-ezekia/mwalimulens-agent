@@ -110,8 +110,8 @@ async def run_open_weights_task(
             initial_clock = perf_counter()
             try:
                 result = await agent.run(
-                prompt,
-                model_settings={"temperature": 0},
+                    prompt,
+                    model_settings={"temperature": 0},
                 )
             finally:
                 timings["initial_agent_run_seconds"] = round(
