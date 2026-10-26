@@ -251,7 +251,8 @@ def test_duplicate_form_field_rejected(server):
                  headers={'Content-Type':'application/x-www-form-urlencoded'})
     resp=conn.getresponse()
     assert resp.status==400
-    resp.read();conn.close()
+    resp.read()
+    conn.close()
 
 
 def test_large_payload_rejected(server):
@@ -281,6 +282,7 @@ def test_confirmation_not_reusable_after_new_case(server,monkeypatch):
 
 def test_committed_qwen_evidence_is_labelled_separately(tmp_path, monkeypatch):
     import json
+
     import mwalimulens.teacher_portal as teacher_portal
 
     folder = tmp_path / 'evidence'
