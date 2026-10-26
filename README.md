@@ -309,6 +309,14 @@ automated check does **not** replace a manually disconnected Wi-Fi rehearsal.
 naming cleanup. The renamed modules require a fresh verification run. Real MCP browser
 integration, repeated Qwen results and an offline rehearsal must be validated separately.
 
+## Continuous integration
+
+The [CircleCI configuration](.circleci/config.yml) runs the full Python test suite,
+Ruff and pinned MCP dependency installation in a Linux Python/Node environment.
+See the [CI setup and validation guide](docs/continuous-integration.md).
+A pipeline is not considered passing until CircleCI is connected and the job runs
+successfully; local Windows testing and device-specific MCP checks remain separate.
+
 ## Further documentation
 
 - `ARCHITECTURE.md` — system design and decision boundaries
