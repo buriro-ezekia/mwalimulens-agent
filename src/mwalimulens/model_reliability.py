@@ -223,7 +223,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     try:
         result = run_campaign(runs=args.runs, timeout=args.timeout,
-                              model=args.model, output_root=args.output_dir)
+                              model=args.model, output_root=args.output_dir,
+                              prompt_style=args.prompt_style)
     except (OSError, ValueError) as exc:
         print(f"Reliability evaluation could not start: {exc}", file=sys.stderr)
         return 2
