@@ -15,6 +15,7 @@ from mwalimulens.agent.ollama import (
     DEFAULT_OLLAMA_MODEL,
     OllamaSettings,
     build_ollama_agent,
+    prewarm_ollama,
 )
 from mwalimulens.agent.orchestrator import (
     AGENT_MCP_TOOL_ALLOWLIST,
@@ -97,13 +98,21 @@ async def run_open_weights_task(
     recovery_output: str | None = None
     error: dict[str, str] | None = None
     state_store = JsonStateStore(state_path)
+    model_requests: list[dict[str, Any]] = []
+    preload: dict[str, Any] = {
+        "attempted": False, "status": "disabled", "seconds": None,
+    }
 
     try:
+        if settings.keep_alive is not None:
+            preload = await asyncio.to_thread(prewarm_ollama, settings)
+
         build_clock = perf_counter()
         agent = build_ollama_agent(
             settings=settings,
             data_dir=data_dir,
             state_path=state_path,
+            records=model_requests,
         )
         timings["agent_build_seconds"] = round(perf_counter() - build_clock, 3)
         async with agent:
@@ -155,6 +164,8 @@ async def run_open_weights_task(
         finished_at=finished_at,
         error=error,
         timings=timings,
+        model_requests=model_requests,
+        preload=preload,
     )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -177,6 +188,8 @@ def build_open_weights_report(
     recovery_output: str | None = None,
     error: dict[str, str] | None = None,
     timings: dict[str, float | None] | None = None,
+    model_requests: list[dict[str, Any]] | None = None,
+    preload: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a compact report from auditable state; never store hidden reasoning."""
 
@@ -263,11 +276,18 @@ def build_open_weights_report(
         "teacher_review_count": len(teacher_reviews),
         "profile_update_count": len(profile_updates),
         "checks": checks,
+        "ollama_keep_alive": settings.keep_alive,
+        "preload": preload or {
+            "attempted": False, "status": "disabled", "seconds": None,
+        },
+        "model_requests": list(model_requests or []),
+        "model_request_count_observed": len(model_requests or []),
         "timing": {
             **(timings or {}),
             "agent_run_includes_model_and_mcp": True,
             "model_only_seconds": None,
             "model_load_seconds": None,
+            "per_request_wall_seconds_available": True,
             "measurement_note": (
                 "Agent-run time includes model inference, MCP tool execution and "
                 "orchestration. Model-only and loading time are not yet measured."
@@ -333,6 +353,11 @@ def main() -> int:
         help="Ollama OpenAI-compatible base URL; defaults to http://localhost:11434/v1.",
     )
     parser.add_argument(
+        "--keep-alive",
+        default=None,
+        help="Optional local Ollama preload duration, e.g. 30m (max 1h).",
+    )
+    parser.add_argument(
         "--report",
         type=Path,
         default=DEFAULT_OPEN_WEIGHTS_REPORT_PATH,
@@ -344,6 +369,7 @@ def main() -> int:
     settings = OllamaSettings(
         model_name=args.model or env_settings.model_name,
         base_url=args.base_url or env_settings.base_url,
+        keep_alive=args.keep_alive or env_settings.keep_alive,
     )
 
     report = asyncio.run(
