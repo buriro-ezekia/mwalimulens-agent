@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
@@ -112,14 +112,20 @@ def _token_count(usage: Any, *names: str) -> int | None:
 class TimedOllamaModel(OllamaModel):
     """Observe per-request wall time and provider usage without storing prompts."""
 
-    def __init__(self, name: str, *, provider: OllamaProvider, records: list) -> None:
+    def __init__(
+        self, name: str, *, provider: OllamaProvider, records: list,
+        audit_snapshot: Callable[[], Sequence[str]] | None = None,
+    ) -> None:
         super().__init__(name, provider=provider)
         self._records = records
+        self._audit_snapshot = audit_snapshot
 
     async def request(self, *args: Any, **kwargs: Any) -> Any:
         index = len(self._records) + 1
         started = perf_counter()
         record: dict[str, Any] = {"request": index}
+        if self._audit_snapshot is not None:
+            record["audited_tools_before"] = list(self._audit_snapshot())
         try:
             response = await super().request(*args, **kwargs)
             usage = getattr(response, "usage", None)
@@ -135,18 +141,24 @@ class TimedOllamaModel(OllamaModel):
             raise
         finally:
             record["seconds"] = round(perf_counter() - started, 3)
+            if self._audit_snapshot is not None:
+                record["audited_tools_after"] = list(self._audit_snapshot())
             self._records.append(record)
 
 
 def build_ollama_model(
-    settings: OllamaSettings | None = None, *, records: list | None = None
+    settings: OllamaSettings | None = None, *, records: list | None = None,
+    audit_snapshot: Callable[[], Sequence[str]] | None = None,
 ) -> OllamaModel:
     """Build the local Ollama model without making a network request."""
 
     settings = settings or OllamaSettings.from_env()
     provider = OllamaProvider(base_url=settings.base_url)
     if records is not None:
-        return TimedOllamaModel(settings.model_name, provider=provider, records=records)
+        return TimedOllamaModel(
+            settings.model_name, provider=provider, records=records,
+            audit_snapshot=audit_snapshot,
+        )
     return OllamaModel(settings.model_name, provider=provider)
 
 
@@ -157,11 +169,14 @@ def build_ollama_agent(
     state_path: Path = DEFAULT_STATE_PATH,
     additional_toolsets: Sequence[Any] = (),
     records: list | None = None,
+    audit_snapshot: Callable[[], Sequence[str]] | None = None,
 ):
     """Build the safe MwalimuLens agent backed by local Qwen/Ollama."""
 
     return build_agent(
-        build_ollama_model(settings, records=records),
+        build_ollama_model(
+            settings, records=records, audit_snapshot=audit_snapshot,
+        ),
         data_dir=data_dir,
         state_path=state_path,
         additional_toolsets=additional_toolsets,
