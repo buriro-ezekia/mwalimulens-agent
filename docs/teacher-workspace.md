@@ -1,8 +1,8 @@
-# MwalimuLens teacher workspace — Product development
+# MwalimuLens teacher workspace
 
-The Teacher workspace brings evidence review, a human decision and the resulting
-local audit trail into one responsive browser interface. It is **post-selection development**
-and does not alter the original challenge submission, published video or promoted evidence.
+The teacher workspace brings longitudinal evidence review, a human decision and the resulting
+local audit trail into one responsive browser interface. It uses fictional learner records
+and keeps experimental state separate from the original published evidence.
 
 ## Start on Windows
 

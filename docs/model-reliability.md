@@ -1,7 +1,7 @@
 # Local real-model repeatability evaluation
 
-This is **post-selection experimental evaluation**. It does not replace the original
-committed Qwen evidence, the challenge evaluation suite or historical failure reports.
+This is an experimental local-model reliability workflow. It preserves the existing
+committed Qwen evidence, evaluation suite and historical failure reports.
 
 ## Purpose
 

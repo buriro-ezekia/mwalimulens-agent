@@ -5,7 +5,7 @@
 Approve, Revise and Reject directly in the browser. The terminal workflow below remains
 available as an independent, synthetic-only regression demonstration.
 
-**Status:** post-selection experimental functionality, not part of the frozen challenge submission.
+**Status:** experimental synthetic-only functionality, not a production teacher system.
 
 This separate demonstration exercises the existing human-only EducationToolService.record_teacher_review
 path. It does **not** authenticate a teacher, connect to a school database, expose a public endpoint,

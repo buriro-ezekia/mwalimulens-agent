@@ -259,9 +259,9 @@ cross-school evaluations, and deployment patterns that remain practical where co
 compute are constrained. These are future directions, not capabilities claimed by the challenge
 prototype.
 
-## Product development (post-selection)
+## Product development
 
-Development for the product event takes place on the separate
+Current product engineering takes place on the separate
 [`product-development` branch](https://github.com/buriro-ezekia/mwalimulens-agent/tree/product-development).
 The original challenge submission remains preserved at
 `6215b9efb79ffd022a835dabba386c5ccb8226e4`.
@@ -305,10 +305,9 @@ For automated local prerequisite and MCP checks, run
 `python -m mwalimulens.offline_preflight --run-mcp --check-model`. A passing
 automated check does **not** replace a manually disconnected Wi-Fi rehearsal.
 
-The three new product modules have **35 targeted isolated tests passing** in the local
-development environment. Full repository pytest, Ruff, actual Windows MCP/browser
-integration and real repeated Qwen runs remain outstanding. These are post-selection
-developments, not part of the original submitted evidence.
+**367 repository tests and Ruff passed** on the Windows development machine before this
+naming cleanup. The renamed modules require a fresh verification run. Real MCP browser
+integration, repeated Qwen results and an offline rehearsal must be validated separately.
 
 ## Further documentation
 
