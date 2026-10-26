@@ -254,16 +254,19 @@ def render_portal(case: Case, token: str, *, message: str = "", error: str = "")
 and make a considered decision. The agent proposes; the teacher decides.</p>
 <div class="toolbar"><form method="post" action="/case/start">
 <input type="hidden" name="csrf" value="{h(token)}">
-<input type="hidden" name="mode" value="seeded"><button class="light">New practice case</button></form>
+<input type="hidden" name="mode" value="seeded">
+<button class="light">New practice case</button></form>
 <form method="post" action="/case/start">
 <input type="hidden" name="csrf" value="{h(token)}">
-<input type="hidden" name="mode" value="mcp"><button class="light">Run MCP evidence analysis</button>
+<input type="hidden" name="mode" value="mcp">
+<button class="light">Run MCP evidence analysis</button>
 </form></div></header>
 <div class="notice"><strong>Demonstration environment:</strong> fictional learner evidence only.
 Reviewer identity is simulated, not authenticated. This runs locally on your computer,
 not as a public school service. <strong>{h(mode)}.</strong></div>
 {notification}{problem}
-<div class="metrics"><div class="metric"><strong>{pending}</strong><span>Awaiting review</span></div>
+<div class="metrics"><div class="metric"><strong>{pending}</strong>
+<span>Awaiting review</span></div>
 <div class="metric"><strong>{reviews}</strong><span>Teacher decisions (simulated)</span></div>
 <div class="metric"><strong>{updates}</strong><span>Synthetic profile notes</span></div></div>
 <div class="grid"><section class="card"><h2>Evidence summary</h2>
@@ -273,7 +276,8 @@ not as a public school service. <strong>{h(mode)}.</strong></div>
 <div class="counter-note"><b>What still needs attention</b>
 <p>{h(current["uncertainty"])}</p><p><b>Teacher question:</b>
 {h(current["suggested_teacher_question"])}</p></div>
-<p class="hint">Evidence supporting the finding: {h(', '.join(current['supporting_evidence_ids']))}<br>
+<p class="hint">Evidence supporting the finding: 
+{h(', '.join(current['supporting_evidence_ids']))}<br>
 Contradictory evidence: {h(', '.join(current['counter_evidence_ids']))}</p></section>
 <section class="card"><h2>Progress across terms</h2>
 <p class="hint">Scores describe assessed tasks, not a permanent ability label.</p>
