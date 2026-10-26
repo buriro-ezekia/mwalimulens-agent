@@ -145,6 +145,13 @@ async def run_open_weights_task(
                 recovery_output = str(recovery_result.output)
                 final_output = recovery_output
     except Exception as exc:
+        if settings.keep_alive is not None and preload["status"] == "disabled":
+            preload = {
+                "attempted": True,
+                "status": "error",
+                "seconds": None,
+                "requested_keep_alive": settings.keep_alive,
+            }
         error = {
             "type": type(exc).__name__,
             "message": str(exc),
