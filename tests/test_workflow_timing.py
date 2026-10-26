@@ -11,7 +11,6 @@ from mwalimulens.domain import load_synthetic_dataset
 from mwalimulens.mcp_server.service import EducationToolService
 from mwalimulens.mcp_server.state import JsonStateStore
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
