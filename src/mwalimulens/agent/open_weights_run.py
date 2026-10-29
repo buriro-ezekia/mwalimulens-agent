@@ -162,6 +162,12 @@ async def run_open_weights_task(
 
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.unlink(missing_ok=True)
+    request_trace_path = (
+        state_path.with_name("model_requests.jsonl")
+        if prompt_style == "scenario" else None
+    )
+    if request_trace_path is not None:
+        request_trace_path.unlink(missing_ok=True)
 
     started_at = datetime.now(UTC)
     started_clock = perf_counter()
@@ -222,6 +228,7 @@ async def run_open_weights_task(
             audit_snapshot=lambda: tuple(
                 item.get("tool_name") for item in state_store.tool_calls()
             ),
+            trace_path=request_trace_path,
             tool_error_behavior="retry" if prompt_style == "scenario" else "error",
             allow_candidate_action=allow_candidate_action,
         )
