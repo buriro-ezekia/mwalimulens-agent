@@ -306,7 +306,10 @@ def test_diagnose_preserves_saved_stages_and_request_history_without_regrading(
         "grounding_correction": {"attempted": True, "verified_term_count": 3},
         "completion_recovery": {"attempted": True, "succeeded": False},
     }
-    evaluated = {"status": "fail", "checks": {"exactly_one_candidate": False}}
+    evaluated = {
+        "status": "fail", "checks": {"exactly_one_candidate": False},
+        "semantic_review_flags": ["consistency_unverified_from_at_most_two_assessments"],
+    }
     if has_stages:
         report.update({
             "outcome_stages_note": "Stages are agent runs, not individual requests.",
@@ -348,6 +351,7 @@ def test_diagnose_preserves_saved_stages_and_request_history_without_regrading(
         assert case[key] == report.get(key)
     assert "do not sum" in case["request_metadata_note"]
     assert case["status"] == "fail"
+    assert case["semantic_review_flags"] == evaluated["semantic_review_flags"]
     assert {path: path.read_bytes() for path in tmp_path.rglob("*.json")} == before
 
 
@@ -414,6 +418,7 @@ def test_focused_suite_runs_two_only_and_preserves_original_stage_grades(
         destination.write_text(json.dumps({
             "status": "pass",
             "checks": {"no_teacher_decision": True},
+            "semantic_review_flags": ["manual_review_needed"],
             "outcome_stages": [
                 {"stage": "initial", "status": "fail"},
                 {"stage": "grounding_correction", "status": "pass"},
@@ -432,6 +437,10 @@ def test_focused_suite_runs_two_only_and_preserves_original_stage_grades(
     assert result["scenario_count"] == 2
     assert result["total_available_scenarios"] == 4
     assert result["first_stage_passed"] == 0
+    assert all(
+        item["semantic_review_flags"] == ["manual_review_needed"]
+        for item in result["results"]
+    )
     assert result["first_stage_unknown"] == 0
     assert result["passed"] == 2
     assert all(item["first_stage_status"] == "fail" for item in result["results"])
