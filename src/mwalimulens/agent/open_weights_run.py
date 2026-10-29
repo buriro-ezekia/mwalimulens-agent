@@ -179,6 +179,7 @@ async def run_open_weights_task(
             audit_snapshot=lambda: tuple(
                 item.get("tool_name") for item in state_store.tool_calls()
             ),
+            tool_error_behavior="retry" if prompt_style == "scenario" else "error",
         )
         timings["agent_build_seconds"] = round(perf_counter() - build_clock, 3)
         async with agent:
