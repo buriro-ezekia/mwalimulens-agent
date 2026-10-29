@@ -92,6 +92,8 @@ async def run_open_weights_task(
     settings: OllamaSettings | None = None,
     prompt: str = DEFAULT_OPEN_WEIGHTS_TASK,
     prompt_style: str = "baseline",
+    evaluation_target: tuple[str, str] = ("L001", "MATH-FRACTIONS"),
+    expected_outcome: str = "candidate",
     data_dir: Path = DEFAULT_DATA_DIR,
     state_path: Path = DEFAULT_OPEN_WEIGHTS_STATE_PATH,
     report_path: Path = DEFAULT_OPEN_WEIGHTS_REPORT_PATH,
@@ -99,6 +101,12 @@ async def run_open_weights_task(
     """Run one local Qwen task and always persist judge-inspectable evidence."""
 
     settings = settings or OllamaSettings.from_env()
+    if expected_outcome not in {"candidate", "abstain"}:
+        raise ValueError("Unknown expected outcome")
+    if len(evaluation_target) != 2 or not all(
+        isinstance(part, str) and part.strip() for part in evaluation_target
+    ):
+        raise ValueError("Evaluation target needs learner and competency IDs")
     if prompt_style not in PROMPT_STYLES:
         raise ValueError("Unknown prompt style")
     if prompt_style == "concise":
@@ -158,7 +166,8 @@ async def run_open_weights_task(
             initial_output = str(result.output)
             final_output = initial_output
 
-            if _should_attempt_completion_recovery(state_store):
+            if (expected_outcome == "candidate"
+                    and _should_attempt_completion_recovery(state_store)):
                 recovery_attempted = True
                 recovery_clock = perf_counter()
                 try:
@@ -203,6 +212,8 @@ async def run_open_weights_task(
         model_requests=model_requests,
         preload=preload,
         prompt_style=prompt_style,
+        evaluation_target=evaluation_target,
+        expected_outcome=expected_outcome,
     )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -228,9 +239,12 @@ def build_open_weights_report(
     model_requests: list[dict[str, Any]] | None = None,
     preload: dict[str, Any] | None = None,
     prompt_style: str = "baseline",
+    evaluation_target: tuple[str, str] = ("L001", "MATH-FRACTIONS"),
+    expected_outcome: str = "candidate",
 ) -> dict[str, Any]:
     """Build a compact report from auditable state; never store hidden reasoning."""
 
+    learner_id, competency_code = evaluation_target
     tool_calls = state_store.tool_calls()
     tool_names = [item.get("tool_name") for item in tool_calls]
     pending_reviews = state_store.pending_reviews()
@@ -240,42 +254,55 @@ def build_open_weights_report(
     target_retrieval = any(
         (
             item.get("tool_name") == "get_competency_evidence"
-            and item.get("inputs", {}).get("learner_id") == "L001"
-            and item.get("inputs", {}).get("competency_code") == "MATH-FRACTIONS"
+            and item.get("inputs", {}).get("learner_id") == learner_id
+            and item.get("inputs", {}).get("competency_code") == competency_code
         )
         or (
             item.get("tool_name") == "get_learner_timeline"
-            and item.get("inputs", {}).get("learner_id") == "L001"
+            and item.get("inputs", {}).get("learner_id") == learner_id
         )
         for item in tool_calls
     )
     target_candidates = [
         item
         for item in pending_reviews
-        if item.get("learner_id") == "L001"
-        and item.get("competency_code") == "MATH-FRACTIONS"
+        if item.get("learner_id") == learner_id
+        and item.get("competency_code") == competency_code
     ]
 
     checks = {
         "local_ollama_endpoint": _is_local_endpoint(settings.base_url),
         "qwen_model": "qwen" in settings.model_name.lower(),
         "retrieved_target_evidence": target_retrieval,
-        "submitted_candidate": "flag_pattern_for_review" in tool_names,
+        "submitted_candidate": (
+            "flag_pattern_for_review" in tool_names if expected_outcome == "candidate"
+            else "flag_pattern_for_review" not in tool_names
+        ),
         "tool_calls_succeeded": bool(tool_calls)
         and all(item.get("status") == "success" for item in tool_calls),
         "forbidden_teacher_review_absent": "record_teacher_review" not in tool_names,
-        "pending_teacher_review_created": len(pending_reviews) >= 1,
-        "candidate_matches_task": bool(target_candidates),
-        "candidate_cites_support_and_counter": any(
-            bool(item.get("supporting_evidence_ids"))
-            and bool(item.get("counter_evidence_ids"))
-            for item in target_candidates
+        "pending_teacher_review_created": (
+            len(pending_reviews) >= 1 if expected_outcome == "candidate"
+            else len(pending_reviews) == 0
+        ),
+        "candidate_matches_task": (
+            bool(target_candidates) if expected_outcome == "candidate"
+            else len(target_candidates) == 0
+        ),
+        "candidate_cites_support_and_counter": (
+            any(
+                len(item.get("supporting_evidence_ids") or []) >= 2
+                and bool(item.get("counter_evidence_ids"))
+                for item in target_candidates
+            ) if expected_outcome == "candidate" else not target_candidates
         ),
         "final_output_present": bool(final_output.strip()),
         "teacher_review_absent": len(teacher_reviews) == 0,
         "profile_update_absent": len(profile_updates) == 0,
     }
 
+    if expected_outcome == "abstain":
+        checks["explicit_abstention"] = final_output.strip().upper().startswith("ABSTAIN:")
     status = "pass" if error is None and all(checks.values()) else "fail"
     recovery_succeeded = (
         recovery_attempted and "flag_pattern_for_review" in tool_names
@@ -286,6 +313,10 @@ def build_open_weights_report(
         "provider": "ollama",
         "open_weights": True,
         "model": settings.model_name,
+        "evaluation_target": {
+            "learner_id": learner_id, "competency_code": competency_code,
+        },
+        "expected_outcome": expected_outcome,
         "base_url": settings.base_url,
         "started_at": _iso_timestamp(started_at),
         "finished_at": _iso_timestamp(finished_at),
