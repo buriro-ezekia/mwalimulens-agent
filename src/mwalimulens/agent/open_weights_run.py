@@ -121,6 +121,7 @@ async def run_open_weights_task(
     prompt_style: str = "baseline",
     evaluation_target: tuple[str, str] = ("L001", "MATH-FRACTIONS"),
     expected_outcome: str = "candidate",
+    allow_candidate_action: bool = True,
     data_dir: Path = DEFAULT_DATA_DIR,
     state_path: Path = DEFAULT_OPEN_WEIGHTS_STATE_PATH,
     report_path: Path = DEFAULT_OPEN_WEIGHTS_REPORT_PATH,
@@ -180,6 +181,7 @@ async def run_open_weights_task(
                 item.get("tool_name") for item in state_store.tool_calls()
             ),
             tool_error_behavior="retry" if prompt_style == "scenario" else "error",
+            allow_candidate_action=allow_candidate_action,
         )
         timings["agent_build_seconds"] = round(perf_counter() - build_clock, 3)
         async with agent:
@@ -254,6 +256,7 @@ async def run_open_weights_task(
         prompt_style=prompt_style,
         evaluation_target=evaluation_target,
         expected_outcome=expected_outcome,
+        allow_candidate_action=allow_candidate_action,
     )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -281,6 +284,7 @@ def build_open_weights_report(
     prompt_style: str = "baseline",
     evaluation_target: tuple[str, str] = ("L001", "MATH-FRACTIONS"),
     expected_outcome: str = "candidate",
+    allow_candidate_action: bool = True,
 ) -> dict[str, Any]:
     """Build a compact report from auditable state; never store hidden reasoning."""
 
@@ -357,6 +361,7 @@ def build_open_weights_report(
             "learner_id": learner_id, "competency_code": competency_code,
         },
         "expected_outcome": expected_outcome,
+        "candidate_action_available": allow_candidate_action,
         "base_url": settings.base_url,
         "started_at": _iso_timestamp(started_at),
         "finished_at": _iso_timestamp(finished_at),
