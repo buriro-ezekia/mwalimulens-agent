@@ -11,13 +11,13 @@ from time import perf_counter
 from typing import Any
 from urllib.parse import urlparse
 
+from mwalimulens.agent.grounding import correction_prompt, verify_abstention_terms
 from mwalimulens.agent.ollama import (
     DEFAULT_OLLAMA_MODEL,
     OllamaSettings,
     build_ollama_agent,
     prewarm_ollama,
 )
-from mwalimulens.agent.grounding import correction_prompt, verify_abstention_terms
 from mwalimulens.agent.orchestrator import (
     AGENT_MCP_TOOL_ALLOWLIST,
     CANDIDATE_REVIEW_POLICY,
