@@ -18,9 +18,11 @@ from mwalimulens.mcp_server.service import EducationToolService
 from mwalimulens.mcp_server.state import JsonStateStore
 from mwalimulens.multi_scenario_eval import (
     SCENARIOS,
+    candidate_semantic_review_flags,
     diagnose_saved_suite,
     evidence_preflight,
     grade_scenario,
+    inspect_partial_model_trace,
     inspect_partial_state,
     main,
     run_one,
@@ -606,3 +608,69 @@ def test_incomplete_state_diagnostics_distinguish_missing_and_invalid_files(tmp_
     assert inspect_partial_state(path) == {"status": "invalid_structure"}
     path.write_text('["unexpected"]', encoding="utf-8")
     assert inspect_partial_state(path) == {"status": "invalid_structure"}
+
+
+def test_partial_request_trace_distinguishes_completed_and_active_requests(tmp_path):
+    trace = tmp_path / "model_requests.jsonl"
+    assert inspect_partial_model_trace(trace) == {"status": "missing"}
+    records = [
+        {"event": "request_started", "request": 1},
+        {"event": "request_finished", "request": 1, "status": "pass",
+         "requested_tool_names": ["get_competency_evidence"], "seconds": 24.0},
+        {"event": "request_started", "request": 2},
+    ]
+    trace.write_text(
+        "\n".join(json.dumps(entry) for entry in records) + "\n",
+        encoding="utf-8",
+    )
+    diagnostic = inspect_partial_model_trace(trace)
+    assert diagnostic["status"] == "readable"
+    assert diagnostic["request_started_count"] == 2
+    assert diagnostic["request_finished_count"] == 1
+    assert diagnostic["unfinished_request_numbers"] == [2]
+    assert diagnostic["last_finished_request"]["requested_tool_names"] == [
+        "get_competency_evidence"
+    ]
+    trace.write_text(trace.read_text(encoding="utf-8") + '{"event": ', encoding="utf-8")
+    assert inspect_partial_model_trace(trace)["status"] == "partial_invalid"
+    assert inspect_partial_model_trace(trace)["malformed_line_count"] == 1
+
+
+def test_small_two_score_increase_cannot_establish_consistent_improvement():
+    scenario = scenario_by_id("conflicting-evidence")
+    evidence = load_synthetic_dataset(DEFAULT_DATA_DIR).competency_evidence(
+        scenario.learner, scenario.competency
+    )
+    flags = candidate_semantic_review_flags(
+        "The learner has shown consistent improvement in interpreting tables "
+        "and explaining trends.", evidence,
+    )
+    assert "consistency_unverified_from_at_most_two_assessments" in flags
+    assert "explanation_improvement_not_established_by_later_observation" in flags
+    assert candidate_semantic_review_flags(
+        "The recorded assessment scores increased from 72% to 75%, "
+        "but explaining trends still required support.", evidence,
+    ) == []
+
+
+def test_structural_pass_still_discloses_semantic_qualification(tmp_path):
+    scenario = scenario_by_id("conflicting-evidence")
+    state, service = make_service(tmp_path)
+    service.get_competency_evidence(scenario.learner, scenario.competency)
+    service.flag_pattern_for_review(
+        learner_id=scenario.learner,
+        competency_code=scenario.competency,
+        claim="The learner shows consistent improvement in explaining trends.",
+        supporting_evidence_ids=["EV-012", "EV-013"],
+        counter_evidence_ids=["EV-014"],
+        uncertainty="The assessments differ slightly and later explanation needs support.",
+        suggested_teacher_question="Can the learner explain new trends unaided?",
+    )
+    evaluated = grade_scenario(
+        make_report(state, scenario, response="Candidate submitted."), scenario,
+    )
+    assert evaluated["status"] == "pass"
+    assert len(evaluated["semantic_review_flags"]) == 2
+    assert evaluated["manual_semantic_review_required"] is True
+    assert evaluated["semantic_quality_verified"] is False
+
