@@ -210,3 +210,64 @@ def test_runner_captures_preload_and_model_request_metrics(tmp_path, monkeypatch
     assert report["model_requests"][0]["input_tokens"] == 40
     assert report["status"] == "fail"
     assert report["teacher_review_count"] == 0
+
+
+def test_per_request_trace_is_durable_before_and_after_model_response(
+    tmp_path, monkeypatch,
+) -> None:
+    trace = tmp_path / "model_requests.jsonl"
+
+    async def fake_request(self, *_args, **_kwargs):
+        # The request-start event must already be on disk during inference.
+        events = [
+            json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()
+        ]
+        assert len(events) == 1
+        assert events[0]["event"] == "request_started"
+        return SimpleNamespace(usage=SimpleNamespace(
+            input_tokens=12, output_tokens=3, total_tokens=15,
+        ))
+
+    monkeypatch.setattr(OllamaModel, "request", fake_request)
+    records = []
+    model = build_ollama_model(
+        OllamaSettings(), records=records, trace_path=trace,
+    )
+    asyncio.run(model.request([], None, None))
+
+    events = [
+        json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()
+    ]
+    assert [item["event"] for item in events] == [
+        "request_started", "request_finished",
+    ]
+    assert events[1]["status"] == "pass"
+    assert events[1]["input_tokens"] == 12
+    assert events[1]["request"] == 1
+    assert records[0]["total_tokens"] == 15
+    assert "prompt" not in trace.read_text(encoding="utf-8")
+    assert "arguments" not in trace.read_text(encoding="utf-8")
+
+
+def test_failed_model_request_writes_durable_trace(tmp_path, monkeypatch) -> None:
+    trace = tmp_path / "model_requests.jsonl"
+
+    async def failed(self, *_args, **_kwargs):
+        raise TimeoutError("fake model timeout")
+
+    monkeypatch.setattr(OllamaModel, "request", failed)
+    model = build_ollama_model(
+        OllamaSettings(), records=[], trace_path=trace,
+    )
+    with pytest.raises(TimeoutError):
+        asyncio.run(model.request([], None, None))
+    events = [
+        json.loads(line) for line in trace.read_text(encoding="utf-8").splitlines()
+    ]
+    assert [event["event"] for event in events] == [
+        "request_started", "request_finished",
+    ]
+    assert events[-1]["status"] == "error"
+    assert events[-1]["error_type"] == "TimeoutError"
+    assert "fake model timeout" not in trace.read_text(encoding="utf-8")
+
