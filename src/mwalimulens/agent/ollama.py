@@ -171,6 +171,7 @@ def build_ollama_agent(
     records: list | None = None,
     audit_snapshot: Callable[[], Sequence[str]] | None = None,
     tool_error_behavior: str = "error",
+    allow_candidate_action: bool = True,
 ):
     """Build the safe MwalimuLens agent backed by local Qwen/Ollama."""
 
@@ -182,4 +183,5 @@ def build_ollama_agent(
         state_path=state_path,
         additional_toolsets=additional_toolsets,
         tool_error_behavior=tool_error_behavior,
+        allow_candidate_action=allow_candidate_action,
     )
