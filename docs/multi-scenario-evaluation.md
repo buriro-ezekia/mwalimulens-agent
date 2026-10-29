@@ -19,6 +19,15 @@ learner and competency, to retrieve evidence, submit a qualified candidate
 if sufficient or explicitly abstain if insufficient. It is **not told**
 which of these two outcomes the test expects.
 
+The task prompt now asks the model to compare dated assessment scores
+and separately interpret qualitative classroom observations, retaining
+a relevant observation as counter-evidence when it limits a numerical
+trend. The wording does not reveal fixture scores, evidence IDs or the
+expected verdict. An explicit `ABSTAIN:` remains a recorded model decision
+and is **not automatically revised using the hidden expected outcome**.
+Incomplete non-abstaining responses may receive a neutral, learner-targeted
+recovery turn.
+
 Each case runs in a separate subprocess and isolated JSON state. The
 runner checks the actual Education MCP tool audit and model output, not
 just whether the process returned without errors.
@@ -87,6 +96,13 @@ all learners, curricula, languages or institutional settings. One run
 per scenario is a functional probe rather than a statistical reliability
 estimate. Repeat with different seeds/cases only after preserving the
 independent labels and expectations.
+
+A prior real Qwen run passed both abstention cases but failed the two
+candidate cases: L001 abstained despite increasing recorded assessment
+scores, while L002 created a pending candidate but omitted the qualitative
+counter-evidence ID. The rubric remains strict, and these failures remain
+part of the historical evaluation record. Prompt guidance has been
+clarified; this is not evidence that the failures are now resolved.
 
 Do **not** switch the overall product default to a new prompt or deploy
 with real learners solely because this suite passes. A teacher-facing
