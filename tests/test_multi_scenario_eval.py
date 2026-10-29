@@ -192,6 +192,16 @@ def test_scenario_prompt_distinguishes_numeric_and_qualitative_evidence():
     assert "75%" not in prompt
 
 
+def test_shared_prompt_requires_abstention_when_only_one_term():
+    for scenario in SCENARIOS:
+        text = scenario_prompt(scenario)
+        assert "fewer than two distinct terms" in text
+        assert "ABSTAIN:" in text
+        assert "two or more supporting evidence IDs" in text
+        assert "counter_evidence_ids" in text
+        assert scenario.expected not in text.split("Apply this decision process")[0]
+
+
 def test_counter_evidence_omission_remains_a_failure(tmp_path):
     scenario = scenario_by_id("conflicting-evidence")
     state, service = make_service(tmp_path)
