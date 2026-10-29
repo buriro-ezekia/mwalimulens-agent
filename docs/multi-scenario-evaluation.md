@@ -328,3 +328,41 @@ saved `summary.json`, `report.json`, `result.json` and `state.json`
 are not rewritten by diagnosis. Do not repeat the live evaluation
 before inspecting these surviving artifacts.
 
+## Persisted request progress and semantic caution flags
+
+The focused `suite-csbk3ip5` timed out L001 after four successful
+evidence-retrieval calls. Its persisted MCP state had no submitted
+candidate, but no final model report existed, so the initial-stage
+outcome is **unknown**, not a confirmed abstention or duplicate attempt.
+L002 produced exactly one pending candidate after a grounding
+correction. This is a **corrected structural pass**, not a first-attempt
+success or verified educational interpretation.
+
+For future scenario executions, the Ollama request adapter appends
+`model_requests.jsonl` next to `state.json`, including a
+`request_started` event *before* inference and a `request_finished`
+event after each completed request. These events contain only request
+counts, timings, token counts, tool names and retry metadata, never
+prompts, tool arguments or private model reasoning. The diagnostic
+reports how many requests started/finished and the last completed tool
+request, even when the overall subprocess times out and the final
+report was never written. A missing or unfinished request remains
+ungraded. Older suites did not contain this trace and should report it
+as missing.
+
+The L002 candidate in the saved run overstates its evidence:
+two assessment scores (72% and 75%) show a small recorded increase,
+while the later observation says the learner still needed help
+explaining the trend. The candidate nonetheless claimed
+"consistent improvement" in interpreting tables and explaining trends.
+
+The scenario grader now emits **non-scoring** `semantic_review_flags`
+for narrowly detectable overclaims, including consistency assertions
+based on at most two assessments and claims of improving explanations
+despite later recorded support needs. These flags do not silently alter
+the existing pass/fail rubric or retroactively regrade saved reports;
+the report continues to require manual pedagogical review with
+`semantic_quality_verified=false`. They are warnings, not a complete
+natural-language fact-checker. Source evidence and original synthetic
+fixture records remain unchanged.
+
