@@ -68,6 +68,7 @@ permanently label, assign a pathway or modify a learner profile.
 PROMPT_STYLES = {
     "baseline": None,
     "concise": CONCISE_OPEN_WEIGHTS_TASK,
+    "scenario": None,
 }
 
 DEFAULT_OPEN_WEIGHTS_TASK = """
@@ -113,6 +114,8 @@ async def run_open_weights_task(
         if prompt != DEFAULT_OPEN_WEIGHTS_TASK:
             raise ValueError("Concise mode cannot override a custom prompt")
         prompt = CONCISE_OPEN_WEIGHTS_TASK
+    if prompt_style == "scenario" and prompt == DEFAULT_OPEN_WEIGHTS_TASK:
+        raise ValueError("Scenario mode requires an explicit custom task prompt")
     state_path = state_path.resolve()
     report_path = report_path.resolve()
 
