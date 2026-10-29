@@ -18,10 +18,10 @@ from mwalimulens.mcp_server.service import EducationToolService
 from mwalimulens.mcp_server.state import JsonStateStore
 from mwalimulens.multi_scenario_eval import (
     SCENARIOS,
-    evidence_preflight,
-    run_one,
     diagnose_saved_suite,
+    evidence_preflight,
     grade_scenario,
+    run_one,
     run_suite,
     scenario_by_id,
     scenario_prompt,
