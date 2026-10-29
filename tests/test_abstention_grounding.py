@@ -5,8 +5,27 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from mwalimulens.agent.grounding import correction_prompt, verify_abstention_terms
 from mwalimulens.agent.open_weights_run import run_open_weights_task
+
+
+@pytest.mark.parametrize(
+    ("response", "learner", "competency"),
+    [
+        ("ABSTAIN: The evidence does not span at least two terms.", "L003", "ENG-INFERENCE"),
+        ("ABSTAIN: The evidence does not span at least two terms.", "L002", "MATH-FRACTIONS"),
+        ("ABSTAIN: The evidence does not span at least six terms.", "L001", "MATH-FRACTIONS"),
+        ("ABSTAIN: The evidence does span at least two terms.", "L001", "MATH-FRACTIONS"),
+        ("ABSTAIN: If the evidence does not span at least two terms, abstain.",
+         "L001", "MATH-FRACTIONS"),
+        ("ABSTAIN: The evidence does not support mastery across two terms.",
+         "L001", "MATH-FRACTIONS"),
+    ],
+)
+def test_negated_span_does_not_correct_true_bounds_or_other_claims(response, learner, competency):
+    assert verify_abstention_terms(response, learner, competency)["factual_contradictions"] == []
 
 
 def test_detects_false_two_term_claim_for_three_term_science_case():

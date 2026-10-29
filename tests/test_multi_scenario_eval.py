@@ -281,6 +281,71 @@ def test_source_derived_preflight_matches_real_synthetic_records():
         )
 
 
+@pytest.mark.parametrize("has_stages", [False, True])
+def test_diagnose_preserves_saved_stages_and_request_history_without_regrading(
+    tmp_path, monkeypatch, has_stages,
+):
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("Diagnostics must not run or regrade the model")
+
+    monkeypatch.setattr("mwalimulens.multi_scenario_eval.run_open_weights_task", forbidden)
+    monkeypatch.setattr("mwalimulens.multi_scenario_eval.grade_scenario", forbidden)
+    (tmp_path / "summary.json").write_text('{"status": "fail"}', encoding="utf-8")
+    folder = tmp_path / "conflicting-evidence"
+    folder.mkdir()
+    report = {
+        "status": "fail", "initial_output": "ABSTAIN: only two terms.",
+        "final_output": "I will now call flag_pattern_for_review.",
+        "pending_reviews": [], "candidate_action_available": True,
+        "agent_tool_allowlist": ["get_competency_evidence", "flag_pattern_for_review"],
+        "grounding_correction": {"attempted": True, "verified_term_count": 3},
+        "completion_recovery": {"attempted": True, "succeeded": False},
+    }
+    evaluated = {"status": "fail", "checks": {"exactly_one_candidate": False}}
+    if has_stages:
+        report.update({
+            "outcome_stages_note": "Stages are agent runs, not individual requests.",
+            "outcome_stages": [
+                {"stage": "initial", "status": "fail",
+                 "checks": {"submitted_candidate": False},
+                 "model_requests_observed_through": 3},
+                {"stage": "completion_recovery", "status": "fail",
+                 "model_requests_observed_through": 4},
+            ],
+            "model_request_count_observed": 4,
+            "model_requests": [
+                {"request": index, "requested_tool_names": names,
+                 "retry_feedback_count": retries}
+                for index, names, retries in [
+                    (1, ["get_competency_evidence"], 0),
+                    (2, ["flag_pattern_for_review"], 0),
+                    (3, [], 1), (4, [], 1),
+                ]
+            ],
+        })
+        evaluated["outcome_stages"] = [
+            {"stage": "initial", "status": "fail",
+             "checks": {"exactly_one_candidate": False}},
+        ]
+    for name, payload in [("report", report), ("result", evaluated)]:
+        (folder / f"{name}.json").write_text(json.dumps(payload), encoding="utf-8")
+    before = {path: path.read_bytes() for path in tmp_path.rglob("*.json")}
+    diagnostic = diagnose_saved_suite(tmp_path)
+    case = next(item for item in diagnostic["cases"] if item["scenario"] == folder.name)
+    assert case["report_outcome_stages"] == report.get("outcome_stages", [])
+    assert case["result_outcome_stages"] == evaluated.get("outcome_stages", [])
+    assert case["model_requests"] == report.get("model_requests", [])
+    for key in (
+        "initial_output", "grounding_correction", "completion_recovery",
+        "candidate_action_available", "agent_tool_allowlist", "pending_reviews",
+        "model_request_count_observed", "outcome_stages_note",
+    ):
+        assert case[key] == report.get(key)
+    assert "do not sum" in case["request_metadata_note"]
+    assert case["status"] == "fail"
+    assert {path: path.read_bytes() for path in tmp_path.rglob("*.json")} == before
+
+
 @pytest.mark.parametrize("scenario", SCENARIOS)
 def test_scenario_action_gate_uses_data_not_expected_label(
     scenario, tmp_path, monkeypatch

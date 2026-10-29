@@ -40,6 +40,15 @@ MISPLACED_ABSTENTION = (
 )
 VALID_ABSTENTION = "ABSTAIN: Only one term has evidence; cross-term history is insufficient."
 
+# Exact saved initial response from suite-agxhdl_y/longitudinal-pattern.
+NEGATED_SPAN_ABSTENTION = (
+    "ABSTAIN: The evidence does not span at least two terms, so there is insufficient "
+    "cross-term evidence to identify a specific pattern. The learner's performance in "
+    "MATH-FRACTIONS shows variability across different terms, but no consistent improvement "
+    "or decline is evident. The limited evidence available does not support a bounded "
+    "longitudinal statement."
+)
+
 
 def replay(tmp_path, monkeypatch, ident, outputs, *, expected=None, on_turn=None):
     """Use the real source/service/state, replacing only model responses."""
@@ -148,6 +157,29 @@ def test_repeated_prose_promise_remains_failure_after_bounded_recovery(tmp_path,
     assert grade_scenario(report, scenario_by_id("conflicting-evidence"))["status"] == "fail"
     assert not state.pending_reviews()
     assert all(stage["status"] == "fail" for stage in report["outcome_stages"])
+
+
+def test_saved_negated_span_claim_triggers_correction_without_forcing_candidate(
+    tmp_path, monkeypatch,
+):
+    corrected = "ABSTAIN: These observations do not support a defensible claim."
+    report, calls, state = replay(
+        tmp_path, monkeypatch, "longitudinal-pattern",
+        [NEGATED_SPAN_ABSTENTION, corrected],
+    )
+    assert len(calls) == 2
+    assert report["grounding_correction"]["verified_term_count"] == 5
+    assert report["grounding_correction"]["factual_contradictions"] == [
+        "incorrect_upper_bound_on_term_count"
+    ]
+    assert report["initial_output"] == NEGATED_SPAN_ABSTENTION
+    assert report["final_output"] == corrected
+    assert [stage["stage"] for stage in report["outcome_stages"]] == [
+        "initial", "grounding_correction",
+    ]
+    assert all(stage["status"] == "fail" for stage in report["outcome_stages"])
+    assert report["completion_recovery"]["attempted"] is False
+    assert state.pending_reviews() == state.teacher_reviews() == state.profile_updates() == ()
 
 
 @pytest.mark.parametrize("recovered", [VALID_ABSTENTION, MISPLACED_ABSTENTION])

@@ -361,6 +361,24 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
                 for item in candidates
             ],
             "response": response,
+            # Preserve the two different rubrics and cumulative request boundaries.
+            # Never regrade saved stages using today's code or source fixtures.
+            "report_outcome_stages": report.get("outcome_stages", []),
+            "result_outcome_stages": evaluated.get("outcome_stages", []),
+            "outcome_stages_note": report.get("outcome_stages_note"),
+            "initial_output": report.get("initial_output"),
+            "grounding_correction": report.get("grounding_correction"),
+            "completion_recovery": report.get("completion_recovery"),
+            "candidate_action_available": report.get("candidate_action_available"),
+            "agent_tool_allowlist": report.get("agent_tool_allowlist"),
+            "pending_reviews": candidates,
+            "model_request_count_observed": report.get("model_request_count_observed"),
+            "model_requests": report.get("model_requests", []),
+            "request_metadata_note": (
+                "An initial stage is an agent run, not the first model request. "
+                "retry_feedback_count counts feedback in each request's history; "
+                "do not sum it across requests. Requested tools may fail before service audit."
+            ),
             "recovery": {
                 "attempted": (report.get("completion_recovery") or {}).get("attempted"),
                 "succeeded": (report.get("completion_recovery") or {}).get("succeeded"),

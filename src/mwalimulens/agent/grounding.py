@@ -19,6 +19,12 @@ _ONLY_COUNT = re.compile(
     r"\s+(?:distinct\s+)?terms?\b",
     re.IGNORECASE,
 )
+_NEGATED_SPAN = re.compile(
+    r"(?:\bABSTAIN:|[.!?])\s*(?:the\s+)?evidence\s+does\s+not\s+span\s+at\s+least\s+"
+    r"(\d+|zero|one|two|three|four|five|six|seven|eight|nine)"
+    r"\s+(?:distinct\s+)?terms?\b",
+    re.IGNORECASE,
+)
 
 
 def verify_abstention_terms(
@@ -36,6 +42,13 @@ def verify_abstention_terms(
     count = len(terms)
     claims: list[str] = []
     if response.strip().upper().startswith("ABSTAIN:"):
+        # A direct denial of a minimum is an upper bound, not an exact count.
+        # Anchor to a sentence to avoid treating conditional rules as assertions.
+        for match in _NEGATED_SPAN.finditer(response):
+            raw = match.group(1).lower()
+            number = int(raw) if raw.isdigit() else _NUMBER_WORDS[raw]
+            if count >= number:
+                claims.append("incorrect_upper_bound_on_term_count")
         for match in _ONLY_COUNT.finditer(response):
             raw = match.group(1).lower()
             number = int(raw) if raw.isdigit() else _NUMBER_WORDS[raw]
