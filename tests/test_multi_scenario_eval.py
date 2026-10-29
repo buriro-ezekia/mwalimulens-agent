@@ -17,6 +17,7 @@ from mwalimulens.mcp_server.service import EducationToolService
 from mwalimulens.mcp_server.state import JsonStateStore
 from mwalimulens.multi_scenario_eval import (
     SCENARIOS,
+    diagnose_saved_suite,
     grade_scenario,
     run_suite,
     scenario_by_id,
@@ -220,3 +221,44 @@ def test_counter_evidence_omission_remains_a_failure(tmp_path):
     grade = grade_scenario(report, scenario)
     assert grade["status"] == "fail"
     assert grade["checks"]["counter_evidence_present"] is False
+
+
+def test_saved_diagnostics_identify_actual_errors_without_changing_results(tmp_path):
+    directory = tmp_path / "suite"
+    directory.mkdir()
+    (directory / "summary.json").write_text(
+        json.dumps({"status": "fail"}), encoding="utf-8"
+    )
+    for scenario in SCENARIOS:
+        folder = directory / scenario.ident
+        folder.mkdir()
+        (folder / "result.json").write_text(
+            json.dumps({"status": "fail", "checks": {"submitted": False}}),
+            encoding="utf-8",
+        )
+        error = (
+            {"type": "ToolError", "message": "Required teacher question missing"}
+            if scenario.ident == "longitudinal-pattern" else None
+        )
+        tools = (
+            [{"tool_name": "flag_pattern_for_review", "status": "error"}]
+            if scenario.ident == "single-assessment" else []
+        )
+        (folder / "report.json").write_text(json.dumps({
+            "error": error,
+            "tool_call_summary": tools,
+            "pending_reviews": [],
+            "final_output": "ABSTAIN: insufficient evidence",
+        }), encoding="utf-8")
+    result = diagnose_saved_suite(directory)
+    by_name = {item["scenario"]: item for item in result["cases"]}
+    assert by_name["longitudinal-pattern"]["classification"] == (
+        "model_or_tool_exception"
+    )
+    assert by_name["longitudinal-pattern"]["model_error_type"] == "ToolError"
+    assert by_name["single-assessment"]["classification"] == (
+        "candidate_attempted_when_abstention_required"
+    )
+    assert (directory / "summary.json").read_text(
+        encoding="utf-8"
+    ) == json.dumps({"status": "fail"})
