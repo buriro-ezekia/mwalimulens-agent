@@ -321,6 +321,21 @@ evaluations separately; no live-model result is implied by this runner.
 .\.venv\Scripts\python.exe -m mwalimulens.product_acceptance --with-mcp
 ```
 
+## Multi-scenario model evaluation
+
+Run a new four-scenario local Qwen suite covering longitudinal patterns,
+conflicting evidence, sparse evidence and missing evidence. The evaluator
+checks scenario-specific candidate or abstention outcomes while retaining
+the model's evidence references and the human teacher-review boundary:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.multi_scenario_eval --timeout 600
+```
+
+See the [multi-scenario testing protocol](docs/multi-scenario-evaluation.md).
+These fictional tests do not establish educational effectiveness or school
+deployment readiness. The original single-task benchmark remains available.
+
 ## Evidence-preserving latency experiment
 
 Individual model requests can now be aligned with the Education MCP tool audit.
