@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from mwalimulens.agent.execution import ExecutionLimits, atomic_json
 from mwalimulens.agent.ollama import OllamaSettings
 from mwalimulens.agent.open_weights_run import run_open_weights_task
 from mwalimulens.domain import load_synthetic_dataset
@@ -110,12 +111,14 @@ def inspect_partial_model_trace(trace_path: Path) -> dict[str, Any]:
         "request_started_count": len(started),
         "request_finished_count": len(completed),
         "unfinished_request_numbers": sorted(started - completed.keys()),
+        "request_events": events,
         "last_finished_request": (
             {
                 "request": last.get("request"),
+                "stage": last.get("stage"),
                 "status": last.get("status"),
                 "seconds": last.get("seconds"),
-                "requested_tool_names": last.get("requested_tool_names", []),
+                "requested_tool_names": last.get("requested_tool_names"),
                 "audited_tools_after": last.get("audited_tools_after", []),
             }
             if last is not None else None
@@ -349,19 +352,28 @@ def grade_scenario(
 async def run_one(
     scenario: Scenario, *, state_path: Path, report_path: Path,
     settings: OllamaSettings | None = None,
+    execution_limits: ExecutionLimits | None = None,
+    result_path: Path | None = None,
 ) -> dict[str, Any]:
     validate_scenario_fixtures()
     preflight = evidence_preflight(scenario)
-    raw = await run_open_weights_task(
-        settings=settings or OllamaSettings.from_env(),
-        prompt=scenario_prompt(scenario),
-        prompt_style="scenario",
-        evaluation_target=(scenario.learner, scenario.competency),
-        expected_outcome=scenario.expected,
-        allow_candidate_action=preflight["longitudinal_eligible"],
-        state_path=state_path,
-        report_path=report_path,
-    )
+    cancellation = None
+    try:
+        raw = await run_open_weights_task(
+            settings=settings or OllamaSettings.from_env(),
+            prompt=scenario_prompt(scenario),
+            prompt_style="scenario",
+            evaluation_target=(scenario.learner, scenario.competency),
+            expected_outcome=scenario.expected,
+            allow_candidate_action=preflight["longitudinal_eligible"],
+            state_path=state_path,
+            report_path=report_path,
+            execution_limits=execution_limits,
+        )
+    except asyncio.CancelledError as exc:
+        # The runner persists its report before propagating cancellation.
+        cancellation = exc
+        raw = json.loads(report_path.read_text(encoding="utf-8"))
     result = grade_scenario(raw, scenario)
     result["outcome_stages"] = [
         {"stage": stage["stage"], **grade_scenario(stage, scenario)}
@@ -369,18 +381,32 @@ async def run_one(
     ]
     result["evidence_preflight"] = preflight
     result["model_report_path"] = str(report_path)
+    for key in ("termination", "active_stage", "active_stage_outcome", "model_requests",
+                "request_events", "execution_limits"):
+        result[key] = raw.get(key)
+    if result_path is not None:
+        atomic_json(result_path, result)
+    if cancellation is not None:
+        raise cancellation
     return result
 
 
 def run_suite(
     *, output_root: Path = DEFAULT_OUTPUT, timeout: int = 600,
     scenarios: tuple[str, ...] | None = None, runner=None,
+    request_limit: int = 6, deadline_seconds: float | None = None,
 ) -> dict[str, Any]:
     """Save every selected subprocess outcome without skipping failures."""
 
     selected = select_scenarios(scenarios)
     if not 60 <= timeout <= 3600:
         raise ValueError("timeout must be between 60 and 3600 seconds")
+    limits = ExecutionLimits(
+        request_limit=request_limit,
+        deadline_seconds=min(540, timeout - 30) if deadline_seconds is None else deadline_seconds,
+    )
+    if limits.deadline_seconds > timeout - 30:
+        raise ValueError("Internal deadline must leave at least 30 seconds before outer timeout")
     validate_scenario_fixtures()
     root = output_root.expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -397,6 +423,8 @@ def run_suite(
             sys.executable, "-m", "mwalimulens.multi_scenario_eval", "--single-run",
             "--scenario", scenario.ident, "--state", str(state),
             "--report", str(report_path), "--result", str(result_path),
+            "--request-limit", str(limits.request_limit),
+            "--deadline-seconds", str(limits.deadline_seconds),
         ]
         started = time.monotonic()
         failure = None
@@ -441,6 +469,9 @@ def run_suite(
                 record["checks"] = evaluated.get("checks")
                 record["semantic_review_flags"] = evaluated.get("semantic_review_flags", [])
                 record["outcome_stages"] = evaluated.get("outcome_stages", [])
+                record["termination"] = evaluated.get("termination")
+                record["active_stage"] = evaluated.get("active_stage")
+                record["active_stage_outcome"] = evaluated.get("active_stage_outcome")
                 record["application_idempotency_applied"] = evaluated.get(
                     "application_idempotency_applied", False
                 )
@@ -511,6 +542,9 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
     for scenario in selected:
         folder = root / scenario.ident
         entry: dict[str, Any] = {"scenario": scenario.ident}
+        checkpoint_path = folder / "report.progress.json"
+        if checkpoint_path.is_file():
+            entry["stage_checkpoint"] = json.loads(checkpoint_path.read_text(encoding="utf-8"))
         result_file, report_file = folder / "result.json", folder / "report.json"
         if not result_file.is_file() or not report_file.is_file():
             saved = summary_records.get(scenario.ident, {})
@@ -566,6 +600,11 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
             "semantic_review_flags": evaluated.get("semantic_review_flags", []),
             "model_error_type": error.get("type"),
             "model_error_message": error.get("message"),
+            "termination": report.get("termination"),
+            "active_stage": report.get("active_stage"),
+            "active_stage_outcome": report.get("active_stage_outcome"),
+            "execution_limits": report.get("execution_limits"),
+            "retrieval_events": report.get("retrieval_events", []),
             "tool_calls": [
                 {"name": item.get("tool_name"), "status": item.get("status")}
                 for item in calls
@@ -609,6 +648,8 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--timeout", type=int, default=600)
+    parser.add_argument("--request-limit", type=int, default=6)
+    parser.add_argument("--deadline-seconds", type=float, default=None)
     parser.add_argument(
         "--scenarios", nargs="+", choices=[case.ident for case in SCENARIOS],
         help="Run only the named scenarios (default: all four).",
@@ -636,13 +677,18 @@ def main(argv: list[str] | None = None) -> int:
         result = asyncio.run(run_one(
             scenario_by_id(args.scenario),
             state_path=args.state, report_path=args.report,
+            result_path=args.result,
+            execution_limits=ExecutionLimits(
+                args.request_limit,
+                args.deadline_seconds if args.deadline_seconds is not None else 540,
+            ),
         ))
-        args.result.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         print(f"Scenario {args.scenario}: {result['status']}")
         return 0 if result["status"] == "pass" else 2
     report = run_suite(
         output_root=args.output_dir, timeout=args.timeout,
         scenarios=tuple(args.scenarios) if args.scenarios is not None else None,
+        request_limit=args.request_limit, deadline_seconds=args.deadline_seconds,
     )
     print(f"Summary: {report['summary_path']}")
     print(f"Scope: {report['selection_mode']} "

@@ -366,3 +366,51 @@ the report continues to require manual pedagogical review with
 natural-language fact-checker. Source evidence and original synthetic
 fixture records remain unchanged.
 
+## Bounded competency review execution
+
+The execution-control repair was reviewed against PydanticAI 2.51.0,
+FastMCP 4.0.10 and MCP 2.2.0. It does not change prompts, expected outcomes,
+candidate validation or the teacher-review boundary.
+
+Scenario mode exposes the target competency retrieval and, when eligible,
+the pending-candidate tool. The broader learner-timeline tool remains
+available to general-purpose agents. The first competency retrieval is a
+real MCP call returning the complete evidence with its provenance.
+Identical retrieval attempts within the same immutable MCP session return
+a reference only when the original complete result remains in history,
+or when duplicate calls are being resolved in the same model response.
+Missing or changed history requires a new MCP retrieval. Cache reuse checks
+the learner, competency and source toolset; the cache is cleared when the
+owning session closes. Failures and duplicate attempts remain observable.
+
+One shared PydanticAI request budget covers initial analysis, grounding
+correction and completion recovery. The default is six model requests.
+One absolute internal deadline also covers preload and MCP cleanup. It
+defaults to 540 seconds with the standard 600-second outer timeout; shorter
+outer timeouts reduce this default to leave a 30-second margin. The CLI
+options `--request-limit` and `--deadline-seconds` configure these controls.
+A custom internal deadline must leave at least 30 seconds before the outer
+timeout. Recovery never resets either limit.
+
+`report.progress.json` atomically checkpoints completed stage snapshots,
+the active stage and request events. Request traces now carry stage names.
+Deadline, cancellation or budget exhaustion saves a failed report and
+scenario result while leaving the unfinished stage outcome `unknown`.
+Cancellation propagates after persistence. If cleanup itself fails after
+interruption, `cleanup_error` records that additional failure without
+overwriting the original termination reason. Pending candidates remain
+pending; termination cannot approve them or create profile updates.
+
+The matching historical timeout is
+`suite-vmxd5hn9/longitudinal-pattern`: five requests started, four finished,
+request 4 took 217.433 seconds, and both retrieval tools were called twice
+with identical arguments and payloads. That old trace has no stage names
+or model text, so request 5's stage and response remain unknown. No saved
+historical artifacts are rewritten by this repair or by diagnosis.
+
+Offline tests exercise real MCP access with mocked inference, cache history
+and session isolation, shared limits, atomic persistence and subprocess
+cleanup. They do not establish a better live Qwen success rate. A hard
+process kill can still prevent final persistence, and cancellation of the
+client request does not establish that Ollama stopped server-side inference.
+Any further live evaluation requires separate authorization.

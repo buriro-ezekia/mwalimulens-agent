@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
+from openai import DefaultAsyncHttpxClient
 from pydantic_ai.messages import RetryPromptPart, ToolCallPart
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
@@ -110,6 +111,29 @@ def _token_count(usage: Any, *names: str) -> int | None:
     return None
 
 
+async def prewarm_ollama_async(settings: OllamaSettings) -> dict[str, Any]:
+    """Cancellable preload for deadline-controlled runs; no lingering worker thread."""
+    if settings.keep_alive is None:
+        return {"attempted": False, "status": "disabled", "seconds": None}
+    parsed = urlparse(settings.base_url)
+    if parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
+        raise ValueError("Model preloading is only permitted on loopback")
+    endpoint = parsed._replace(path="/api/generate", params="", query="", fragment="")
+    started = perf_counter()
+    async with DefaultAsyncHttpxClient(timeout=90) as client:
+        response = await client.post(endpoint.geturl(), json={
+            "model": settings.model_name, "prompt": "", "stream": False,
+            "keep_alive": settings.keep_alive,
+        })
+        response.raise_for_status()
+        payload = response.json()
+    if payload.get("done") is not True or payload.get("model") != settings.model_name:
+        raise RuntimeError("Local Ollama preloading did not confirm the requested model")
+    return {"attempted": True, "status": "pass",
+            "seconds": round(perf_counter() - started, 3),
+            "requested_keep_alive": settings.keep_alive}
+
+
 class TimedOllamaModel(OllamaModel):
     """Observe per-request wall time and provider usage without storing prompts."""
 
@@ -117,15 +141,21 @@ class TimedOllamaModel(OllamaModel):
         self, name: str, *, provider: OllamaProvider, records: list,
         audit_snapshot: Callable[[], Sequence[str]] | None = None,
         trace_path: Path | None = None,
+        stage_snapshot: Callable[[], str | None] | None = None,
+        on_request_event: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         super().__init__(name, provider=provider)
         self._records = records
         self._audit_snapshot = audit_snapshot
         self._trace_path = trace_path
+        self._stage_snapshot = stage_snapshot
+        self._on_request_event = on_request_event
 
     def _trace(self, event: dict[str, Any]) -> None:
         """Append non-sensitive request metadata before a subprocess can time out."""
 
+        if self._on_request_event is not None:
+            self._on_request_event(event)
         if self._trace_path is None:
             return
         self._trace_path.parent.mkdir(parents=True, exist_ok=True)
@@ -145,13 +175,13 @@ class TimedOllamaModel(OllamaModel):
                 for part in getattr(message, "parts", ())
             ),
         }
+        if self._stage_snapshot is not None:
+            record["stage"] = self._stage_snapshot()
         if self._audit_snapshot is not None:
             record["audited_tools_before"] = list(self._audit_snapshot())
         self._trace({
             "event": "request_started",
-            "request": index,
-            "retry_feedback_count": record["retry_feedback_count"],
-            "audited_tools_before": record.get("audited_tools_before", []),
+            **record,
         })
         try:
             response = await super().request(*args, **kwargs)
@@ -184,6 +214,8 @@ def build_ollama_model(
     settings: OllamaSettings | None = None, *, records: list | None = None,
     audit_snapshot: Callable[[], Sequence[str]] | None = None,
     trace_path: Path | None = None,
+    stage_snapshot: Callable[[], str | None] | None = None,
+    on_request_event: Callable[[dict[str, Any]], None] | None = None,
 ) -> OllamaModel:
     """Build the local Ollama model without making a network request."""
 
@@ -193,6 +225,7 @@ def build_ollama_model(
         return TimedOllamaModel(
             settings.model_name, provider=provider, records=records,
             audit_snapshot=audit_snapshot, trace_path=trace_path,
+            stage_snapshot=stage_snapshot, on_request_event=on_request_event,
         )
     return OllamaModel(settings.model_name, provider=provider)
 
@@ -208,6 +241,10 @@ def build_ollama_agent(
     trace_path: Path | None = None,
     tool_error_behavior: str = "error",
     allow_candidate_action: bool = True,
+    competency_review_target: tuple[str, str] | None = None,
+    retrieval_events: list[dict[str, Any]] | None = None,
+    stage_snapshot: Callable[[], str | None] | None = None,
+    on_request_event: Callable[[dict[str, Any]], None] | None = None,
 ):
     """Build the safe MwalimuLens agent backed by local Qwen/Ollama."""
 
@@ -215,10 +252,12 @@ def build_ollama_agent(
         build_ollama_model(
             settings, records=records, audit_snapshot=audit_snapshot,
             trace_path=trace_path,
+            stage_snapshot=stage_snapshot, on_request_event=on_request_event,
         ),
         data_dir=data_dir,
         state_path=state_path,
         additional_toolsets=additional_toolsets,
         tool_error_behavior=tool_error_behavior,
         allow_candidate_action=allow_candidate_action,
+        competency_review_target=competency_review_target, retrieval_events=retrieval_events,
     )

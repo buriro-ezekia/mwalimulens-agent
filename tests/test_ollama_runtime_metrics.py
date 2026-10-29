@@ -190,15 +190,15 @@ def test_runner_captures_preload_and_model_request_metrics(tmp_path, monkeypatch
         return FakeAgent()
 
     monkeypatch.setattr(open_weights_run, "build_ollama_agent", fake_builder)
-    monkeypatch.setattr(
-        open_weights_run, "prewarm_ollama",
-        lambda settings: {
+    async def preload(settings):
+        return {
             "attempted": True,
             "status": "pass",
             "seconds": 0.5,
             "requested_keep_alive": settings.keep_alive,
-        },
-    )
+        }
+
+    monkeypatch.setattr(open_weights_run, "prewarm_ollama_async", preload)
     report = asyncio.run(open_weights_run.run_open_weights_task(
         settings=OllamaSettings(keep_alive="30m"),
         state_path=tmp_path / "state.json",
@@ -270,4 +270,3 @@ def test_failed_model_request_writes_durable_trace(tmp_path, monkeypatch) -> Non
     assert events[-1]["status"] == "error"
     assert events[-1]["error_type"] == "TimeoutError"
     assert "fake model timeout" not in trace.read_text(encoding="utf-8")
-

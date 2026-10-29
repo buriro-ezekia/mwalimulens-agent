@@ -13,6 +13,7 @@ from fastmcp.client.transports import StdioTransport
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPToolset
 
+from mwalimulens.agent.retrieval import CompetencyReviewToolset
 from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR, DEFAULT_STATE_PATH, PROJECT_ROOT
 
 EDUCATION_MCP_CLIENT_MODE = "legacy"
@@ -85,6 +86,8 @@ def build_agent_mcp_toolset(
     state_path: Path = DEFAULT_STATE_PATH,
     tool_error_behavior: str = "error",
     allow_candidate_action: bool = True,
+    competency_review_target: tuple[str, str] | None = None,
+    retrieval_events: list[dict[str, Any]] | None = None,
 ):
     """Build the MCP toolset exposed to the agent, filtered before model visibility."""
 
@@ -101,9 +104,15 @@ def build_agent_mcp_toolset(
     visible = set(AGENT_MCP_TOOL_ALLOWLIST)
     if not allow_candidate_action:
         visible.discard("flag_pattern_for_review")
-    return raw_toolset.filtered(
+    toolset = raw_toolset.filtered(
         lambda _ctx, tool_def: tool_def.name in visible
     )
+    if competency_review_target is not None:
+        return CompetencyReviewToolset(
+            toolset, competency_review_target,
+            events=retrieval_events if retrieval_events is not None else [],
+        )
+    return toolset
 
 
 def build_agent(
@@ -114,6 +123,8 @@ def build_agent(
     additional_toolsets: Sequence[Any] = (),
     tool_error_behavior: str = "error",
     allow_candidate_action: bool = True,
+    competency_review_target: tuple[str, str] | None = None,
+    retrieval_events: list[dict[str, Any]] | None = None,
 ) -> Agent:
     """Build a model-independent MwalimuLens agent with the strict MCP allowlist."""
 
@@ -126,6 +137,8 @@ def build_agent(
                 state_path=state_path,
                 tool_error_behavior=tool_error_behavior,
                 allow_candidate_action=allow_candidate_action,
+                competency_review_target=competency_review_target,
+                retrieval_events=retrieval_events,
             ),
             *additional_toolsets,
         ],

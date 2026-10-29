@@ -11,12 +11,16 @@ from time import perf_counter
 from typing import Any
 from urllib.parse import urlparse
 
+from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.usage import RunUsage, UsageLimits
+
+from mwalimulens.agent.execution import ExecutionLimits, atomic_json
 from mwalimulens.agent.grounding import correction_prompt, verify_abstention_terms
 from mwalimulens.agent.ollama import (
     DEFAULT_OLLAMA_MODEL,
     OllamaSettings,
     build_ollama_agent,
-    prewarm_ollama,
+    prewarm_ollama_async,
 )
 from mwalimulens.agent.orchestrator import (
     AGENT_MCP_TOOL_ALLOWLIST,
@@ -128,6 +132,27 @@ Do not attempt to approve, edit or reject the candidate: that is reserved for th
 """.strip()
 
 
+def _pending_cancellation(exc: BaseException) -> asyncio.CancelledError | None:
+    """Recover task cancellation hidden by an exception during async cleanup."""
+
+    task = asyncio.current_task()
+    if task is None or not task.cancelling():
+        return None
+    pending = [exc]
+    seen = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        if isinstance(current, asyncio.CancelledError):
+            return current
+        pending.extend(item for item in (current.__cause__, current.__context__) if item)
+        if isinstance(current, BaseExceptionGroup):
+            pending.extend(current.exceptions)
+    return None
+
+
 async def run_open_weights_task(
     *,
     settings: OllamaSettings | None = None,
@@ -139,10 +164,15 @@ async def run_open_weights_task(
     data_dir: Path = DEFAULT_DATA_DIR,
     state_path: Path = DEFAULT_OPEN_WEIGHTS_STATE_PATH,
     report_path: Path = DEFAULT_OPEN_WEIGHTS_REPORT_PATH,
+    execution_limits: ExecutionLimits | None = None,
 ) -> dict[str, Any]:
     """Run one local Qwen task and always persist judge-inspectable evidence."""
 
     settings = settings or OllamaSettings.from_env()
+    execution_limits = execution_limits or ExecutionLimits()
+    usage = RunUsage()
+    usage_limits = UsageLimits(request_limit=execution_limits.request_limit)
+    deadline = asyncio.get_running_loop().time() + execution_limits.deadline_seconds
     if expected_outcome not in {"candidate", "abstain"}:
         raise ValueError("Unknown expected outcome")
     if len(evaluation_target) != 2 or not all(
@@ -192,8 +222,63 @@ async def run_open_weights_task(
     }
     outcome_stages: list[dict[str, Any]] = []
     active_stage: str | None = None
+    termination: dict[str, Any] | None = None
+    cancellation: asyncio.CancelledError | None = None
+    cleanup_error: dict[str, str] | None = None
+    request_events: list[dict[str, Any]] = []
+    retrieval_events: list[dict[str, Any]] = []
+    progress_path = report_path.with_suffix(".progress.json")
+
+    def checkpoint() -> None:
+        atomic_json(progress_path, {
+            "status": "in_progress" if termination is None else "fail",
+            "outcome_stages": outcome_stages, "active_stage": active_stage,
+            "active_stage_outcome": "unknown" if active_stage else None,
+            "initial_output": initial_output, "last_completed_output": final_output,
+            "model_requests": model_requests, "request_events": request_events,
+            "retrieval_events": retrieval_events, "termination": termination,
+            "cleanup_error": cleanup_error,
+            "grounding_correction": grounding_correction,
+            "request_limit": execution_limits.request_limit,
+            "deadline_seconds": execution_limits.deadline_seconds,
+        })
+
+    def request_event(event: dict[str, Any]) -> None:
+        request_events.append(event)
+        checkpoint()
+
+    def record_termination(exc: BaseException, *, during_stage: bool = False) -> None:
+        nonlocal termination, error, cancellation
+        interrupted = exc if isinstance(exc, asyncio.CancelledError) else _pending_cancellation(exc)
+        if interrupted is not None and (not during_stage or not deadline_scope.expired()):
+            # Outside the timeout context its own cancellation has been consumed;
+            # external cancellation must propagate even after an earlier limit failure.
+            cancellation = interrupted
+        if termination is not None:
+            return
+        reason = (
+            "deadline_exceeded" if deadline_scope.expired() else
+            "cancelled" if interrupted is not None else
+            "request_budget_exhausted" if isinstance(exc, UsageLimitExceeded) else
+            "request_timeout"
+        )
+        termination = {"reason": reason, "active_stage": active_stage}
+        error = {"type": type(exc).__name__, "message": str(exc) or reason}
+        checkpoint()
+
+    async def run_stage(agent, prompt, **kwargs):
+        checkpoint()
+        try:
+            return await agent.run(
+                prompt, usage=usage, usage_limits=usage_limits, **kwargs,
+            )
+        except (TimeoutError, UsageLimitExceeded, asyncio.CancelledError) as exc:
+            # Save interruption before MCP teardown can raise a different exception.
+            record_termination(exc, during_stage=True)
+            raise
 
     def record_stage(output: str) -> None:
+        nonlocal active_stage
         # Snapshot now: later candidate creation must not rewrite the initial outcome.
         snapshot = build_open_weights_report(
             settings=settings, prompt=prompt, final_output=output,
@@ -214,121 +299,147 @@ async def run_open_weights_task(
                 "candidate_submission_audited_attempt_count", "error",
             )},
         })
+        if error is None:
+            active_stage = None
+        checkpoint()
 
     try:
-        if settings.keep_alive is not None:
-            preload = await asyncio.to_thread(prewarm_ollama, settings)
+        async with asyncio.timeout_at(deadline) as deadline_scope:
+            if settings.keep_alive is not None:
+                preload = {
+                    "attempted": True, "status": "running", "seconds": None,
+                    "requested_keep_alive": settings.keep_alive,
+                }
+                preload = await prewarm_ollama_async(settings)
 
-        build_clock = perf_counter()
-        agent = build_ollama_agent(
-            settings=settings,
-            data_dir=data_dir,
-            state_path=state_path,
-            records=model_requests,
-            audit_snapshot=lambda: tuple(
-                item.get("tool_name") for item in state_store.tool_calls()
-            ),
-            trace_path=request_trace_path,
-            tool_error_behavior="retry" if prompt_style == "scenario" else "error",
-            allow_candidate_action=allow_candidate_action,
-        )
-        timings["agent_build_seconds"] = round(perf_counter() - build_clock, 3)
-        async with agent:
-            active_stage = "initial"
-            initial_clock = perf_counter()
-            try:
-                result = await agent.run(
-                    prompt,
-                    model_settings={"temperature": 0},
-                )
-            finally:
-                timings["initial_agent_run_seconds"] = round(
-                    perf_counter() - initial_clock, 3
-                )
-            initial_output = str(result.output)
-            final_output = initial_output
-            record_stage(final_output)
-            active_stage = None
+            build_clock = perf_counter()
+            agent = build_ollama_agent(
+                settings=settings,
+                data_dir=data_dir,
+                state_path=state_path,
+                records=model_requests,
+                audit_snapshot=lambda: tuple(
+                    item.get("tool_name") for item in state_store.tool_calls()
+                ),
+                trace_path=request_trace_path,
+                stage_snapshot=lambda: active_stage,
+                on_request_event=request_event,
+                competency_review_target=evaluation_target if prompt_style == "scenario" else None,
+                retrieval_events=retrieval_events,
+                tool_error_behavior="retry" if prompt_style == "scenario" else "error",
+                allow_candidate_action=allow_candidate_action,
+            )
+            timings["agent_build_seconds"] = round(perf_counter() - build_clock, 3)
+            async with agent:
+                active_stage = "initial"
+                initial_clock = perf_counter()
+                try:
+                    result = await run_stage(
+                        agent,
+                        prompt,
+                        model_settings={"temperature": 0},
+                    )
+                finally:
+                    timings["initial_agent_run_seconds"] = round(
+                        perf_counter() - initial_clock, 3
+                    )
+                initial_output = str(result.output)
+                final_output = initial_output
+                record_stage(final_output)
+                active_stage = None
 
-            if prompt_style == "scenario" and final_output.strip().upper().startswith(
-                "ABSTAIN:"
-            ):
-                facts = verify_abstention_terms(
-                    final_output, evaluation_target[0], evaluation_target[1], data_dir
-                )
-                grounding_correction.update({
-                    "original_abstention": final_output,
-                    "factual_contradictions": facts["factual_contradictions"],
-                    "verified_term_count": facts["verified_term_count"],
-                    "verified_term_ids": facts["verified_term_ids"],
-                })
-                if facts["factual_contradictions"]:
-                    grounding_correction["attempted"] = True
-                    active_stage = "grounding_correction"
-                    correction_started = perf_counter()
+                if prompt_style == "scenario" and final_output.strip().upper().startswith(
+                    "ABSTAIN:"
+                ):
+                    facts = verify_abstention_terms(
+                        final_output, evaluation_target[0], evaluation_target[1], data_dir
+                    )
+                    grounding_correction.update({
+                        "original_abstention": final_output,
+                        "factual_contradictions": facts["factual_contradictions"],
+                        "verified_term_count": facts["verified_term_count"],
+                        "verified_term_ids": facts["verified_term_ids"],
+                    })
+                    if facts["factual_contradictions"]:
+                        grounding_correction["attempted"] = True
+                        active_stage = "grounding_correction"
+                        correction_started = perf_counter()
+                        try:
+                            result = await run_stage(
+                                agent,
+                                correction_prompt(
+                                    evaluation_target[0], evaluation_target[1], facts
+                                ),
+                                message_history=result.all_messages(),
+                                model_settings={"temperature": 0},
+                            )
+                            final_output = str(result.output)
+                            grounding_correction["output"] = final_output
+                            record_stage(final_output)
+                            active_stage = None
+                        finally:
+                            grounding_correction["duration_seconds"] = round(
+                                perf_counter() - correction_started, 3
+                            )
+
+                should_recover = _should_attempt_completion_recovery(state_store)
+                if prompt_style == "scenario":
+                    # An explicit abstention must remain an observed outcome, not
+                    # be repaired using the evaluation's hidden expected label.
+                    should_recover = (
+                        should_recover
+                        and not final_output.strip().upper().startswith("ABSTAIN:")
+                    )
+                elif expected_outcome != "candidate":
+                    should_recover = False
+
+                if should_recover:
+                    recovery_attempted = True
+                    active_stage = "completion_recovery"
+                    recovery_clock = perf_counter()
                     try:
-                        result = await agent.run(
-                            correction_prompt(
-                                evaluation_target[0], evaluation_target[1], facts
+                        recovery_result = await run_stage(
+                            agent,
+                            _recovery_prompt(
+                                prompt_style, evaluation_target,
+                                allow_candidate_action=allow_candidate_action,
                             ),
                             message_history=result.all_messages(),
                             model_settings={"temperature": 0},
                         )
-                        final_output = str(result.output)
-                        grounding_correction["output"] = final_output
-                        record_stage(final_output)
-                        active_stage = None
                     finally:
-                        grounding_correction["duration_seconds"] = round(
-                            perf_counter() - correction_started, 3
+                        timings["recovery_agent_run_seconds"] = round(
+                            perf_counter() - recovery_clock, 3
                         )
-
-            should_recover = _should_attempt_completion_recovery(state_store)
-            if prompt_style == "scenario":
-                # An explicit abstention must remain an observed outcome, not
-                # be repaired using the evaluation's hidden expected label.
-                should_recover = (
-                    should_recover
-                    and not final_output.strip().upper().startswith("ABSTAIN:")
-                )
-            elif expected_outcome != "candidate":
-                should_recover = False
-
-            if should_recover:
-                recovery_attempted = True
-                active_stage = "completion_recovery"
-                recovery_clock = perf_counter()
-                try:
-                    recovery_result = await agent.run(
-                        _recovery_prompt(
-                            prompt_style, evaluation_target,
-                            allow_candidate_action=allow_candidate_action,
-                        ),
-                        message_history=result.all_messages(),
-                        model_settings={"temperature": 0},
-                    )
-                finally:
-                    timings["recovery_agent_run_seconds"] = round(
-                        perf_counter() - recovery_clock, 3
-                    )
-                recovery_output = str(recovery_result.output)
-                final_output = recovery_output
-                record_stage(final_output)
-                active_stage = None
+                    recovery_output = str(recovery_result.output)
+                    final_output = recovery_output
+                    record_stage(final_output)
+                    active_stage = None
+    except (TimeoutError, UsageLimitExceeded, asyncio.CancelledError) as exc:
+        if preload["status"] == "running":
+            preload["status"] = "interrupted"
+        record_termination(exc)
     except Exception as exc:
-        if settings.keep_alive is not None and preload["status"] == "disabled":
+        if deadline_scope.expired() or _pending_cancellation(exc) is not None:
+            # The interruption may first occur in preload/MCP __aexit__, after
+            # run_stage has returned, and be masked by a cleanup exception.
+            record_termination(exc)
+        if termination is not None and preload["status"] == "running":
+            preload["status"] = "interrupted"
+        elif settings.keep_alive is not None and preload["status"] in {"disabled", "running"}:
             preload = {
                 "attempted": True,
                 "status": "error",
                 "seconds": None,
                 "requested_keep_alive": settings.keep_alive,
             }
-        error = {
-            "type": type(exc).__name__,
-            "message": str(exc),
-        }
-        if active_stage is not None:
-            record_stage("")
+        if termination is not None:
+            cleanup_error = {"type": type(exc).__name__, "message": str(exc)}
+            checkpoint()
+        else:
+            error = {"type": type(exc).__name__, "message": str(exc)}
+            if active_stage is not None:
+                record_stage("")
 
     timings["total_wall_seconds"] = round(perf_counter() - started_clock, 3)
     finished_at = datetime.now(UTC)
@@ -353,11 +464,19 @@ async def run_open_weights_task(
         grounding_correction=grounding_correction,
         outcome_stages=outcome_stages,
     )
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(
-        json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    report.update({
+        "termination": termination, "active_stage": active_stage,
+        "cleanup_error": cleanup_error,
+        "active_stage_outcome": "unknown" if termination and active_stage else None,
+        "request_events": request_events, "retrieval_events": retrieval_events,
+        "model_requests_used": usage.requests,
+        "execution_limits": {"request_limit": execution_limits.request_limit,
+                             "deadline_seconds": execution_limits.deadline_seconds},
+    })
+    atomic_json(report_path, report)
+    atomic_json(progress_path, report)
+    if cancellation is not None:
+        raise cancellation
     return report
 
 
@@ -447,6 +566,8 @@ def build_open_weights_report(
     status = "pass" if error is None and all(checks.values()) else "fail"
     recovery_succeeded = recovery_attempted and status == "pass"
     visible_tools = set(AGENT_MCP_TOOL_ALLOWLIST)
+    if prompt_style == "scenario":
+        visible_tools.discard("get_learner_timeline")
     if not allow_candidate_action:
         visible_tools.discard("flag_pattern_for_review")
 
