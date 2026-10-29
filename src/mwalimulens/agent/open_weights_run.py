@@ -17,6 +17,7 @@ from mwalimulens.agent.ollama import (
     build_ollama_agent,
     prewarm_ollama,
 )
+from mwalimulens.agent.grounding import correction_prompt, verify_abstention_terms
 from mwalimulens.agent.orchestrator import (
     AGENT_MCP_TOOL_ALLOWLIST,
     CANDIDATE_REVIEW_POLICY,
@@ -160,6 +161,10 @@ async def run_open_weights_task(
     final_output = ""
     recovery_attempted = False
     recovery_output: str | None = None
+    grounding_correction: dict[str, Any] = {
+        "attempted": False, "original_abstention": None,
+        "factual_contradictions": [], "verified_term_count": None,
+    }
     error: dict[str, str] | None = None
     state_store = JsonStateStore(state_path)
     model_requests: list[dict[str, Any]] = []
@@ -197,6 +202,35 @@ async def run_open_weights_task(
                 )
             initial_output = str(result.output)
             final_output = initial_output
+
+            if prompt_style == "scenario" and final_output.strip().upper().startswith(
+                "ABSTAIN:"
+            ):
+                facts = verify_abstention_terms(
+                    final_output, evaluation_target[0], evaluation_target[1], data_dir
+                )
+                grounding_correction.update({
+                    "original_abstention": final_output,
+                    "factual_contradictions": facts["factual_contradictions"],
+                    "verified_term_count": facts["verified_term_count"],
+                    "verified_term_ids": facts["verified_term_ids"],
+                })
+                if facts["factual_contradictions"]:
+                    grounding_correction["attempted"] = True
+                    correction_started = perf_counter()
+                    try:
+                        corrected = await agent.run(
+                            correction_prompt(
+                                evaluation_target[0], evaluation_target[1], facts
+                            ),
+                            message_history=result.all_messages(),
+                            model_settings={"temperature": 0},
+                        )
+                        final_output = str(corrected.output)
+                    finally:
+                        grounding_correction["duration_seconds"] = round(
+                            perf_counter() - correction_started, 3
+                        )
 
             should_recover = _should_attempt_completion_recovery(state_store)
             if prompt_style == "scenario":
@@ -257,6 +291,7 @@ async def run_open_weights_task(
         evaluation_target=evaluation_target,
         expected_outcome=expected_outcome,
         allow_candidate_action=allow_candidate_action,
+        grounding_correction=grounding_correction,
     )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -285,6 +320,7 @@ def build_open_weights_report(
     evaluation_target: tuple[str, str] = ("L001", "MATH-FRACTIONS"),
     expected_outcome: str = "candidate",
     allow_candidate_action: bool = True,
+    grounding_correction: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a compact report from auditable state; never store hidden reasoning."""
 
@@ -362,6 +398,9 @@ def build_open_weights_report(
         },
         "expected_outcome": expected_outcome,
         "candidate_action_available": allow_candidate_action,
+        "grounding_correction": grounding_correction or {
+            "attempted": False, "factual_contradictions": [],
+        },
         "base_url": settings.base_url,
         "started_at": _iso_timestamp(started_at),
         "finished_at": _iso_timestamp(finished_at),
