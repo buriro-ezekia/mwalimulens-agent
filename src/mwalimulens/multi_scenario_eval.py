@@ -163,6 +163,7 @@ async def run_one(
     raw = await run_open_weights_task(
         settings=settings or OllamaSettings.from_env(),
         prompt=scenario_prompt(scenario),
+        prompt_style="scenario",
         evaluation_target=(scenario.learner, scenario.competency),
         expected_outcome=scenario.expected,
         state_path=state_path,
