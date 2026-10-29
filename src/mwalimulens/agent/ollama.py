@@ -116,10 +116,21 @@ class TimedOllamaModel(OllamaModel):
     def __init__(
         self, name: str, *, provider: OllamaProvider, records: list,
         audit_snapshot: Callable[[], Sequence[str]] | None = None,
+        trace_path: Path | None = None,
     ) -> None:
         super().__init__(name, provider=provider)
         self._records = records
         self._audit_snapshot = audit_snapshot
+        self._trace_path = trace_path
+
+    def _trace(self, event: dict[str, Any]) -> None:
+        """Append non-sensitive request metadata before a subprocess can time out."""
+
+        if self._trace_path is None:
+            return
+        self._trace_path.parent.mkdir(parents=True, exist_ok=True)
+        with self._trace_path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(event, sort_keys=True) + "\n")
 
     async def request(self, *args: Any, **kwargs: Any) -> Any:
         index = len(self._records) + 1
@@ -136,6 +147,12 @@ class TimedOllamaModel(OllamaModel):
         }
         if self._audit_snapshot is not None:
             record["audited_tools_before"] = list(self._audit_snapshot())
+        self._trace({
+            "event": "request_started",
+            "request": index,
+            "retry_feedback_count": record["retry_feedback_count"],
+            "audited_tools_before": record.get("audited_tools_before", []),
+        })
         try:
             response = await super().request(*args, **kwargs)
             usage = getattr(response, "usage", None)
@@ -157,12 +174,16 @@ class TimedOllamaModel(OllamaModel):
             record["seconds"] = round(perf_counter() - started, 3)
             if self._audit_snapshot is not None:
                 record["audited_tools_after"] = list(self._audit_snapshot())
+            if "status" not in record:
+                record["status"] = "interrupted"
             self._records.append(record)
+            self._trace({"event": "request_finished", **record})
 
 
 def build_ollama_model(
     settings: OllamaSettings | None = None, *, records: list | None = None,
     audit_snapshot: Callable[[], Sequence[str]] | None = None,
+    trace_path: Path | None = None,
 ) -> OllamaModel:
     """Build the local Ollama model without making a network request."""
 
@@ -171,7 +192,7 @@ def build_ollama_model(
     if records is not None:
         return TimedOllamaModel(
             settings.model_name, provider=provider, records=records,
-            audit_snapshot=audit_snapshot,
+            audit_snapshot=audit_snapshot, trace_path=trace_path,
         )
     return OllamaModel(settings.model_name, provider=provider)
 
@@ -184,6 +205,7 @@ def build_ollama_agent(
     additional_toolsets: Sequence[Any] = (),
     records: list | None = None,
     audit_snapshot: Callable[[], Sequence[str]] | None = None,
+    trace_path: Path | None = None,
     tool_error_behavior: str = "error",
     allow_candidate_action: bool = True,
 ):
@@ -192,6 +214,7 @@ def build_ollama_agent(
     return build_agent(
         build_ollama_model(
             settings, records=records, audit_snapshot=audit_snapshot,
+            trace_path=trace_path,
         ),
         data_dir=data_dir,
         state_path=state_path,
