@@ -21,10 +21,12 @@ from mwalimulens.multi_scenario_eval import (
     diagnose_saved_suite,
     evidence_preflight,
     grade_scenario,
+    main,
     run_one,
     run_suite,
     scenario_by_id,
     scenario_prompt,
+    select_scenarios,
     validate_scenario_fixtures,
 )
 
@@ -381,3 +383,111 @@ def test_scenario_action_gate_uses_data_not_expected_label(
     assert result["evidence_preflight"] == facts
     assert captured["prompt_style"] == "scenario"
     assert result["status"] == "fail"
+
+
+def test_focused_selection_is_ordered_without_changing_defaults():
+    assert select_scenarios() == SCENARIOS
+    cases = select_scenarios(("conflicting-evidence", "longitudinal-pattern"))
+    assert [case.ident for case in cases] == [
+        "conflicting-evidence", "longitudinal-pattern",
+    ]
+    with pytest.raises(ValueError, match="Duplicate"):
+        select_scenarios(("longitudinal-pattern", "longitudinal-pattern"))
+    with pytest.raises(ValueError, match="at least one"):
+        select_scenarios(())
+    with pytest.raises(ValueError, match="Unknown scenario"):
+        select_scenarios(("not-in-suite",))
+
+
+def test_focused_suite_runs_two_only_and_preserves_original_stage_grades(
+    tmp_path, monkeypatch,
+):
+    seen = []
+
+    def fake_runner(command, **_kwargs):
+        scenario = command[command.index("--scenario") + 1]
+        seen.append(scenario)
+        destination = Path(command[command.index("--result") + 1])
+        destination.write_text(json.dumps({
+            "status": "pass",
+            "checks": {"no_teacher_decision": True},
+            "outcome_stages": [
+                {"stage": "initial", "status": "fail"},
+                {"stage": "grounding_correction", "status": "pass"},
+            ],
+        }), encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    result = run_suite(
+        output_root=tmp_path,
+        runner=fake_runner,
+        scenarios=("longitudinal-pattern", "conflicting-evidence"),
+    )
+    assert seen == ["longitudinal-pattern", "conflicting-evidence"]
+    assert result["status"] == "pass"
+    assert result["selection_mode"] == "focused"
+    assert result["scenario_count"] == 2
+    assert result["total_available_scenarios"] == 4
+    assert result["first_stage_passed"] == 0
+    assert result["first_stage_unknown"] == 0
+    assert result["passed"] == 2
+    assert all(item["first_stage_status"] == "fail" for item in result["results"])
+    directory = Path(result["summary_path"]).parent
+    assert not (directory / "single-assessment").exists()
+    assert not (directory / "missing-competency").exists()
+    diagnostic = diagnose_saved_suite(directory)
+    assert [case["scenario"] for case in diagnostic["cases"]] == seen
+    stored = json.loads(Path(result["summary_path"]).read_text(encoding="utf-8"))
+    assert stored["selected_scenarios"] == seen
+
+
+def test_focused_suite_does_not_hide_failed_scenario(tmp_path):
+    def failed_runner(command, **_kwargs):
+        report = Path(command[command.index("--result") + 1])
+        report.write_text(json.dumps({
+            "status": "fail",
+            "checks": {"candidate_created": False},
+            "outcome_stages": [{"stage": "initial", "status": "fail"}],
+        }), encoding="utf-8")
+        return subprocess.CompletedProcess(command, 2, stdout="", stderr="")
+
+    result = run_suite(
+        output_root=tmp_path, runner=failed_runner,
+        scenarios=("conflicting-evidence",),
+    )
+    assert result["status"] == "fail"
+    assert result["failed"] == 1
+    assert result["passed"] == 0
+    assert result["results"][0]["first_stage_status"] == "fail"
+    assert result["results"][0]["failure"] == "Scenario process exit code 2"
+
+
+def test_cli_forwards_focused_selection_without_starting_qwen(
+    monkeypatch, tmp_path, capsys,
+):
+    observed = {}
+
+    def fake_suite(**kwargs):
+        observed.update(kwargs)
+        return {
+            "summary_path": str(tmp_path / "summary.json"),
+            "status": "pass",
+            "selection_mode": "focused",
+            "scenario_count": 2,
+            "total_available_scenarios": 4,
+            "first_stage_passed": 1,
+            "passed": 2,
+        }
+
+    monkeypatch.setattr("mwalimulens.multi_scenario_eval.run_suite", fake_suite)
+    code = main([
+        "--scenarios", "longitudinal-pattern", "conflicting-evidence",
+        "--timeout", "600", "--output-dir", str(tmp_path),
+    ])
+    assert code == 0
+    assert observed["scenarios"] == (
+        "longitudinal-pattern", "conflicting-evidence",
+    )
+    output = capsys.readouterr().out
+    assert "focused (2/4 cases)" in output
+    assert "Initial-stage passes: 1" in output
