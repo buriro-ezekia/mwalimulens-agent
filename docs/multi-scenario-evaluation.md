@@ -66,6 +66,44 @@ Any failure, missing result, non-zero exit or timeout is retained and
 makes the overall suite fail. Inspect the per-scenario `result.json` and
 `report.json` to understand why. Never silently discard a failed case.
 
+## Focused evaluation of candidate scenarios
+
+To investigate only the two previously failing candidate scenarios without
+re-running the abstention cases, use:
+
+```powershell
+.\\.venv\\Scripts\\python.exe -m ruff check .
+.\\.venv\\Scripts\\python.exe -m pytest -q
+.\\.venv\\Scripts\\python.exe -m mwalimulens.multi_scenario_eval --timeout 600 --scenarios longitudinal-pattern conflicting-evidence
+```
+
+The CLI accepts one or more scenario IDs, validates their names, rejects
+duplicates and executes only the selected cases in isolated subprocesses.
+Without `--scenarios`, the original full four-case suite remains the default.
+
+A focused run stores `selection_mode: focused`, the explicit
+`selected_scenarios`, `scenario_count: 2` and
+`total_available_scenarios: 4` in its `summary.json`. A focused
+2/2 result must **not** be reported as a complete 4/4 evaluation.
+
+The summary also distinguishes `first_stage_status` and
+`first_stage_passed` from final acceptance. The existing saved stage
+rubrics and request metadata remain available in each
+`result.json` and `report.json`, including outcomes after grounding
+correction or completion recovery. Where an attempt ends without an
+initial-stage result, its status is `unknown`, not a fabricated pass.
+
+After a focused evaluation, diagnose the resulting suite without making
+another model call:
+
+```powershell
+.\\.venv\\Scripts\\python.exe -m mwalimulens.multi_scenario_eval --diagnose "runtime/multi_scenario/suite-REPLACE_WITH_NEW_ID"
+```
+
+The diagnostic reads only scenarios recorded in the saved suite; old
+four-case suites retain their prior behaviour. It never changes grades,
+candidate payloads or historical evidence.
+
 ## Acceptance rules
 
 All cases must retrieve the target competency via the Education MCP
