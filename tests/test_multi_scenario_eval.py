@@ -36,6 +36,7 @@ def make_report(state, scenario, *, response):
     return build_open_weights_report(
         settings=OllamaSettings(),
         prompt=scenario_prompt(scenario),
+        prompt_style="scenario",
         final_output=response,
         state_store=state,
         started_at=time,
