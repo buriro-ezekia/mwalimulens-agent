@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -233,16 +234,47 @@ def validate_scenario_fixtures(data_dir: Path = DEFAULT_DATA_DIR) -> None:
             raise ValueError("Scenario contains cross-learner evidence")
 
 
+def candidate_semantic_review_flags(
+    claim: str, evidence: list[Any],
+) -> list[str]:
+    """Identify narrowly demonstrable overclaims for separate human review."""
+
+    flags: list[str] = []
+    assessments = [
+        item for item in evidence
+        if item.evidence_type.value == "assessment" and item.score is not None
+    ]
+    if len(assessments) <= 2 and re.search(
+        r"\bconsistent(?:ly)?\s+improv(?:ement|ed|ing)\b", claim,
+        flags=re.IGNORECASE,
+    ):
+        flags.append("consistency_unverified_from_at_most_two_assessments")
+    if (
+        re.search(r"\bimprov(?:ement|ed|ing)\b", claim, flags=re.IGNORECASE)
+        and re.search(r"\bexplain(?:ing)?\s+trends?\b", claim, re.IGNORECASE)
+        and any(
+            "required support to explain the trend" in (item.observation or "").lower()
+            for item in evidence
+        )
+    ):
+        flags.append("explanation_improvement_not_established_by_later_observation")
+    return flags
+
+
 def grade_scenario(
     report: dict[str, Any], scenario: Scenario, data_dir: Path = DEFAULT_DATA_DIR
 ) -> dict[str, Any]:
-    """Apply deterministic evidence constraints, not subjective semantic scoring."""
+    """Apply deterministic structural checks plus non-scoring semantic cautions."""
 
     dataset = load_synthetic_dataset(data_dir)
     evidence = dataset.competency_evidence(scenario.learner, scenario.competency)
     by_id = {item.evidence_id: item for item in evidence}
     candidates = report.get("pending_reviews") or []
     tools = report.get("audited_tool_names") or []
+    semantic_flags = (
+        candidate_semantic_review_flags(str(candidates[0].get("claim") or ""), evidence)
+        if len(candidates) == 1 else []
+    )
     common = {
         "model_report_pass": report.get("status") == "pass",
         "correct_target": report.get("evaluation_target") == {
@@ -308,6 +340,7 @@ def grade_scenario(
         "application_idempotency_applied": (
             int(report.get("candidate_submission_deduplicated_count") or 0) > 0
         ),
+        "semantic_review_flags": semantic_flags,
         "manual_semantic_review_required": True,
         "semantic_quality_verified": False,
     }
