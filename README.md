@@ -259,6 +259,122 @@ cross-school evaluations, and deployment patterns that remain practical where co
 compute are constrained. These are future directions, not capabilities claimed by the challenge
 prototype.
 
+## Product development
+
+Current product engineering takes place on the separate
+[`product-development` branch](https://github.com/buriro-ezekia/mwalimulens-agent/tree/product-development).
+The original challenge submission remains preserved at
+`6215b9efb79ffd022a835dabba386c5ccb8226e4`.
+
+### Learner Progress Review — browser workspace
+
+The new [teacher workspace](docs/teacher-workspace.md) brings the fictional learner
+timeline, supporting and counter-evidence, uncertainty, teacher decision and audit trail
+into a single responsive, offline-friendly local browser interface. Teachers can
+**Approve, Revise or Reject** through the browser, inspect a confirmation page and see
+the resulting synthetic profile note and audited state.
+
+Run from the product-development branch:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal
+```
+
+The default view uses a **seeded fictional candidate** and makes no model-inference claim.
+Select **Run MCP evidence analysis** in the browser to execute the existing deterministic
+agent against the real Education and borrowed Filesystem MCP servers, then review the
+resulting candidate in the same browser workflow. This is **not** a live Qwen run; separately
+committed Qwen evidence is clearly identified in the technical section.
+
+The app binds only to local `127.0.0.1`, uses disposable synthetic state and a simulated
+reviewer identity. It is **not authenticated** and must not be exposed publicly or used
+with real learner data. The model cannot call the human-only review action.
+
+The earlier [terminal-driven review sandbox](docs/teacher-review.md) remains available
+for reproducibility. The [teacher feedback protocol](docs/teacher-feedback.md) supports
+exploratory usability assessment with fictional examples.
+
+The product-development branch also provides a
+[repeated local Qwen evaluation harness](docs/model-reliability.md) and an
+[offline presentation rehearsal checklist](docs/offline-demo.md).
+Run the Qwen harness with `python -m mwalimulens.model_reliability --runs 3` to
+record every successful, failed or timed-out attempt separately. This first benchmark
+repeats **one synthetic learner task**, not multiple classroom scenarios.
+
+For automated local prerequisite and MCP checks, run
+`python -m mwalimulens.offline_preflight --run-mcp --check-model`. A passing
+automated check does **not** replace a manually disconnected Wi-Fi rehearsal.
+
+**367 repository tests and Ruff passed** on the Windows development machine before this
+naming cleanup. The renamed modules require a fresh verification run. Real MCP browser
+integration, repeated Qwen results and an offline rehearsal must be validated separately.
+
+## Functional acceptance
+
+The [product acceptance runner](docs/functional-acceptance.md) checks independent
+Approve/Revise/Reject decisions against synthetic learner evidence, including
+audited consequences. Add `--with-mcp` to verify genuine Education and borrowed
+Filesystem MCP calls using the fast deterministic agent. Run repeated local Qwen
+evaluations separately; no live-model result is implied by this runner.
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.product_acceptance --with-mcp
+```
+
+## Multi-scenario model evaluation
+
+Run a new four-scenario local Qwen suite covering longitudinal patterns,
+conflicting evidence, sparse evidence and missing evidence. The evaluator
+checks scenario-specific candidate or abstention outcomes while retaining
+the model's evidence references and the human teacher-review boundary:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.multi_scenario_eval --timeout 600
+```
+
+See the [multi-scenario testing protocol](docs/multi-scenario-evaluation.md).
+These fictional tests do not establish educational effectiveness or school
+deployment readiness. The original single-task benchmark remains available.
+
+## Evidence-preserving latency experiment
+
+Individual model requests can now be aligned with the Education MCP tool audit.
+An opt-in `--prompt-style concise` experiment aims to reduce unnecessary
+generation while preserving evidence IDs and the human review gate. The
+original `baseline` prompt remains the default. See the
+[request sequence and optimisation guide](docs/request-sequence-optimisation.md)
+for controlled testing and decision criteria.
+
+## CPU inference diagnostics
+
+Use optional native Ollama preloading and model-request telemetry for the
+local Qwen workflow:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.agent.open_weights_run --keep-alive 30m
+```
+
+This records observed request wall times and provider token usage without
+changing teacher authority or claiming pure token-generation timings.
+See the [CPU inference guide](docs/ollama-performance.md) for setup,
+per-attempt reliability reporting and measured-baseline comparisons.
+
+## Workflow performance measurement
+
+The local Qwen runner now records agent construction time, initial/recovery
+agent-run duration, overall execution time and service-side Education MCP tool
+durations. It explicitly distinguishes the combined model-and-MCP span from
+model-only inference time, which is not yet measured. See the
+[performance instrumentation guide](docs/workflow-timing.md).
+
+## Continuous integration
+
+The [CircleCI configuration](.circleci/config.yml) runs the full Python test suite,
+Ruff and pinned MCP dependency installation in a Linux Python/Node environment.
+See the [CI setup and validation guide](docs/continuous-integration.md).
+A pipeline is not considered passing until CircleCI is connected and the job runs
+successfully; local Windows testing and device-specific MCP checks remain separate.
+
 ## Further documentation
 
 - `ARCHITECTURE.md` — system design and decision boundaries

@@ -169,3 +169,80 @@ def test_flag_rejects_overlapping_support_and_counter_evidence(tmp_path) -> None
             uncertainty="Uncertain.",
             suggested_teacher_question="What should the teacher verify?",
         )
+
+def _repeat_candidate_args() -> dict:
+    return {
+        "learner_id": "L001",
+        "competency_code": "MATH-FRACTIONS",
+        "claim": "Recorded fraction assessment scores increased across terms.",
+        "supporting_evidence_ids": ["EV-001", "EV-004", "EV-007"],
+        "counter_evidence_ids": ["EV-008"],
+        "uncertainty": "Independent explanation remains inconsistent in observations.",
+        "suggested_teacher_question": (
+            "Can the learner explain an unfamiliar fraction problem independently?"
+        ),
+    }
+
+
+def test_duplicate_pending_candidate_is_idempotent_and_each_attempt_audited(tmp_path):
+    service = _service(tmp_path)
+    args = _repeat_candidate_args()
+
+    first = service.flag_pattern_for_review(**args)
+    second = service.flag_pattern_for_review(**args)
+
+    assert second == first
+    assert len(service.state_store.pending_reviews()) == 1
+    assert service.state_store.teacher_reviews() == ()
+    assert service.state_store.profile_updates() == ()
+    calls = service.state_store.tool_calls()
+    assert len(calls) == 2
+    assert [call["status"] for call in calls] == ["success", "success"]
+    assert [call["duplicate_submission"] for call in calls] == [False, True]
+    assert calls[0]["output"] == first
+    assert calls[1]["output"] == first
+
+
+def test_reordered_evidence_ids_do_not_create_a_duplicate(tmp_path):
+    service = _service(tmp_path)
+    args = _repeat_candidate_args()
+    first = service.flag_pattern_for_review(**args)
+    reordered = {
+        **args,
+        "supporting_evidence_ids": list(reversed(args["supporting_evidence_ids"])),
+    }
+
+    assert service.flag_pattern_for_review(**reordered)["review_id"] == first["review_id"]
+    assert len(service.state_store.pending_reviews()) == 1
+    assert service.state_store.tool_calls()[-1]["duplicate_submission"] is True
+
+
+def test_a_distinct_qualified_candidate_is_not_silently_merged(tmp_path):
+    service = _service(tmp_path)
+    args = _repeat_candidate_args()
+    first = service.flag_pattern_for_review(**args)
+    changed = {**args, "claim": "A separate cautious longitudinal interpretation."}
+    second = service.flag_pattern_for_review(**changed)
+
+    assert second["review_id"] != first["review_id"]
+    assert len(service.state_store.pending_reviews()) == 2
+    assert service.state_store.tool_calls()[-1]["duplicate_submission"] is False
+
+
+def test_a_resolved_review_is_not_reopened_by_an_identical_new_submission(tmp_path):
+    service = _service(tmp_path)
+    args = _repeat_candidate_args()
+    first = service.flag_pattern_for_review(**args)
+    service.record_teacher_review(
+        review_id=first["review_id"],
+        reviewer_id="simulated-reviewer",
+        decision="reject",
+        reason="Further evidence is needed before accepting this interpretation.",
+    )
+    second = service.flag_pattern_for_review(**args)
+
+    assert first["review_id"] != second["review_id"]
+    assert len(service.state_store.review_candidates()) == 2
+    assert len(service.state_store.pending_reviews()) == 1
+    assert len(service.state_store.teacher_reviews()) == 1
+    assert service.state_store.profile_updates() == ()

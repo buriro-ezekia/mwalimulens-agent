@@ -181,3 +181,32 @@ async def test_teacher_reject_creates_no_profile_update(mcp_client) -> None:
     assert result.structured_content["teacher_review"]["decision"] == "reject"
     assert result.structured_content["profile_update"] is None
     assert state_store.profile_updates() == ()
+
+
+@pytest.mark.anyio
+async def test_identical_mcp_action_reuses_pending_candidate_and_audits_retry(
+    mcp_client,
+) -> None:
+    client, state = mcp_client
+    arguments = {
+        "learner_id": "L002",
+        "competency_code": "SCI-DATA",
+        "claim": "Science assessments varied slightly across recorded terms.",
+        "supporting_evidence_ids": ["EV-012", "EV-013"],
+        "counter_evidence_ids": ["EV-014"],
+        "uncertainty": "Explaining the interpretation still required support.",
+        "suggested_teacher_question": "Can the learner explain a new table unaided?",
+    }
+    initial = await client.call_tool("flag_pattern_for_review", arguments)
+    repeated = await client.call_tool("flag_pattern_for_review", arguments)
+
+    assert initial.is_error is False
+    assert repeated.is_error is False
+    assert initial.structured_content == repeated.structured_content
+    assert len(state.pending_reviews()) == 1
+    assert state.teacher_reviews() == ()
+    assert state.profile_updates() == ()
+    audits = state.tool_calls()
+    assert len(audits) == 2
+    assert [entry["duplicate_submission"] for entry in audits] == [False, True]
+    assert all(entry["status"] == "success" for entry in audits)
