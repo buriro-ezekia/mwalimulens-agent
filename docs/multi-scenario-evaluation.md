@@ -11,7 +11,7 @@ and evidence in `data/synthetic/`; no real pupil records are required.
 |---|---|---|---|
 | `longitudinal-pattern` | L001 / MATH-FRACTIONS | Multiple terms with supporting and counter-evidence | Pending candidate |
 | `conflicting-evidence` | L002 / SCI-DATA | Two assessments across terms plus a cautionary classroom observation | Qualified pending candidate |
-| `single-observation` | L003 / ENG-INFERENCE | One assessment, no longitudinal record | Explicit abstention |
+| `single-assessment` | L003 / ENG-INFERENCE | One assessment, no longitudinal record | Explicit abstention |
 | `missing-competency` | L002 / MATH-FRACTIONS | No records for the requested competency | Explicit abstention |
 
 The model receives a **common conditional instruction**, parameterised by
@@ -49,7 +49,7 @@ The runner creates the following under
 summary.json
 longitudinal-pattern/{report.json,state.json,result.json,stdout.txt,stderr.txt}
 conflicting-evidence/{report.json,state.json,result.json,stdout.txt,stderr.txt}
-single-observation/{report.json,state.json,result.json,stdout.txt,stderr.txt}
+single-assessment/{report.json,state.json,result.json,stdout.txt,stderr.txt}
 missing-competency/{report.json,state.json,result.json,stdout.txt,stderr.txt}
 ```
 
