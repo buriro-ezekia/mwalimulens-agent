@@ -114,6 +114,7 @@ def test_explicit_scenario_abstention_is_not_oracle_retried(
     from mwalimulens.agent import open_weights_run
 
     attempts = []
+    tool_error_modes = []
 
     class Agent:
         async def __aenter__(self):
@@ -129,8 +130,11 @@ def test_explicit_scenario_abstention_is_not_oracle_retried(
                 all_messages=lambda: [],
             )
 
-    monkeypatch.setattr(open_weights_run, "build_ollama_agent",
-                        lambda **_kwargs: Agent())
+    def fake_builder(**kwargs):
+        tool_error_modes.append(kwargs["tool_error_behavior"])
+        return Agent()
+
+    monkeypatch.setattr(open_weights_run, "build_ollama_agent", fake_builder)
     monkeypatch.setattr(
         open_weights_run, "_should_attempt_completion_recovery",
         lambda _store: True,
@@ -144,5 +148,6 @@ def test_explicit_scenario_abstention_is_not_oracle_retried(
         report_path=tmp_path / "report.json",
     ))
     assert len(attempts) == 1
+    assert tool_error_modes == ["retry"]
     assert report["completion_recovery"]["attempted"] is False
     assert report["status"] == "fail"
