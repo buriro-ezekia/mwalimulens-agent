@@ -183,7 +183,8 @@ def test_unknown_scenario_is_rejected():
 def test_scenario_prompt_distinguishes_numeric_and_qualitative_evidence():
     prompt = scenario_prompt(scenario_by_id("conflicting-evidence"))
     assert "assessment scores" in prompt
-    assert "qualitative observations" in prompt
+    assert "classroom observation" in prompt
+    assert "observation has no score" in prompt
     assert "counter-evidence" in prompt
     assert "consistent improvement" in prompt
     assert "EV-014" not in prompt
