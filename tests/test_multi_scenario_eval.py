@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -143,9 +144,7 @@ def test_run_suite_persists_each_scenario_result_without_model_calls(
     tmp_path, monkeypatch,
 ):
     def fake_runner(command, **kwargs):
-        ident = command[command.index("--scenario") + 1]
         output = command[command.index("--result") + 1]
-        from pathlib import Path
 
         Path(output).write_text(
             json.dumps({"status": "pass", "checks": {"test": True}}),
@@ -159,7 +158,7 @@ def test_run_suite_persists_each_scenario_result_without_model_calls(
     assert result["status"] == "pass"
     assert result["passed"] == 4
     assert result["semantic_quality_verified"] is False
-    stored = json.loads(open(result["summary_path"], encoding="utf-8").read())
+    stored = json.loads(Path(result["summary_path"]).read_text(encoding="utf-8"))
     assert stored["scenario_count"] == 4
 
 
