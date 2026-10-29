@@ -195,3 +195,31 @@ files now include `evidence_preflight` and raw model reports include
 The current real-model result is still **1/4 passing**. No claim of
 4/4 or improved generalisability should be made before a new run.
 
+## Grounding verification of explicit abstention claims
+
+A subsequent saved run passed three of four cases. The remaining L002
+Science case abstained because Qwen incorrectly claimed that the retrieved
+evidence covered only two terms and omitted `2026-T1`. The actual
+synthetic dataset has `2025-T1`, `2025-T3` and `2026-T1`.
+
+The scenario agent now compares **explicit, falsifiable term-count and
+missing-term statements in an abstention** against the validated source
+records. If a statement is demonstrably false, it may request **one**
+additional model turn showing the correct term IDs and asking for
+re-evaluation. The correction does not provide supporting evidence IDs,
+an expected outcome or a candidate claim. The model remains free to
+abstain for a different, substantiated reason.
+
+The report preserves the original model response under
+`initial_output` and `grounding_correction.original_abstention`,
+along with the detected contradiction and correction duration. A
+post-correction candidate must still pass every original evidence
+and teacher-review check. A corrected run is **not** a first-pass model
+success; future reliability reporting should distinguish first-pass and
+corrected outcomes.
+
+This verifier is intentionally narrow. It does not validate all possible
+natural-language claims or guarantee that a model's final interpretation
+is pedagogically sound. The last demonstrated real-model result remains
+**3/4** until a further local Qwen evaluation completes.
+
