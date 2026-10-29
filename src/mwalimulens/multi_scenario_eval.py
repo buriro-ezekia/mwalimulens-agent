@@ -75,6 +75,55 @@ def inspect_partial_state(state_path: Path) -> dict[str, Any]:
     }
 
 
+def inspect_partial_model_trace(trace_path: Path) -> dict[str, Any]:
+    """Read request lifecycle metadata without claiming a missing final verdict."""
+
+    if not trace_path.is_file():
+        return {"status": "missing"}
+    try:
+        lines = trace_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as exc:
+        return {"status": "unreadable", "error_type": type(exc).__name__}
+    events: list[dict[str, Any]] = []
+    malformed_lines = 0
+    for line in lines:
+        try:
+            parsed = json.loads(line)
+        except ValueError:
+            malformed_lines += 1
+            continue
+        if isinstance(parsed, dict) and parsed.get("event") in {
+            "request_started", "request_finished"
+        } and isinstance(parsed.get("request"), int):
+            events.append(parsed)
+        else:
+            malformed_lines += 1
+    started = {item["request"] for item in events if item["event"] == "request_started"}
+    completed = {
+        item["request"]: item
+        for item in events if item["event"] == "request_finished"
+    }
+    last = completed[max(completed)] if completed else None
+    return {
+        "status": "readable" if not malformed_lines else "partial_invalid",
+        "request_started_count": len(started),
+        "request_finished_count": len(completed),
+        "unfinished_request_numbers": sorted(started - completed.keys()),
+        "last_finished_request": (
+            {
+                "request": last.get("request"),
+                "status": last.get("status"),
+                "seconds": last.get("seconds"),
+                "requested_tool_names": last.get("requested_tool_names", []),
+                "audited_tools_after": last.get("audited_tools_after", []),
+            }
+            if last is not None else None
+        ),
+        "malformed_line_count": malformed_lines,
+        "note": "Persisted request metadata only, not a completed agent or model verdict.",
+    }
+
+
 @dataclass(frozen=True)
 class Scenario:
     ident: str
@@ -349,6 +398,9 @@ def run_suite(
             "returncode": completed.returncode if completed else None,
             "failure": failure,
             "partial_progress": inspect_partial_state(state),
+            "partial_model_requests": inspect_partial_model_trace(
+                folder / "model_requests.jsonl"
+            ),
         }
         if result_path.is_file():
             try:
@@ -440,6 +492,9 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
                 "recorded_suite_status": saved.get("status"),
                 "failure": failure,
                 "partial_progress": inspect_partial_state(folder / "state.json"),
+                "partial_model_requests": inspect_partial_model_trace(
+                    folder / "model_requests.jsonl"
+                ),
                 "final_report_available": report_file.is_file(),
                 "scenario_result_available": result_file.is_file(),
             })
