@@ -34,7 +34,7 @@ class Scenario:
 SCENARIOS = (
     Scenario("longitudinal-pattern", "L001", "MATH-FRACTIONS", "candidate", "supported"),
     Scenario("conflicting-evidence", "L002", "SCI-DATA", "candidate", "mixed"),
-    Scenario("single-observation", "L003", "ENG-INFERENCE", "abstain", "sparse"),
+    Scenario("single-assessment", "L003", "ENG-INFERENCE", "abstain", "sparse"),
     Scenario("missing-competency", "L002", "MATH-FRACTIONS", "abstain", "missing"),
 )
 
