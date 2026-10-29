@@ -21,6 +21,7 @@ from mwalimulens.multi_scenario_eval import (
     diagnose_saved_suite,
     evidence_preflight,
     grade_scenario,
+    inspect_partial_state,
     main,
     run_one,
     run_suite,
@@ -525,3 +526,83 @@ def test_identical_repeated_candidate_is_structurally_accepted_but_disclosed(
     assert result["semantic_quality_verified"] is False
     assert not state.teacher_reviews()
     assert not state.profile_updates()
+
+
+def test_timeout_preserves_partial_mcp_progress_and_logs_without_regrading(
+    tmp_path, monkeypatch,
+):
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("Forensics must never execute or regrade the model")
+
+    monkeypatch.setattr(
+        "mwalimulens.multi_scenario_eval.grade_scenario", forbidden
+    )
+    monkeypatch.setattr(
+        "mwalimulens.multi_scenario_eval.run_open_weights_task", forbidden
+    )
+
+    def timeout_runner(command, **_kwargs):
+        state = Path(command[command.index("--state") + 1])
+        state.write_text(json.dumps({
+            "tool_calls": [
+                {"tool_name": "get_competency_evidence", "status": "success"},
+                {"tool_name": "flag_pattern_for_review", "status": "success",
+                 "duplicate_submission": False},
+                {"tool_name": "flag_pattern_for_review", "status": "success",
+                 "duplicate_submission": True},
+            ],
+            "pending_reviews": [{"status": "pending_teacher_review"}],
+            "teacher_reviews": [],
+            "profile_updates": [],
+        }), encoding="utf-8")
+        raise subprocess.TimeoutExpired(
+            command, 600, output=b"partial stdout\n",
+            stderr=b"partial stderr\n",
+        )
+
+    result = run_suite(
+        output_root=tmp_path, timeout=600, runner=timeout_runner,
+        scenarios=("longitudinal-pattern",),
+    )
+    assert result["status"] == "fail"
+    assert result["passed"] == 0
+    assert result["failed"] == 1
+    assert result["first_stage_unknown"] == 1
+    assert result["results"][0]["first_stage_status"] == "unknown"
+    assert result["results"][0]["partial_progress"]["pending_review_count"] == 1
+    assert result["results"][0]["partial_progress"][
+        "candidate_submission_deduplicated_count"
+    ] == 1
+
+    directory = Path(result["summary_path"]).parent
+    folder = directory / "longitudinal-pattern"
+    assert (folder / "stdout.txt").read_text(encoding="utf-8") == "partial stdout\n"
+    assert (folder / "stderr.txt").read_text(encoding="utf-8") == "partial stderr\n"
+    before = {p: p.read_bytes() for p in directory.rglob("*") if p.is_file()}
+
+    diagnostics = diagnose_saved_suite(directory)
+    assert len(diagnostics["cases"]) == 1
+    case = diagnostics["cases"][0]
+    assert case["classification"] == "timeout_without_final_report"
+    assert case["status"] == "unknown"
+    assert case["recorded_suite_status"] == "fail"
+    assert case["failure"] == "Timeout after 600 seconds"
+    assert case["partial_progress"]["status"] == "readable"
+    assert case["partial_progress"]["candidate_submission_attempts_audited"] == 2
+    assert case["partial_progress"]["candidate_submission_deduplicated_count"] == 1
+    assert case["partial_progress"]["teacher_review_count"] == 0
+    assert case["partial_progress"]["profile_update_count"] == 0
+    assert case["final_report_available"] is False
+    assert case["scenario_result_available"] is False
+    assert {p: p.read_bytes() for p in directory.rglob("*") if p.is_file()} == before
+
+
+def test_incomplete_state_diagnostics_distinguish_missing_and_invalid_files(tmp_path):
+    path = tmp_path / "state.json"
+    assert inspect_partial_state(path) == {"status": "missing"}
+    path.write_text("{unfinished", encoding="utf-8")
+    assert inspect_partial_state(path)["status"] == "unreadable"
+    path.write_text('{"tool_calls": []}', encoding="utf-8")
+    assert inspect_partial_state(path) == {"status": "invalid_structure"}
+    path.write_text('["unexpected"]', encoding="utf-8")
+    assert inspect_partial_state(path) == {"status": "invalid_structure"}
