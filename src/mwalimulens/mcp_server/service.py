@@ -157,7 +157,9 @@ class EducationToolService:
                 timestamp=created_at,
                 duration_seconds=round(perf_counter() - tool_started, 6),
             )
-            self.state_store.record_pending_review_and_tool_call(review, event)
+            review = self.state_store.record_pending_review_and_tool_call(
+                review, event
+            )
         except Exception as exc:
             self._audit_error("flag_pattern_for_review", inputs, exc, tool_started)
             raise
