@@ -292,3 +292,39 @@ actual validated action occurs.
 Historical evaluation artefacts are retained unchanged. The new code
 does not establish a fresh real-Qwen success rate.
 
+## Diagnosing a timed-out focused scenario
+
+The subsequent focused suite `suite-csbk3ip5` reported a final **1/2**:
+`conflicting-evidence` passed only after an initially failing stage, while
+`longitudinal-pattern` reached the 600-second subprocess limit with
+`initial=unknown`. A timeout is not evidence that the model abstained, made
+a duplicate submission or completed a valid review; those facts require an
+audit or model report. This outcome is not a 4-case success result.
+
+The runner now preserves any captured partial stdout/stderr supplied by
+`TimeoutExpired`, even when Python delivers them as bytes. Its summary
+includes `partial_progress` derived read-only from the atomically
+persisted `state.json` where available.
+
+For **existing** as well as new suites, `--diagnose` now distinguishes
+`timeout_without_final_report` from a generic missing report. It exposes
+surviving MCP tool names/statuses, audited candidate-submission attempts,
+deduplicated attempts, pending review count, teacher review count and
+profile update count, without rerunning Qwen. If no state exists, the
+diagnostic explicitly reports `status: missing`. Invalid state is reported
+as invalid or unreadable, never treated as successful.
+
+Run the following locally to investigate the saved results:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.multi_scenario_eval --diagnose "runtime/multi_scenario/suite-csbk3ip5"
+```
+
+The updated diagnostics cannot recover model-response parts that were
+never written before the subprocess was terminated. For a timed-out run
+without `result.json`, the initial-stage verdict correctly remains
+`unknown`; `partial_progress` is **not** an acceptance grade. The original
+saved `summary.json`, `report.json`, `result.json` and `state.json`
+are not rewritten by diagnosis. Do not repeat the live evaluation
+before inspecting these surviving artifacts.
+
