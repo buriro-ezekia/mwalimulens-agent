@@ -50,7 +50,7 @@ def test_recovery_message_does_not_reveal_hidden_expected_outcome():
     )
     text = correction_prompt("L002", "SCI-DATA", facts)
     assert "2026-T1" in text
-    assert "otherwise respond ABSTAIN:" in text
+    assert "Otherwise respond ABSTAIN:" in text
     assert "EV-014" not in text
     assert "must submit" not in text
 
