@@ -204,7 +204,8 @@ async def run_open_weights_task(
                 "status", "checks", "evaluation_target", "final_output",
                 "audited_tool_names", "tool_call_summary", "pending_reviews",
                 "pending_review_count", "teacher_review_count", "profile_update_count",
-                "error",
+                "candidate_submission_deduplicated_count",
+                "candidate_submission_audited_attempt_count", "error",
             )},
         })
 
@@ -482,12 +483,20 @@ def build_open_weights_report(
         },
         "agent_tool_allowlist": sorted(visible_tools),
         "audited_tool_names": tool_names,
+        "candidate_submission_audited_attempt_count": sum(
+            item.get("tool_name") == "flag_pattern_for_review" for item in tool_calls
+        ),
+        "candidate_submission_deduplicated_count": sum(
+            item.get("tool_name") == "flag_pattern_for_review"
+            and item.get("duplicate_submission") is True for item in tool_calls
+        ),
         "tool_call_summary": [
             {
                 "tool_name": item.get("tool_name"),
                 "status": item.get("status"),
                 "timestamp": item.get("timestamp"),
                 "duration_seconds": item.get("duration_seconds"),
+                "duplicate_submission": item.get("duplicate_submission", False),
             }
             for item in tool_calls
         ],
