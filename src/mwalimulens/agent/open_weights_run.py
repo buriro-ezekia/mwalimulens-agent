@@ -71,6 +71,32 @@ PROMPT_STYLES = {
     "scenario": None,
 }
 
+SCENARIO_RECOVERY_PROMPT = """
+The evidence tools have been called, but no pending review candidate was created.
+Reconsider the evidence you already retrieved for learner {learner_id}, competency
+{competency_code}. Compare dated assessment scores and check qualitative observations
+for limitations. A provisional pattern is not a permanent label.
+
+If a bounded longitudinal statement is defensible, submit it using
+flag_pattern_for_review with at least two exact supporting IDs from different
+terms, relevant counter-evidence IDs, uncertainty and a teacher question.
+Otherwise reply ABSTAIN: and identify the specific missing evidence. Do not
+invent evidence, ask for permission or use the teacher-review tool.
+""".strip()
+
+
+def _recovery_prompt(
+    prompt_style: str, evaluation_target: tuple[str, str]
+) -> str:
+    """Use the original recovery for legacy runs and a target-specific one for scenarios."""
+
+    if prompt_style != "scenario":
+        return COMPLETION_RECOVERY_PROMPT
+    return SCENARIO_RECOVERY_PROMPT.format(
+        learner_id=evaluation_target[0], competency_code=evaluation_target[1]
+    )
+
+
 DEFAULT_OPEN_WEIGHTS_TASK = """
 Assess learner L001's longitudinal MATH-FRACTIONS evidence.
 
@@ -169,13 +195,23 @@ async def run_open_weights_task(
             initial_output = str(result.output)
             final_output = initial_output
 
-            if (expected_outcome == "candidate"
-                    and _should_attempt_completion_recovery(state_store)):
+            should_recover = _should_attempt_completion_recovery(state_store)
+            if prompt_style == "scenario":
+                # An explicit abstention must remain an observed outcome, not
+                # be repaired using the evaluation's hidden expected label.
+                should_recover = (
+                    should_recover
+                    and not final_output.strip().upper().startswith("ABSTAIN:")
+                )
+            elif expected_outcome != "candidate":
+                should_recover = False
+
+            if should_recover:
                 recovery_attempted = True
                 recovery_clock = perf_counter()
                 try:
                     recovery_result = await agent.run(
-                        COMPLETION_RECOVERY_PROMPT,
+                        _recovery_prompt(prompt_style, evaluation_target),
                         message_history=result.all_messages(),
                         model_settings={"temperature": 0},
                     )
@@ -329,7 +365,10 @@ def build_open_weights_report(
         "completion_recovery": {
             "attempted": recovery_attempted,
             "succeeded": recovery_succeeded,
-            "prompt": COMPLETION_RECOVERY_PROMPT if recovery_attempted else None,
+            "prompt": (
+                _recovery_prompt(prompt_style, evaluation_target)
+                if recovery_attempted else None
+            ),
             "output": recovery_output,
         },
         "agent_tool_allowlist": sorted(AGENT_MCP_TOOL_ALLOWLIST),
