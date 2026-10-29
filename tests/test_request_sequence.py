@@ -111,8 +111,6 @@ def test_scenario_recovery_targets_correct_learner_without_answers():
 def test_explicit_scenario_abstention_is_not_oracle_retried(
     tmp_path, monkeypatch,
 ):
-    from types import SimpleNamespace
-
     from mwalimulens.agent import open_weights_run
 
     attempts = []
