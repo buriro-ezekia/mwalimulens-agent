@@ -95,3 +95,56 @@ def test_concise_mode_rejects_an_uncontrolled_custom_prompt(tmp_path) -> None:
             state_path=tmp_path / "state.json",
             report_path=tmp_path / "report.json",
         ))
+
+def test_scenario_recovery_targets_correct_learner_without_answers():
+    from mwalimulens.agent.open_weights_run import _recovery_prompt
+
+    prompt = _recovery_prompt("scenario", ("L002", "SCI-DATA"))
+    assert "L002" in prompt
+    assert "SCI-DATA" in prompt
+    assert "L001" not in prompt
+    assert "EV-014" not in prompt
+    assert "two exact supporting" in prompt
+    assert "counter-evidence" in prompt
+
+
+def test_explicit_scenario_abstention_is_not_oracle_retried(
+    tmp_path, monkeypatch,
+):
+    from types import SimpleNamespace
+
+    from mwalimulens.agent import open_weights_run
+
+    attempts = []
+
+    class Agent:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def run(self, prompt, **_kwargs):
+            attempts.append(prompt)
+            return SimpleNamespace(
+                output="ABSTAIN: Insufficient history.",
+                all_messages=lambda: [],
+            )
+
+    monkeypatch.setattr(open_weights_run, "build_ollama_agent",
+                        lambda **_kwargs: Agent())
+    monkeypatch.setattr(
+        open_weights_run, "_should_attempt_completion_recovery",
+        lambda _store: True,
+    )
+    report = asyncio.run(run_open_weights_task(
+        prompt="Review hypothetical evidence.",
+        prompt_style="scenario",
+        evaluation_target=("L001", "MATH-FRACTIONS"),
+        expected_outcome="candidate",
+        state_path=tmp_path / "state.json",
+        report_path=tmp_path / "report.json",
+    ))
+    assert len(attempts) == 1
+    assert report["completion_recovery"]["attempted"] is False
+    assert report["status"] == "fail"
