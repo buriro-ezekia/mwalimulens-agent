@@ -8,6 +8,14 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    RetryPromptPart,
+    TextPart,
+    ThinkingPart,
+    ToolCallPart,
+)
 from pydantic_ai.models.ollama import OllamaModel
 
 from mwalimulens.agent.ollama import OllamaSettings, build_ollama_model
@@ -57,6 +65,53 @@ def test_request_sequence_records_mcp_checkpoint_without_leaking_evidence(
     assert "claim" not in json.dumps(records)
     assert "response" not in json.dumps(records)
     assert records[1]["output_tokens"] == 80
+
+
+@pytest.mark.parametrize("keyword_messages", [False, True])
+def test_request_sequence_records_unaudited_tool_attempts_and_retry_counts(
+    monkeypatch, keyword_messages,
+) -> None:
+    attempted = ModelResponse(parts=[
+        ToolCallPart(
+            "flag_pattern_for_review", {"claim": "PRIVATE_ARGUMENT"},
+            tool_call_id="attempt-1",
+        ),
+        ThinkingPart("PRIVATE_REASONING"),
+        TextPart("PRIVATE_OUTPUT"),
+    ])
+    responses = iter([attempted, ModelResponse(parts=[TextPart("ABSTAIN: sparse")])])
+
+    async def fake_request(self, *args, **kwargs):
+        return next(responses)
+
+    monkeypatch.setattr(OllamaModel, "request", fake_request)
+    records = []
+    model = build_ollama_model(
+        OllamaSettings(), records=records, audit_snapshot=lambda: (),
+    )
+
+    async def request(messages):
+        if keyword_messages:
+            return await model.request(
+                messages=messages, model_settings=None, model_request_parameters=None,
+            )
+        return await model.request(messages, None, None)
+
+    asyncio.run(request([]))
+    asyncio.run(request([
+        attempted,
+        ModelRequest(parts=[RetryPromptPart(
+            content="PRIVATE_VALIDATION_ERROR", tool_name="flag_pattern_for_review",
+            tool_call_id="attempt-1",
+        )]),
+    ]))
+
+    assert records[0]["requested_tool_names"] == ["flag_pattern_for_review"]
+    assert records[0]["retry_feedback_count"] == 0
+    assert records[1]["requested_tool_names"] == []
+    assert records[1]["retry_feedback_count"] == 1
+    assert all(record["audited_tools_after"] == [] for record in records)
+    assert "PRIVATE_" not in json.dumps(records)
 
 
 def test_report_carries_prompt_style_without_changing_gates(tmp_path) -> None:

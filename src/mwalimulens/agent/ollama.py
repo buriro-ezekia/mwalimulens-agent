@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
+from pydantic_ai.messages import RetryPromptPart, ToolCallPart
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
 
@@ -123,7 +124,16 @@ class TimedOllamaModel(OllamaModel):
     async def request(self, *args: Any, **kwargs: Any) -> Any:
         index = len(self._records) + 1
         started = perf_counter()
-        record: dict[str, Any] = {"request": index}
+        messages = args[0] if args else kwargs.get("messages", ())
+        record: dict[str, Any] = {
+            "request": index,
+            # Counts feedback in this request's history, not new service errors.
+            "retry_feedback_count": sum(
+                isinstance(part, RetryPromptPart)
+                for message in messages
+                for part in getattr(message, "parts", ())
+            ),
+        }
         if self._audit_snapshot is not None:
             record["audited_tools_before"] = list(self._audit_snapshot())
         try:
@@ -134,6 +144,10 @@ class TimedOllamaModel(OllamaModel):
                 "input_tokens": _token_count(usage, "input_tokens", "request_tokens"),
                 "output_tokens": _token_count(usage, "output_tokens", "response_tokens"),
                 "total_tokens": _token_count(usage, "total_tokens"),
+                "requested_tool_names": [
+                    part.tool_name for part in getattr(response, "parts", ())
+                    if isinstance(part, ToolCallPart)
+                ],
             })
             return response
         except Exception as exc:

@@ -81,19 +81,32 @@ for limitations. A provisional pattern is not a permanent label.
 If a bounded longitudinal statement is defensible, submit it using
 flag_pattern_for_review with at least two exact supporting IDs from different
 terms, relevant counter-evidence IDs, uncertainty and a teacher question.
-Otherwise reply ABSTAIN: and identify the specific missing evidence. Do not
+Otherwise reply beginning with ABSTAIN: and identify the specific missing evidence. Do not
 invent evidence, ask for permission or use the teacher-review tool.
+""".strip()
+
+SCENARIO_READ_ONLY_RECOVERY_PROMPT = """
+The candidate action is unavailable in this run for learner {learner_id}, competency
+{competency_code}. Your previous response did not meet the final-response contract.
+Using only the retrieved evidence, respond beginning with ABSTAIN: and explain the
+specific missing evidence condition. Do not place an introduction before ABSTAIN:.
+Do not invent evidence or attempt any candidate or teacher-review action.
 """.strip()
 
 
 def _recovery_prompt(
-    prompt_style: str, evaluation_target: tuple[str, str]
+    prompt_style: str, evaluation_target: tuple[str, str], *,
+    allow_candidate_action: bool = True,
 ) -> str:
     """Use the original recovery for legacy runs and a target-specific one for scenarios."""
 
     if prompt_style != "scenario":
         return COMPLETION_RECOVERY_PROMPT
-    return SCENARIO_RECOVERY_PROMPT.format(
+    template = (
+        SCENARIO_RECOVERY_PROMPT if allow_candidate_action
+        else SCENARIO_READ_ONLY_RECOVERY_PROMPT
+    )
+    return template.format(
         learner_id=evaluation_target[0], competency_code=evaluation_target[1]
     )
 
@@ -163,7 +176,7 @@ async def run_open_weights_task(
     recovery_output: str | None = None
     grounding_correction: dict[str, Any] = {
         "attempted": False, "original_abstention": None,
-        "factual_contradictions": [], "verified_term_count": None,
+        "factual_contradictions": [], "verified_term_count": None, "output": None,
     }
     error: dict[str, str] | None = None
     state_store = JsonStateStore(state_path)
@@ -171,6 +184,29 @@ async def run_open_weights_task(
     preload: dict[str, Any] = {
         "attempted": False, "status": "disabled", "seconds": None,
     }
+    outcome_stages: list[dict[str, Any]] = []
+    active_stage: str | None = None
+
+    def record_stage(output: str) -> None:
+        # Snapshot now: later candidate creation must not rewrite the initial outcome.
+        snapshot = build_open_weights_report(
+            settings=settings, prompt=prompt, final_output=output,
+            state_store=state_store, started_at=started_at,
+            finished_at=datetime.now(UTC), error=error,
+            prompt_style=prompt_style, evaluation_target=evaluation_target,
+            expected_outcome=expected_outcome,
+            allow_candidate_action=allow_candidate_action,
+        )
+        outcome_stages.append({
+            "stage": active_stage,
+            "model_requests_observed_through": len(model_requests),
+            **{key: snapshot[key] for key in (
+                "status", "checks", "evaluation_target", "final_output",
+                "audited_tool_names", "tool_call_summary", "pending_reviews",
+                "pending_review_count", "teacher_review_count", "profile_update_count",
+                "error",
+            )},
+        })
 
     try:
         if settings.keep_alive is not None:
@@ -190,6 +226,7 @@ async def run_open_weights_task(
         )
         timings["agent_build_seconds"] = round(perf_counter() - build_clock, 3)
         async with agent:
+            active_stage = "initial"
             initial_clock = perf_counter()
             try:
                 result = await agent.run(
@@ -202,6 +239,8 @@ async def run_open_weights_task(
                 )
             initial_output = str(result.output)
             final_output = initial_output
+            record_stage(final_output)
+            active_stage = None
 
             if prompt_style == "scenario" and final_output.strip().upper().startswith(
                 "ABSTAIN:"
@@ -217,16 +256,20 @@ async def run_open_weights_task(
                 })
                 if facts["factual_contradictions"]:
                     grounding_correction["attempted"] = True
+                    active_stage = "grounding_correction"
                     correction_started = perf_counter()
                     try:
-                        corrected = await agent.run(
+                        result = await agent.run(
                             correction_prompt(
                                 evaluation_target[0], evaluation_target[1], facts
                             ),
                             message_history=result.all_messages(),
                             model_settings={"temperature": 0},
                         )
-                        final_output = str(corrected.output)
+                        final_output = str(result.output)
+                        grounding_correction["output"] = final_output
+                        record_stage(final_output)
+                        active_stage = None
                     finally:
                         grounding_correction["duration_seconds"] = round(
                             perf_counter() - correction_started, 3
@@ -245,10 +288,14 @@ async def run_open_weights_task(
 
             if should_recover:
                 recovery_attempted = True
+                active_stage = "completion_recovery"
                 recovery_clock = perf_counter()
                 try:
                     recovery_result = await agent.run(
-                        _recovery_prompt(prompt_style, evaluation_target),
+                        _recovery_prompt(
+                            prompt_style, evaluation_target,
+                            allow_candidate_action=allow_candidate_action,
+                        ),
                         message_history=result.all_messages(),
                         model_settings={"temperature": 0},
                     )
@@ -258,6 +305,8 @@ async def run_open_weights_task(
                     )
                 recovery_output = str(recovery_result.output)
                 final_output = recovery_output
+                record_stage(final_output)
+                active_stage = None
     except Exception as exc:
         if settings.keep_alive is not None and preload["status"] == "disabled":
             preload = {
@@ -270,6 +319,8 @@ async def run_open_weights_task(
             "type": type(exc).__name__,
             "message": str(exc),
         }
+        if active_stage is not None:
+            record_stage("")
 
     timings["total_wall_seconds"] = round(perf_counter() - started_clock, 3)
     finished_at = datetime.now(UTC)
@@ -292,6 +343,7 @@ async def run_open_weights_task(
         expected_outcome=expected_outcome,
         allow_candidate_action=allow_candidate_action,
         grounding_correction=grounding_correction,
+        outcome_stages=outcome_stages,
     )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
@@ -321,6 +373,7 @@ def build_open_weights_report(
     expected_outcome: str = "candidate",
     allow_candidate_action: bool = True,
     grounding_correction: dict[str, Any] | None = None,
+    outcome_stages: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build a compact report from auditable state; never store hidden reasoning."""
 
@@ -384,9 +437,10 @@ def build_open_weights_report(
     if expected_outcome == "abstain":
         checks["explicit_abstention"] = final_output.strip().upper().startswith("ABSTAIN:")
     status = "pass" if error is None and all(checks.values()) else "fail"
-    recovery_succeeded = (
-        recovery_attempted and "flag_pattern_for_review" in tool_names
-    )
+    recovery_succeeded = recovery_attempted and status == "pass"
+    visible_tools = set(AGENT_MCP_TOOL_ALLOWLIST)
+    if not allow_candidate_action:
+        visible_tools.discard("flag_pattern_for_review")
 
     return {
         "status": status,
@@ -407,16 +461,26 @@ def build_open_weights_report(
         "prompt": prompt,
         "initial_output": initial_output if initial_output is not None else final_output,
         "final_output": final_output,
+        "outcome_stages": list(outcome_stages or []),
+        "outcome_stages_note": (
+            "Each stage is an agent run and may include tool retries. Stage checks are "
+            "structural report checks; the scenario evaluator applies its full rubric "
+            "separately. Neither establishes semantic correctness."
+        ),
         "completion_recovery": {
             "attempted": recovery_attempted,
             "succeeded": recovery_succeeded,
             "prompt": (
-                _recovery_prompt(prompt_style, evaluation_target)
+                _recovery_prompt(
+                    prompt_style, evaluation_target,
+                    allow_candidate_action=allow_candidate_action,
+                )
                 if recovery_attempted else None
             ),
             "output": recovery_output,
+            "success_criterion": "all_report_checks",
         },
-        "agent_tool_allowlist": sorted(AGENT_MCP_TOOL_ALLOWLIST),
+        "agent_tool_allowlist": sorted(visible_tools),
         "audited_tool_names": tool_names,
         "tool_call_summary": [
             {

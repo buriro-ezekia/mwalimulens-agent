@@ -207,6 +207,10 @@ async def run_one(
         report_path=report_path,
     )
     result = grade_scenario(raw, scenario)
+    result["outcome_stages"] = [
+        {"stage": stage["stage"], **grade_scenario(stage, scenario)}
+        for stage in raw.get("outcome_stages", [])
+    ]
     result["evidence_preflight"] = preflight
     result["model_report_path"] = str(report_path)
     return result
@@ -267,6 +271,7 @@ def run_suite(
             try:
                 evaluated = json.loads(result_path.read_text(encoding="utf-8"))
                 record["checks"] = evaluated.get("checks")
+                record["outcome_stages"] = evaluated.get("outcome_stages", [])
                 if completed and completed.returncode == 0:
                     record["status"] = evaluated["status"]
             except (OSError, ValueError, KeyError):
