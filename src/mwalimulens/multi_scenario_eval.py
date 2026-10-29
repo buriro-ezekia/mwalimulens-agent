@@ -22,6 +22,59 @@ from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR, PROJECT_ROOT
 DEFAULT_OUTPUT = PROJECT_ROOT / "runtime" / "multi_scenario"
 
 
+def _subprocess_output_text(value: bytes | str | None) -> str:
+    """Keep available timeout logs (which may be bytes even with text=True)."""
+
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value if isinstance(value, str) else ""
+
+
+def inspect_partial_state(state_path: Path) -> dict[str, Any]:
+    """Read persisted MCP audit progress; never infer a completed evaluation."""
+
+    if not state_path.is_file():
+        return {"status": "missing"}
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeError) as exc:
+        return {"status": "unreadable", "error_type": type(exc).__name__}
+
+    if not isinstance(state, dict) or any(
+        not isinstance(state.get(key), list)
+        or not all(isinstance(item, dict) for item in state[key])
+        for key in ("tool_calls", "pending_reviews", "teacher_reviews", "profile_updates")
+    ):
+        return {"status": "invalid_structure"}
+
+    calls = state["tool_calls"]
+    return {
+        "status": "readable",
+        "audited_tools": [
+            {
+                "tool_name": call.get("tool_name"),
+                "status": call.get("status"),
+                "duplicate_submission": call.get("duplicate_submission"),
+            }
+            for call in calls
+        ],
+        "candidate_submission_attempts_audited": sum(
+            call.get("tool_name") == "flag_pattern_for_review" for call in calls
+        ),
+        "candidate_submission_deduplicated_count": sum(
+            call.get("tool_name") == "flag_pattern_for_review"
+            and call.get("duplicate_submission") is True for call in calls
+        ),
+        "pending_review_count": sum(
+            item.get("status") == "pending_teacher_review"
+            for item in state["pending_reviews"]
+        ),
+        "teacher_review_count": len(state["teacher_reviews"]),
+        "profile_update_count": len(state["profile_updates"]),
+        "note": "Partial MCP state only; not a completed model or scenario verdict.",
+    }
+
+
 @dataclass(frozen=True)
 class Scenario:
     ident: str
@@ -266,20 +319,26 @@ def run_suite(
         started = time.monotonic()
         failure = None
         completed = None
+        partial_stdout = ""
+        partial_stderr = ""
         try:
             completed = runner(
                 cmd, cwd=PROJECT_ROOT, capture_output=True, text=True,
                 timeout=timeout, check=False,
             )
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as exc:
             failure = f"Timeout after {timeout} seconds"
+            partial_stdout = _subprocess_output_text(exc.stdout)
+            partial_stderr = _subprocess_output_text(exc.stderr)
         except OSError as exc:
             failure = f"Process error: {type(exc).__name__}"
         (folder / "stdout.txt").write_text(
-            completed.stdout or "" if completed else "", encoding="utf-8"
+            (completed.stdout or "") if completed else partial_stdout,
+            encoding="utf-8",
         )
         (folder / "stderr.txt").write_text(
-            completed.stderr or "" if completed else "", encoding="utf-8"
+            (completed.stderr or "") if completed else partial_stderr,
+            encoding="utf-8",
         )
         record = {
             "scenario": scenario.ident,
@@ -289,6 +348,7 @@ def run_suite(
             "duration_seconds": round(time.monotonic() - started, 2),
             "returncode": completed.returncode if completed else None,
             "failure": failure,
+            "partial_progress": inspect_partial_state(state),
         }
         if result_path.is_file():
             try:
@@ -358,12 +418,31 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
     result = {"suite": str(root), "cases": [], "original_status": summary["status"]}
     names = summary.get("selected_scenarios")
     selected = select_scenarios(tuple(names)) if names is not None else SCENARIOS
+    summary_records = {
+        record.get("scenario"): record for record in summary.get("results", [])
+        if isinstance(record, dict)
+    }
     for scenario in selected:
         folder = root / scenario.ident
         entry: dict[str, Any] = {"scenario": scenario.ident}
         result_file, report_file = folder / "result.json", folder / "report.json"
         if not result_file.is_file() or not report_file.is_file():
-            entry.update({"classification": "missing_report", "status": "unknown"})
+            saved = summary_records.get(scenario.ident, {})
+            failure = saved.get("failure")
+            is_timeout = isinstance(failure, str) and failure.startswith(
+                "Timeout after "
+            )
+            entry.update({
+                "classification": (
+                    "timeout_without_final_report" if is_timeout else "missing_report"
+                ),
+                "status": "unknown",
+                "recorded_suite_status": saved.get("status"),
+                "failure": failure,
+                "partial_progress": inspect_partial_state(folder / "state.json"),
+                "final_report_available": report_file.is_file(),
+                "scenario_result_available": result_file.is_file(),
+            })
             result["cases"].append(entry)
             continue
         evaluated = json.loads(result_file.read_text(encoding="utf-8"))
