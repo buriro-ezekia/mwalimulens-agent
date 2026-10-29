@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import subprocess
 from datetime import UTC, datetime
@@ -17,6 +18,8 @@ from mwalimulens.mcp_server.service import EducationToolService
 from mwalimulens.mcp_server.state import JsonStateStore
 from mwalimulens.multi_scenario_eval import (
     SCENARIOS,
+    evidence_preflight,
+    run_one,
     diagnose_saved_suite,
     grade_scenario,
     run_suite,
@@ -262,3 +265,54 @@ def test_saved_diagnostics_identify_actual_errors_without_changing_results(tmp_p
     assert (directory / "summary.json").read_text(
         encoding="utf-8"
     ) == json.dumps({"status": "fail"})
+
+
+def test_source_derived_preflight_matches_real_synthetic_records():
+    observed = {
+        case.ident: evidence_preflight(case) for case in SCENARIOS
+    }
+    assert observed["longitudinal-pattern"]["distinct_term_count"] >= 3
+    assert observed["conflicting-evidence"]["distinct_term_count"] == 3
+    assert observed["single-assessment"]["distinct_term_count"] == 1
+    assert observed["missing-competency"]["distinct_term_count"] == 0
+    for case in SCENARIOS:
+        assert observed[case.ident]["longitudinal_eligible"] == (
+            observed[case.ident]["distinct_term_count"] >= 2
+        )
+
+
+@pytest.mark.parametrize("scenario", SCENARIOS)
+def test_scenario_action_gate_uses_data_not_expected_label(
+    scenario, tmp_path, monkeypatch
+):
+    captured = {}
+
+    async def fake_model_run(**kwargs):
+        captured.update(kwargs)
+        return {
+            "status": "fail",
+            "evaluation_target": {
+                "learner_id": scenario.learner,
+                "competency_code": scenario.competency,
+            },
+            "pending_reviews": [],
+            "audited_tool_names": [],
+            "tool_call_summary": [],
+            "teacher_review_count": 0,
+            "profile_update_count": 0,
+        }
+
+    monkeypatch.setattr(
+        "mwalimulens.multi_scenario_eval.run_open_weights_task",
+        fake_model_run,
+    )
+    result = asyncio.run(run_one(
+        scenario,
+        state_path=tmp_path / "state.json",
+        report_path=tmp_path / "report.json",
+    ))
+    facts = evidence_preflight(scenario)
+    assert captured["allow_candidate_action"] == facts["longitudinal_eligible"]
+    assert result["evidence_preflight"] == facts
+    assert captured["prompt_style"] == "scenario"
+    assert result["status"] == "fail"
