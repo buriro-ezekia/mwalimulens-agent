@@ -72,9 +72,9 @@ To investigate only the two previously failing candidate scenarios without
 re-running the abstention cases, use:
 
 ```powershell
-.\\.venv\\Scripts\\python.exe -m ruff check .
-.\\.venv\\Scripts\\python.exe -m pytest -q
-.\\.venv\\Scripts\\python.exe -m mwalimulens.multi_scenario_eval --timeout 600 --scenarios longitudinal-pattern conflicting-evidence
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m mwalimulens.multi_scenario_eval --timeout 600 --scenarios longitudinal-pattern conflicting-evidence
 ```
 
 The CLI accepts one or more scenario IDs, validates their names, rejects
@@ -97,7 +97,7 @@ After a focused evaluation, diagnose the resulting suite without making
 another model call:
 
 ```powershell
-.\\.venv\\Scripts\\python.exe -m mwalimulens.multi_scenario_eval --diagnose "runtime/multi_scenario/suite-REPLACE_WITH_NEW_ID"
+.\.venv\Scripts\python.exe -m mwalimulens.multi_scenario_eval --diagnose "runtime/multi_scenario/suite-REPLACE_WITH_NEW_ID"
 ```
 
 The diagnostic reads only scenarios recorded in the saved suite; old
