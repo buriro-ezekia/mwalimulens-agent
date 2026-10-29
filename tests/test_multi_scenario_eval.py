@@ -64,7 +64,7 @@ def test_scenario_prompt_does_not_give_away_expected_outcome():
         assert "pending_teacher_review" not in text
 
 
-@pytest.mark.parametrize("ident", ["single-observation", "missing-competency"])
+@pytest.mark.parametrize("ident", ["single-assessment", "missing-competency"])
 def test_sparse_and_missing_evidence_require_explicit_abstention(tmp_path, ident):
     scenario = scenario_by_id(ident)
     state, service = make_service(tmp_path)
@@ -79,7 +79,7 @@ def test_sparse_and_missing_evidence_require_explicit_abstention(tmp_path, ident
 
 
 def test_unqualified_abstention_does_not_pass(tmp_path):
-    scenario = scenario_by_id("single-observation")
+    scenario = scenario_by_id("single-assessment")
     state, service = make_service(tmp_path)
     service.get_competency_evidence(scenario.learner, scenario.competency)
     report = make_report(state, scenario, response="Maybe later.")
