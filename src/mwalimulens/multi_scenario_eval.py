@@ -197,6 +197,15 @@ def grade_scenario(
         "expected_outcome": scenario.expected,
         "status": "pass" if all(checks.values()) else "fail",
         "checks": checks,
+        "candidate_action_attempts_audited": report.get(
+            "candidate_submission_audited_attempt_count"
+        ),
+        "deduplicated_candidate_attempts": report.get(
+            "candidate_submission_deduplicated_count", 0
+        ),
+        "application_idempotency_applied": (
+            int(report.get("candidate_submission_deduplicated_count") or 0) > 0
+        ),
         "manual_semantic_review_required": True,
         "semantic_quality_verified": False,
     }
@@ -286,6 +295,12 @@ def run_suite(
                 evaluated = json.loads(result_path.read_text(encoding="utf-8"))
                 record["checks"] = evaluated.get("checks")
                 record["outcome_stages"] = evaluated.get("outcome_stages", [])
+                record["application_idempotency_applied"] = evaluated.get(
+                    "application_idempotency_applied", False
+                )
+                record["deduplicated_candidate_attempts"] = evaluated.get(
+                    "deduplicated_candidate_attempts", 0
+                )
                 initial = next(
                     (
                         stage for stage in record["outcome_stages"]
