@@ -261,3 +261,34 @@ natural-language claims or guarantee that a model's final interpretation
 is pedagogically sound. The last demonstrated real-model result remains
 **3/4** until a further local Qwen evaluation completes.
 
+## Duplicate candidate submission protection
+
+The focused `suite-azmrwsq8` produced two identical pending reviews for
+L001 because Qwen called `flag_pattern_for_review` twice with the same
+validated content. The scenario correctly failed the requirement for exactly
+one pending candidate, despite the basic model report marking its evidence
+checks as successful.
+
+The JSON state store now treats **identical, still-pending candidates**
+as idempotent. It reuses the original `review_id` and records the second
+successful tool attempt with `duplicate_submission=true`, instead of
+creating a second candidate. A different claim or evidence content remains
+a separate candidate; a review resolved by a teacher is not silently
+reopened. This operates only on local synthetic demo state.
+
+Model reports include `candidate_submission_audited_attempt_count` and
+`candidate_submission_deduplicated_count`; the scenario grade separately
+exposes `application_idempotency_applied`. An idempotently protected
+workflow may pass structural checks but **does not mean the model avoided
+repeating a tool action**. Teacher approval authority and profile-update
+rules are unchanged.
+
+The same saved focused run found no candidate submission in L002 Science,
+even though Qwen identified the IDs and stated an intention to submit.
+Idempotency cannot fix a missing tool call. That is still a known model
+action-selection limitation and must remain a failed evaluation until an
+actual validated action occurs.
+
+Historical evaluation artefacts are retained unchanged. The new code
+does not establish a fresh real-Qwen success rate.
+
