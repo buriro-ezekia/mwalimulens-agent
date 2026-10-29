@@ -168,3 +168,30 @@ Inspect each scenario's `model_error_message`, `tool_calls`,
 before another prompt or tool-schema change. Success on the Python unit
 suite alone does not demonstrate passing real Qwen execution.
 
+## Verified evidence preflight (new)
+
+The diagnostic from `suite-39v52t75` showed the model incorrectly asserting
+that L001 and L002 had fewer than two distinct terms, even though the
+fictional source data contains multiple terms. It also attempted to submit
+a candidate for L003 with only one assessed term.
+
+The scenario runner now computes **record count, distinct term IDs and
+longitudinal eligibility directly from the validated synthetic dataset**.
+These source-derived facts appear in the prompt for every scenario, without
+revealing the evaluator's hidden expected outcome. Eligibility requires two
+or more distinct terms; it does not itself certify an educational claim.
+
+For a target with fewer than two terms, `flag_pattern_for_review` is
+removed from that agent's exposed MCP tool list. A model that fails to
+explicitly abstain still fails evaluation. For a target with two or more
+terms, the model can submit a candidate, but the full evidence, counter-
+evidence and teacher-approval checks continue to apply.
+
+This is an **application-level safeguard**, not a demonstration that
+Qwen can independently count terms or reason correctly. Recorded result
+files now include `evidence_preflight` and raw model reports include
+`candidate_action_available`. Historical failures remain untouched.
+
+The current real-model result is still **1/4 passing**. No claim of
+4/4 or improved generalisability should be made before a new run.
+
