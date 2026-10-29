@@ -46,6 +46,18 @@ def scenario_by_id(ident: str) -> Scenario:
     raise ValueError(f"Unknown scenario: {ident}")
 
 
+def select_scenarios(names: tuple[str, ...] | None = None) -> tuple[Scenario, ...]:
+    """Select an ordered subset without changing the full-suite default."""
+
+    if names is None:
+        return SCENARIOS
+    if not names:
+        raise ValueError("Select at least one scenario")
+    if len(names) != len(set(names)):
+        raise ValueError("Duplicate scenarios are not allowed")
+    return tuple(scenario_by_id(name) for name in names)
+
+
 def evidence_preflight(
     scenario: Scenario, data_dir: Path = DEFAULT_DATA_DIR
 ) -> dict[str, Any]:
@@ -218,10 +230,11 @@ async def run_one(
 
 def run_suite(
     *, output_root: Path = DEFAULT_OUTPUT, timeout: int = 600,
-    runner=None,
+    scenarios: tuple[str, ...] | None = None, runner=None,
 ) -> dict[str, Any]:
-    """Save every subprocess outcome, including timeouts and missing reports."""
+    """Save every selected subprocess outcome without skipping failures."""
 
+    selected = select_scenarios(scenarios)
     if not 60 <= timeout <= 3600:
         raise ValueError("timeout must be between 60 and 3600 seconds")
     validate_scenario_fixtures()
@@ -230,7 +243,7 @@ def run_suite(
     directory = Path(tempfile.mkdtemp(prefix="suite-", dir=root))
     runner = runner or subprocess.run
     records = []
-    for scenario in SCENARIOS:
+    for scenario in selected:
         folder = directory / scenario.ident
         folder.mkdir()
         state = folder / "state.json"
@@ -263,6 +276,7 @@ def run_suite(
             "scenario": scenario.ident,
             "expected_outcome": scenario.expected,
             "status": "fail",
+            "first_stage_status": "unknown",
             "duration_seconds": round(time.monotonic() - started, 2),
             "returncode": completed.returncode if completed else None,
             "failure": failure,
@@ -272,6 +286,14 @@ def run_suite(
                 evaluated = json.loads(result_path.read_text(encoding="utf-8"))
                 record["checks"] = evaluated.get("checks")
                 record["outcome_stages"] = evaluated.get("outcome_stages", [])
+                initial = next(
+                    (
+                        stage for stage in record["outcome_stages"]
+                        if stage.get("stage") == "initial"
+                    ), None
+                )
+                if initial is not None:
+                    record["first_stage_status"] = initial.get("status", "unknown")
                 if completed and completed.returncode == 0:
                     record["status"] = evaluated["status"]
             except (OSError, ValueError, KeyError):
@@ -282,11 +304,21 @@ def run_suite(
             record["failure"] = f"Scenario process exit code {completed.returncode}"
         records.append(record)
         print(f"{scenario.ident}: {record['status']} "
-              f"({record['duration_seconds']}s)", flush=True)
+              f"({record['duration_seconds']}s; "
+              f"initial={record['first_stage_status']})", flush=True)
     summary = {
         "status": "pass" if all(item["status"] == "pass" for item in records) else "fail",
         "generated_at": datetime.now(UTC).isoformat(),
-        "scenario_count": len(SCENARIOS),
+        "selection_mode": "focused" if scenarios is not None else "full",
+        "selected_scenarios": [scenario.ident for scenario in selected],
+        "scenario_count": len(selected),
+        "total_available_scenarios": len(SCENARIOS),
+        "first_stage_passed": sum(
+            item["first_stage_status"] == "pass" for item in records
+        ),
+        "first_stage_unknown": sum(
+            item["first_stage_status"] == "unknown" for item in records
+        ),
         "passed": sum(item["status"] == "pass" for item in records),
         "failed": sum(item["status"] != "pass" for item in records),
         "model": OllamaSettings.from_env().model_name,
@@ -309,7 +341,9 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
     summary_path = root / "summary.json"
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     result = {"suite": str(root), "cases": [], "original_status": summary["status"]}
-    for scenario in SCENARIOS:
+    names = summary.get("selected_scenarios")
+    selected = select_scenarios(tuple(names)) if names is not None else SCENARIOS
+    for scenario in selected:
         folder = root / scenario.ident
         entry: dict[str, Any] = {"scenario": scenario.ident}
         result_file, report_file = folder / "result.json", folder / "report.json"
@@ -391,6 +425,10 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--timeout", type=int, default=600)
+    parser.add_argument(
+        "--scenarios", nargs="+", choices=[case.ident for case in SCENARIOS],
+        help="Run only the named scenarios (default: all four).",
+    )
     parser.add_argument("--diagnose", type=Path,
                         help="Inspect an existing suite without running Qwen.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
@@ -418,9 +456,15 @@ def main(argv: list[str] | None = None) -> int:
         args.result.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         print(f"Scenario {args.scenario}: {result['status']}")
         return 0 if result["status"] == "pass" else 2
-    report = run_suite(output_root=args.output_dir, timeout=args.timeout)
+    report = run_suite(
+        output_root=args.output_dir, timeout=args.timeout,
+        scenarios=tuple(args.scenarios) if args.scenarios is not None else None,
+    )
     print(f"Summary: {report['summary_path']}")
-    print(f"Passed: {report['passed']}/{report['scenario_count']}")
+    print(f"Scope: {report['selection_mode']} "
+          f"({report['scenario_count']}/{report['total_available_scenarios']} cases)")
+    print(f"Initial-stage passes: {report['first_stage_passed']}")
+    print(f"Final passes: {report['passed']}/{report['scenario_count']}")
     return 0 if report["status"] == "pass" else 2
 
 
