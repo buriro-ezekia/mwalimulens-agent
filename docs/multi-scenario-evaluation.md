@@ -108,3 +108,23 @@ Do **not** switch the overall product default to a new prompt or deploy
 with real learners solely because this suite passes. A teacher-facing
 pilot would require consent, appropriate governance, authentication,
 privacy controls and practitioner evaluation.
+
+## Further evaluation after the second local run
+
+A subsequent four-case run again passed 2/4: the mixed Science case and the
+missing-competency case passed, while the longitudinal fractions case and the
+single-assessment case failed. This is **not** a passing multi-scenario result.
+The latest failure artefacts were not supplied with that result, so the exact
+cause of those two failures is still unverified.
+
+The shared prompt now states an explicit, category-neutral process: count
+distinct term IDs; abstain when fewer than two terms are present; otherwise
+compare score patterns with qualitative observations; submit only a bounded,
+evidence-grounded candidate when justified. No scenario's expected verdict
+is included in the actual model prompt, and acceptance checks remain unchanged.
+This revision must be validated through fresh real-model executions.
+
+The evaluator's `result.json` and `report.json` in each failed scenario
+folder are needed to distinguish inappropriate submissions, unsupported
+abstentions, tool failures and formatting issues. The existing passing
+unit tests and CircleCI checks do not substitute for this evidence.
