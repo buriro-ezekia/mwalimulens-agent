@@ -491,3 +491,37 @@ def test_cli_forwards_focused_selection_without_starting_qwen(
     output = capsys.readouterr().out
     assert "focused (2/4 cases)" in output
     assert "Initial-stage passes: 1" in output
+
+
+def test_identical_repeated_candidate_is_structurally_accepted_but_disclosed(
+    tmp_path,
+):
+    scenario = scenario_by_id("longitudinal-pattern")
+    state, service = make_service(tmp_path)
+    service.get_competency_evidence(scenario.learner, scenario.competency)
+    args = {
+        "learner_id": scenario.learner,
+        "competency_code": scenario.competency,
+        "claim": "Fraction scores increased, while explanation remains mixed.",
+        "supporting_evidence_ids": ["EV-001", "EV-004", "EV-007"],
+        "counter_evidence_ids": ["EV-008"],
+        "uncertainty": "Independent reasoning is inconsistent across tasks.",
+        "suggested_teacher_question": "Can the learner explain a new task unaided?",
+    }
+    first = service.flag_pattern_for_review(**args)
+    second = service.flag_pattern_for_review(**args)
+    assert first["review_id"] == second["review_id"]
+    report = make_report(state, scenario, response="Candidate submitted.")
+    result = grade_scenario(report, scenario)
+
+    assert report["status"] == "pass"
+    assert report["pending_review_count"] == 1
+    assert report["candidate_submission_audited_attempt_count"] == 2
+    assert report["candidate_submission_deduplicated_count"] == 1
+    assert report["tool_call_summary"][-1]["duplicate_submission"] is True
+    assert result["status"] == "pass"
+    assert result["application_idempotency_applied"] is True
+    assert result["deduplicated_candidate_attempts"] == 1
+    assert result["semantic_quality_verified"] is False
+    assert not state.teacher_reviews()
+    assert not state.profile_updates()
