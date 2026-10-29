@@ -152,3 +152,19 @@ scenario grader. Retained failures are evidence of reliability limitations.
 
 Current engineering status: the implementation and regression checks have
 been amended; **a four-case real Qwen pass has not yet been demonstrated**.
+
+## Inspect a previously failed suite without another model run
+
+The command below reads the original reports, classifies known failure
+types and prints the precise failed checks and tool-error messages. It does
+not change any verdict or run Ollama again:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.multi_scenario_eval --diagnose "runtime/multi_scenario/suite-39v52t75"
+```
+
+Inspect each scenario's `model_error_message`, `tool_calls`,
+`candidate_ids`, `failed_checks` and `response`. This is necessary
+before another prompt or tool-schema change. Success on the Python unit
+suite alone does not demonstrate passing real Qwen execution.
+
