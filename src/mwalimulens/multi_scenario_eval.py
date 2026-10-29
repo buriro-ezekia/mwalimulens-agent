@@ -46,10 +46,31 @@ def scenario_by_id(ident: str) -> Scenario:
     raise ValueError(f"Unknown scenario: {ident}")
 
 
-def scenario_prompt(scenario: Scenario) -> str:
-    """Apply identical evidence sufficiency and action rules to every target."""
+def evidence_preflight(
+    scenario: Scenario, data_dir: Path = DEFAULT_DATA_DIR
+) -> dict[str, Any]:
+    """Compute verified structural facts without reading the expected label."""
 
+    dataset = load_synthetic_dataset(data_dir)
+    items = dataset.competency_evidence(scenario.learner, scenario.competency)
+    terms = sorted({item.term_id for item in items})
+    return {
+        "record_count": len(items),
+        "term_ids": terms,
+        "distinct_term_count": len(terms),
+        "longitudinal_eligible": len(terms) >= 2,
+    }
+
+
+def scenario_prompt(scenario: Scenario) -> str:
+    """Apply identical evidence rules with verified fixture metadata."""
+
+    preflight = evidence_preflight(scenario)
     return (
+        f"Verified source metadata (not an expected verdict): "
+        f"{preflight['record_count']} evidence records; "
+        f"{preflight['distinct_term_count']} distinct terms: "
+        f"{', '.join(preflight['term_ids']) or 'none'}. "
         f"Evaluate fictional learner {scenario.learner} on {scenario.competency}. "
         "First call get_competency_evidence with those exact identifiers. "
         "Use only evidence returned for that learner and competency. "
@@ -174,16 +195,19 @@ async def run_one(
     settings: OllamaSettings | None = None,
 ) -> dict[str, Any]:
     validate_scenario_fixtures()
+    preflight = evidence_preflight(scenario)
     raw = await run_open_weights_task(
         settings=settings or OllamaSettings.from_env(),
         prompt=scenario_prompt(scenario),
         prompt_style="scenario",
         evaluation_target=(scenario.learner, scenario.competency),
         expected_outcome=scenario.expected,
+        allow_candidate_action=preflight["longitudinal_eligible"],
         state_path=state_path,
         report_path=report_path,
     )
     result = grade_scenario(raw, scenario)
+    result["evidence_preflight"] = preflight
     result["model_report_path"] = str(report_path)
     return result
 
