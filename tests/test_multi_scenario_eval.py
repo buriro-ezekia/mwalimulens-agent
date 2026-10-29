@@ -179,3 +179,33 @@ def test_run_suite_does_not_hide_timeout(tmp_path, monkeypatch):
 def test_unknown_scenario_is_rejected():
     with pytest.raises(ValueError, match="Unknown scenario"):
         scenario_by_id("not-a-scenario")
+
+def test_scenario_prompt_distinguishes_numeric_and_qualitative_evidence():
+    prompt = scenario_prompt(scenario_by_id("conflicting-evidence"))
+    assert "assessment scores" in prompt
+    assert "qualitative observations" in prompt
+    assert "counter-evidence" in prompt
+    assert "consistent improvement" in prompt
+    assert "EV-014" not in prompt
+    assert "72%" not in prompt
+    assert "75%" not in prompt
+
+
+def test_counter_evidence_omission_remains_a_failure(tmp_path):
+    scenario = scenario_by_id("conflicting-evidence")
+    state, service = make_service(tmp_path)
+    service.get_competency_evidence(scenario.learner, scenario.competency)
+    service.flag_pattern_for_review(
+        learner_id=scenario.learner,
+        competency_code=scenario.competency,
+        claim="Recorded assessments differ slightly over terms.",
+        supporting_evidence_ids=["EV-012", "EV-013"],
+        counter_evidence_ids=[],
+        uncertainty="One later observation calls for further explanation.",
+        suggested_teacher_question="Can the learner explain the trend independently?",
+    )
+    report = make_report(state, scenario, response="Candidate submitted.")
+    assert report["status"] == "fail"
+    grade = grade_scenario(report, scenario)
+    assert grade["status"] == "fail"
+    assert grade["checks"]["counter_evidence_present"] is False
