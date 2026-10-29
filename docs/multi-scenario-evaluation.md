@@ -128,3 +128,27 @@ The evaluator's `result.json` and `report.json` in each failed scenario
 folder are needed to distinguish inappropriate submissions, unsupported
 abstentions, tool failures and formatting issues. The existing passing
 unit tests and CircleCI checks do not substitute for this evidence.
+
+## Invalid model tool arguments
+
+The third local multi-scenario run passed only 1 of 4 scenarios. The
+longitudinal case attempted to call `flag_pattern_for_review` without the
+required `suggested_teacher_question`, and the single-assessment case
+attempted a forbidden-for-this-case candidate action that produced a tool
+error. These are real model tool-selection and argument failures, **not**
+valid candidate submissions. The case expecting abstention must continue to
+fail if it attempts candidate submission.
+
+The scenario agent now uses PydanticAI's bounded MCP retry behaviour (one
+retry per tool) to return a validation error to the model, allowing it to
+correct an incomplete tool call where appropriate. The original baseline
+agent preserves the former fail-fast `tool_error_behavior="error"` setting.
+No automatic evidence-ID generation, teacher-question fabrication or
+teacher-review action is added; the original MCP input validation is intact.
+
+A tool retry is not a guarantee of a safe candidate or a passing scenario.
+For every new real-model execution, inspect the raw model report and the
+scenario grader. Retained failures are evidence of reliability limitations.
+
+Current engineering status: the implementation and regression checks have
+been amended; **a four-case real Qwen pass has not yet been demonstrated**.
