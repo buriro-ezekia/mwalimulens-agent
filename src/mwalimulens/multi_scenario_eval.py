@@ -273,9 +273,79 @@ def run_suite(
     return {"summary_path": str(path), **summary}
 
 
+def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
+    """Inspect existing run evidence without rerunning Qwen or changing grades."""
+
+    root = Path(directory).expanduser().resolve()
+    summary_path = root / "summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    result = {"suite": str(root), "cases": [], "original_status": summary["status"]}
+    for scenario in SCENARIOS:
+        folder = root / scenario.ident
+        entry: dict[str, Any] = {"scenario": scenario.ident}
+        result_file, report_file = folder / "result.json", folder / "report.json"
+        if not result_file.is_file() or not report_file.is_file():
+            entry.update({"classification": "missing_report", "status": "unknown"})
+            result["cases"].append(entry)
+            continue
+        evaluated = json.loads(result_file.read_text(encoding="utf-8"))
+        report = json.loads(report_file.read_text(encoding="utf-8"))
+        failed = [
+            name for name, passed in (evaluated.get("checks") or {}).items()
+            if passed is False
+        ]
+        calls = report.get("tool_call_summary") or []
+        names = [item.get("tool_name") for item in calls]
+        error = report.get("error") or {}
+        candidates = report.get("pending_reviews") or []
+        response = str(report.get("final_output") or "").strip()
+        if error:
+            reason = "model_or_tool_exception"
+        elif scenario.expected == "abstain" and (
+            "flag_pattern_for_review" in names or candidates
+        ):
+            reason = "candidate_attempted_when_abstention_required"
+        elif scenario.expected == "candidate" and not candidates:
+            reason = "candidate_not_created"
+        elif "counter_evidence_present" in failed:
+            reason = "counter_evidence_missing"
+        elif failed:
+            reason = "other_acceptance_failure"
+        else:
+            reason = "passed"
+        entry.update({
+            "status": evaluated.get("status"),
+            "classification": reason,
+            "failed_checks": failed,
+            "model_error_type": error.get("type"),
+            "model_error_message": error.get("message"),
+            "tool_calls": [
+                {"name": item.get("tool_name"), "status": item.get("status")}
+                for item in calls
+            ],
+            "candidate_count": len(candidates),
+            "candidate_ids": [
+                {
+                    "support": item.get("supporting_evidence_ids"),
+                    "counter": item.get("counter_evidence_ids"),
+                }
+                for item in candidates
+            ],
+            "response": response,
+            "recovery": {
+                "attempted": (report.get("completion_recovery") or {}).get("attempted"),
+                "succeeded": (report.get("completion_recovery") or {}).get("succeeded"),
+            },
+        })
+        result["cases"].append(entry)
+    return result
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--timeout", type=int, default=600)
+    parser.add_argument("--diagnose", type=Path,
+                        help="Inspect an existing suite without running Qwen.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--single-run", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scenario", choices=[s.ident for s in SCENARIOS])
@@ -283,6 +353,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--result", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+    if args.diagnose is not None:
+        try:
+            diagnostic = diagnose_saved_suite(args.diagnose)
+        except (OSError, KeyError, ValueError) as exc:
+            print(f"Cannot inspect saved suite: {exc}", file=sys.stderr)
+            return 2
+        print(json.dumps(diagnostic, indent=2, ensure_ascii=False))
+        return 0
     if args.single_run:
         if not all((args.scenario, args.state, args.report, args.result)):
             parser.error("--single-run requires scenario, state, report and result")
