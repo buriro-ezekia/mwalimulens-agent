@@ -84,6 +84,7 @@ def build_agent_mcp_toolset(
     data_dir: Path = DEFAULT_DATA_DIR,
     state_path: Path = DEFAULT_STATE_PATH,
     tool_error_behavior: str = "error",
+    allow_candidate_action: bool = True,
 ):
     """Build the MCP toolset exposed to the agent, filtered before model visibility."""
 
@@ -97,8 +98,11 @@ def build_agent_mcp_toolset(
         tool_error_behavior=tool_error_behavior,
         max_retries=1,
     )
+    visible = set(AGENT_MCP_TOOL_ALLOWLIST)
+    if not allow_candidate_action:
+        visible.discard("flag_pattern_for_review")
     return raw_toolset.filtered(
-        lambda _ctx, tool_def: tool_def.name in AGENT_MCP_TOOL_ALLOWLIST
+        lambda _ctx, tool_def: tool_def.name in visible
     )
 
 
@@ -109,6 +113,7 @@ def build_agent(
     state_path: Path = DEFAULT_STATE_PATH,
     additional_toolsets: Sequence[Any] = (),
     tool_error_behavior: str = "error",
+    allow_candidate_action: bool = True,
 ) -> Agent:
     """Build a model-independent MwalimuLens agent with the strict MCP allowlist."""
 
@@ -120,6 +125,7 @@ def build_agent(
                 data_dir=data_dir,
                 state_path=state_path,
                 tool_error_behavior=tool_error_behavior,
+                allow_candidate_action=allow_candidate_action,
             ),
             *additional_toolsets,
         ],
