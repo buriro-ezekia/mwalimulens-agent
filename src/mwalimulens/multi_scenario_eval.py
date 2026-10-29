@@ -439,6 +439,7 @@ def run_suite(
             try:
                 evaluated = json.loads(result_path.read_text(encoding="utf-8"))
                 record["checks"] = evaluated.get("checks")
+                record["semantic_review_flags"] = evaluated.get("semantic_review_flags", [])
                 record["outcome_stages"] = evaluated.get("outcome_stages", [])
                 record["application_idempotency_applied"] = evaluated.get(
                     "application_idempotency_applied", False
@@ -562,6 +563,7 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
             "status": evaluated.get("status"),
             "classification": reason,
             "failed_checks": failed,
+            "semantic_review_flags": evaluated.get("semantic_review_flags", []),
             "model_error_type": error.get("type"),
             "model_error_message": error.get("message"),
             "tool_calls": [
