@@ -55,6 +55,9 @@ async def run_structured_case(
     error = None
     termination = None
     cancellation = None
+    cleanup_error = None
+    primary_exception: BaseException | None = None
+    deadline_scope: asyncio.Timeout | None = None
     final_output = ""
     submission_attempted = False
     progress_path = report_path.with_suffix(".progress.json")
@@ -87,11 +90,30 @@ async def run_structured_case(
         if kind == "submission_started":
             active_stage = "submission"
         atomic_json(progress_path, {
-            "workflow_mode": MODE, "status": "in_progress", "active_stage": active_stage,
+            "workflow_mode": MODE, "status": "fail" if termination else "in_progress",
+            "active_stage": active_stage,
             "active_stage_outcome": "unknown", "events": events,
             "model_requests": requests, "outcome_stages": stages,
             "evidence_sha256": snapshot.sha256 if snapshot else None,
         })
+
+    def capture_failure(exc: BaseException) -> None:
+        nonlocal cancellation, termination, error, cleanup_error, primary_exception
+        interrupted = (
+            exc if isinstance(exc, asyncio.CancelledError) else _pending_cancellation(exc)
+        )
+        expired = deadline_scope is not None and deadline_scope.expired()
+        if interrupted is not None and not expired:
+            cancellation = interrupted
+        if primary_exception is not None:
+            if exc is not primary_exception and not (expired and isinstance(exc, TimeoutError)):
+                cleanup_error = {"type": type(exc).__name__, "message": str(exc)}
+            return
+        primary_exception = exc
+        reason = "deadline_exceeded" if expired else "cancelled" if cancellation else "error"
+        termination = {"reason": reason, "active_stage": active_stage}
+        error = {"type": type(exc).__name__, "message": str(exc) or reason}
+        observe({"event": "workflow_interrupted", "reason": reason})
 
     async def audited_call(client, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         before = len(store.tool_calls())
@@ -111,49 +133,48 @@ async def run_structured_case(
             if settings.keep_alive is not None:
                 await prewarm_ollama_async(settings)
             async with build_agent_mcp_client(data_dir=data_dir, state_path=state_path) as client:
-                observe({"event": "retrieval_started"})
-                payload = await audited_call(client, "get_competency_evidence", {
-                    "learner_id": target[0], "competency_code": target[1],
-                })
-                snapshot = EvidenceSnapshot.from_mcp(payload, target)
-                atomic_json(state_path.with_name("evidence_snapshot.json"), {
-                    "sha256": snapshot.sha256, "payload": json.loads(snapshot.payload_json),
-                })
-                observe({"event": "retrieval_completed", "evidence_sha256": snapshot.sha256})
-                generator = OllamaJsonGenerator(
-                    model=settings.model_name, base_url=settings.base_url, deadline=deadline,
-                    request_limit=limits.request_limit, records=requests, observe=observe,
-                    keep_alive=settings.keep_alive,
-                )
+                try:
+                    observe({"event": "retrieval_started"})
+                    payload = await audited_call(client, "get_competency_evidence", {
+                        "learner_id": target[0], "competency_code": target[1],
+                    })
+                    snapshot = EvidenceSnapshot.from_mcp(payload, target)
+                    atomic_json(state_path.with_name("evidence_snapshot.json"), {
+                        "sha256": snapshot.sha256, "payload": json.loads(snapshot.payload_json),
+                    })
+                    observe({"event": "retrieval_completed", "evidence_sha256": snapshot.sha256})
+                    generator = OllamaJsonGenerator(
+                        model=settings.model_name, base_url=settings.base_url, deadline=deadline,
+                        request_limit=limits.request_limit, records=requests, observe=observe,
+                        keep_alive=settings.keep_alive,
+                    )
 
-                async def submit(arguments):
-                    nonlocal submission_attempted
-                    if submission_attempted:
-                        raise RuntimeError("A second application submission is not authorised")
-                    submission_attempted = True
-                    return await audited_call(client, "flag_pattern_for_review", arguments)
+                    async def submit(arguments):
+                        nonlocal submission_attempted
+                        if submission_attempted:
+                            raise RuntimeError("A second application submission is not authorised")
+                        submission_attempted = True
+                        return await audited_call(client, "flag_pattern_for_review", arguments)
 
-                outcome = await decide_and_submit(
-                    snapshot, generate=generator, submit=submit, observe=observe,
-                    request_limit=limits.request_limit,
-                )
-                final_output = outcome.get("final_output", "")
-                if outcome["status"] == "invalid_proposal":
-                    error = {"type": "ProposalRejected", "message": "Proposal repair exhausted"}
-                else:
-                    stage = "initial" if len(outcome["attempts"]) == 1 else "proposal_repair"
-                    stages.append({"stage": stage, **raw_report(final_output)})
-                active_stage = None
+                    outcome = await decide_and_submit(
+                        snapshot, generate=generator, submit=submit, observe=observe,
+                        request_limit=limits.request_limit,
+                    )
+                    final_output = outcome.get("final_output", "")
+                    if outcome["status"] == "invalid_proposal":
+                        error = {"type": "ProposalRejected", "message": "Proposal repair exhausted"}
+                    else:
+                        stage = "initial" if len(outcome["attempts"]) == 1 else "proposal_repair"
+                        stages.append({"stage": stage, **raw_report(final_output)})
+                    active_stage = None
+                except BaseException as exc:
+                    # Persist the original interruption before MCP teardown can replace it.
+                    capture_failure(exc)
+                    raise
     except BaseException as exc:
-        cancellation = (
-            exc if isinstance(exc, asyncio.CancelledError) else _pending_cancellation(exc)
-        )
+        capture_failure(exc)
         if not isinstance(exc, Exception) and cancellation is None:
             raise
-        timed_out = "deadline_scope" in locals() and deadline_scope.expired()
-        reason = "deadline_exceeded" if timed_out else "cancelled" if cancellation else "error"
-        termination = {"reason": reason, "active_stage": active_stage}
-        error = {"type": type(exc).__name__, "message": str(exc) or reason}
     report = raw_report(final_output, error)
     report.update({
         "workflow_mode": MODE,
@@ -164,7 +185,7 @@ async def run_structured_case(
         "outcome_stages": stages, "events": events, "model_requests": requests,
         "model_request_count_observed": len(requests),
         "active_stage": active_stage, "active_stage_outcome": "unknown" if active_stage else None,
-        "termination": termination,
+        "termination": termination, "cleanup_error": cleanup_error,
         "evidence_sha256": snapshot.sha256 if snapshot else None,
         "execution_limits": {"request_limit": limits.request_limit,
                              "deadline_seconds": limits.deadline_seconds,
