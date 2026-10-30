@@ -36,9 +36,12 @@ async def run_structured_case(
     state_path, report_path, result_path = (
         path.resolve() for path in (state_path, report_path, result_path)
     )
-    if len({state_path, report_path, result_path}) != 3:
-        raise ValueError("State, report and result paths must be different")
-    if any(path.exists() for path in (state_path, report_path, result_path)):
+    snapshot_path = state_path.with_name("evidence_snapshot.json")
+    progress_path = report_path.with_suffix(".progress.json")
+    artifact_paths = (state_path, report_path, result_path, snapshot_path, progress_path)
+    if len(set(artifact_paths)) != len(artifact_paths):
+        raise ValueError("All review artifact paths must be different")
+    if any(path.exists() for path in artifact_paths):
         raise FileExistsError("Refusing to overwrite existing review evidence")
     state_path.parent.mkdir(parents=True, exist_ok=True)
     store = JsonStateStore(state_path)
@@ -60,7 +63,6 @@ async def run_structured_case(
     deadline_scope: asyncio.Timeout | None = None
     final_output = ""
     submission_attempted = False
-    progress_path = report_path.with_suffix(".progress.json")
 
     def raw_report(text: str, stage_error=None) -> dict[str, Any]:
         report = build_open_weights_report(
@@ -97,13 +99,15 @@ async def run_structured_case(
             "evidence_sha256": snapshot.sha256 if snapshot else None,
         })
 
-    def capture_failure(exc: BaseException) -> None:
+    def capture_failure(exc: BaseException, *, during_stage: bool = False) -> None:
         nonlocal cancellation, termination, error, cleanup_error, primary_exception
         interrupted = (
             exc if isinstance(exc, asyncio.CancelledError) else _pending_cancellation(exc)
         )
         expired = deadline_scope is not None and deadline_scope.expired()
-        if interrupted is not None and not expired:
+        # Outside the timeout scope its cancellation has been consumed. Any
+        # remaining cancellation is external, including one during teardown.
+        if interrupted is not None and (not during_stage or not expired):
             cancellation = interrupted
         if primary_exception is not None:
             if exc is not primary_exception and not (expired and isinstance(exc, TimeoutError)):
@@ -139,7 +143,7 @@ async def run_structured_case(
                         "learner_id": target[0], "competency_code": target[1],
                     })
                     snapshot = EvidenceSnapshot.from_mcp(payload, target)
-                    atomic_json(state_path.with_name("evidence_snapshot.json"), {
+                    atomic_json(snapshot_path, {
                         "sha256": snapshot.sha256, "payload": json.loads(snapshot.payload_json),
                     })
                     observe({"event": "retrieval_completed", "evidence_sha256": snapshot.sha256})
@@ -169,7 +173,7 @@ async def run_structured_case(
                     active_stage = None
                 except BaseException as exc:
                     # Persist the original interruption before MCP teardown can replace it.
-                    capture_failure(exc)
+                    capture_failure(exc, during_stage=True)
                     raise
     except BaseException as exc:
         capture_failure(exc)

@@ -62,11 +62,15 @@ The existing outer suite runner still enforces a 600-second watchdog and at
 least 30 seconds of margin. One 540-second internal deadline covers retrieval,
 preload, generation, validation, submission and cleanup. The request budget is
 shared; this path needs at most two proposal requests, even if the configured
-shared limit is larger. State, report and result paths must be distinct and
-new. Existing reports are never overwritten.
+shared limit is larger. All five artefact paths (state, report, result, evidence
+snapshot and progress checkpoint) must be distinct and absent before execution.
+Existing snapshots and checkpoints receive the same protection as final reports.
 
 Cancellation produces a failed report and result and propagates; it is not
-converted into a model abstention. Checkpoints record active stages and preserve
+converted into a model abstention. External cancellation during cleanup after a
+deadline preserves the original deadline termination and writes final reports
+before propagating, including when cleanup raises another exception.
+Checkpoints record active stages and preserve
 completed outcomes. No prompts, arguments or private reasoning are copied into
 request telemetry. The complete synthetic evidence and validated candidate
 remain in the ordinary case artefacts. No school or real-pupil deployment is
@@ -84,6 +88,26 @@ shape, malformed/prose-only decisions, invalid evidence, genuine abstention,
 no-write-before-validation, schema transmission, truncation and ambiguous writes.
 Integration tests use genuine in-process MCP but mocked model responses. They
 are not live Qwen evidence.
+
+Local review reproduced three defects: an undeclared `httpx` import prevented
+test collection; derived snapshot/checkpoint paths could overwrite existing
+artefacts or collide with explicit paths; and cancellation during cleanup after
+a deadline could skip final reports or be swallowed. The corrections declare
+`httpx>=0.28,<1`, check all five paths before execution, and distinguish external
+cancellation after timeout cleanup. Six added regression cases reproduced the
+path and cancellation defects before correction.
+
+On the corrected code, Ruff and `pip check` passed, the focused contract/MCP/
+cleanup suite passed 45 tests, and the complete suite passed 539 tests. An earlier
+complete run had 532 passes and one `ConnectionAbortedError [WinError 10053]` in
+`test_nonexistent_route_does_not_mutate`; that test passed on focused retry and
+in the final complete run without portal changes. Local tests used Python 3.14,
+PydanticAI 2.51.0, FastMCP 4.0.10, MCP 2.2.0 and HTTPX 0.28.1.
+
+These local results do not establish the cause of historical CircleCI failures
+#107/#108, whose failing logs were unavailable. Consult PR #33 for the current
+commit's hosted status. Live-model reliability, provider-side cancellation and
+semantic correctness remain unverified; no live Ollama/Qwen run was performed.
 
 Only after review and passing local/hosted checks, a single explicitly approved
 probe can be run with:

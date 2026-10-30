@@ -170,3 +170,31 @@ def test_existing_files_are_not_overwritten(setup_case, monkeypatch):
             scenario_by_id("longitudinal-pattern"), **args,
         ))
     assert args["state_path"].read_text(encoding="utf-8") == '{"historical":true}'
+
+
+@pytest.mark.parametrize("name", ["evidence_snapshot.json", "report.progress.json"])
+def test_existing_derived_artifacts_are_not_overwritten(setup_case, monkeypatch, name):
+    args, store = setup_case
+    historical = args["state_path"].with_name(name)
+    historical.write_bytes(b'{"historical":true}')
+    calls = fake_generator(monkeypatch, [proposal()])
+    with pytest.raises(FileExistsError):
+        asyncio.run(structured_review.run_structured_case(
+            scenario_by_id("longitudinal-pattern"), **args,
+        ))
+    assert historical.read_bytes() == b'{"historical":true}'
+    assert calls == []
+    assert store.tool_calls() == ()
+
+
+@pytest.mark.parametrize("name", ["evidence_snapshot.json", "report.progress.json"])
+def test_explicit_paths_cannot_alias_derived_artifacts(setup_case, monkeypatch, name):
+    args, store = setup_case
+    args["result_path"] = args["state_path"].with_name(name)
+    calls = fake_generator(monkeypatch, [proposal()])
+    with pytest.raises(ValueError):
+        asyncio.run(structured_review.run_structured_case(
+            scenario_by_id("longitudinal-pattern"), **args,
+        ))
+    assert calls == []
+    assert store.tool_calls() == ()
