@@ -5,12 +5,16 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Awaitable, Callable
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 DECISION_POLICY_ID = "provisional_review_v2"
+DEFAULT_DECISION_SCHEMA_ID = "review_decision_v1"
+OUTCOME_DECISION_SCHEMA_ID = "review_decision_outcome_v2"
+DECISION_SCHEMA_IDS = (DEFAULT_DECISION_SCHEMA_ID, OUTCOME_DECISION_SCHEMA_ID)
 
 
 class CandidateProposal(BaseModel):
@@ -44,6 +48,60 @@ class ReviewDecision(BaseModel):
         elif self.candidate is not None or self.abstention_reason is None:
             raise ValueError("abstain requires null candidate and a non-empty abstention_reason")
         return self
+
+
+def decision_schema(schema_id: str = DEFAULT_DECISION_SCHEMA_ID) -> dict[str, Any]:
+    """Expose existing outcome rules to generation; never relax runtime validation.
+
+    The default is byte-equivalent under the existing canonical JSON encoder.
+    V2 uses two complete object branches, rather than putting anyOf beside
+    properties or relying on a Python validator that is absent from JSON Schema.
+    Evidence membership, whitespace and semantic checks remain runtime concerns.
+    """
+
+    if schema_id not in DECISION_SCHEMA_IDS:
+        raise ValueError(f"Unknown decision schema: {schema_id}")
+    legacy = ReviewDecision.model_json_schema()
+    if schema_id == DEFAULT_DECISION_SCHEMA_ID:
+        return legacy
+
+    branches = []
+    for outcome in ("candidate", "abstain"):
+        branch = deepcopy(legacy)
+        branch.pop("$defs", None)
+        branch.pop("title", None)
+        branch.pop("description", None)
+        properties = branch["properties"]
+        properties["outcome"] = {"type": "string", "const": outcome}
+        if outcome == "candidate":
+            properties["candidate"] = next(
+                item for item in properties["candidate"]["anyOf"] if "$ref" in item
+            )
+            properties["abstention_reason"] = {"type": "null"}
+        else:
+            properties["candidate"] = {"type": "null"}
+            properties["abstention_reason"] = next(
+                item for item in properties["abstention_reason"]["anyOf"]
+                if item.get("type") == "string"
+            )
+        branches.append(branch)
+    return {
+        "title": "OutcomeBoundReviewDecision",
+        "$defs": deepcopy(legacy["$defs"]),
+        "anyOf": branches,
+    }
+
+
+def decision_schema_metadata(schema_id: str = DEFAULT_DECISION_SCHEMA_ID) -> dict[str, str]:
+    """Version the wire contract separately from the unchanged educational policy."""
+
+    encoded = json.dumps(
+        decision_schema(schema_id), sort_keys=True, ensure_ascii=False, allow_nan=False,
+    )
+    return {
+        "decision_schema_id": schema_id,
+        "decision_schema_sha256": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+    }
 
 
 @dataclass(frozen=True)
@@ -172,6 +230,7 @@ def review_messages(snapshot: EvidenceSnapshot) -> list[dict[str, str]]:
 async def decide_and_submit(
     snapshot: EvidenceSnapshot, *, generate: Generate, submit: Submit,
     observe: Observe, request_limit: int = 2,
+    decision_schema_id: str = DEFAULT_DECISION_SCHEMA_ID,
 ) -> dict[str, Any]:
     """At most two proposals, at most one MCP submission; never retry a side effect."""
 
@@ -180,13 +239,14 @@ async def decide_and_submit(
         or request_limit < 1
     ):
         raise ValueError("request_limit must be a positive integer")
+    schema = decision_schema(decision_schema_id)
     messages = review_messages(snapshot)
     attempts = []
     for index in range(1, min(2, request_limit) + 1):
         attempt: dict[str, Any] = {"attempt": index, "status": "running"}
         attempts.append(attempt)
         observe({"event": "proposal_started", **attempt})
-        text = await generate(messages, ReviewDecision.model_json_schema())
+        text = await generate(messages, deepcopy(schema))
         try:
             decision = validate_decision(text, snapshot)
         except ProposalRejected as exc:

@@ -29,6 +29,7 @@ record = [
   "obsws-python>=1.8,<2",
 ]
 dev = [
+  "jsonschema>=4.23,<5",
   "pytest>=8.3",
   "ruff>=0.9",
 ]
