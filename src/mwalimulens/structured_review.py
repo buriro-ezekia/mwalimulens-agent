@@ -7,14 +7,18 @@ import asyncio
 import json
 import subprocess
 from datetime import UTC, datetime
+from functools import partial
 from pathlib import Path
 from time import perf_counter
 from typing import Any
 
 from mwalimulens.agent.candidate_contract import (
     DECISION_POLICY_ID,
+    DECISION_SCHEMA_IDS,
+    DEFAULT_DECISION_SCHEMA_ID,
     EvidenceSnapshot,
     decide_and_submit,
+    decision_schema_metadata,
 )
 from mwalimulens.agent.execution import ExecutionLimits, atomic_json
 from mwalimulens.agent.ollama import OllamaSettings, prewarm_ollama_async
@@ -32,9 +36,11 @@ async def run_structured_case(
     scenario, *, state_path: Path, report_path: Path, result_path: Path,
     settings: OllamaSettings | None = None, execution_limits: ExecutionLimits | None = None,
     data_dir: Path = DEFAULT_DATA_DIR,
+    decision_schema_id: str = DEFAULT_DECISION_SCHEMA_ID,
 ) -> dict[str, Any]:
     """Run a new isolated case; expected outcomes are used ONLY by grading."""
 
+    schema_metadata = decision_schema_metadata(decision_schema_id)
     settings = settings or OllamaSettings.from_env()
     limits = execution_limits or ExecutionLimits()
     state_path, report_path, result_path = (
@@ -83,6 +89,7 @@ async def run_structured_case(
         report["submission_actor"] = "application_controller"
         report["model_tool_selection_evaluated"] = False
         report["decision_policy_id"] = DECISION_POLICY_ID
+        report.update(schema_metadata)
         return report
 
     def observe(event: dict[str, Any]) -> None:
@@ -98,7 +105,7 @@ async def run_structured_case(
             active_stage = "submission"
         atomic_json(progress_path, {
             "workflow_mode": MODE, "status": "fail" if termination else "in_progress",
-            "decision_policy_id": DECISION_POLICY_ID,
+            "decision_policy_id": DECISION_POLICY_ID, **schema_metadata,
             "active_stage": active_stage,
             "active_stage_outcome": "unknown", "events": events,
             "model_requests": requests, "outcome_stages": stages,
@@ -169,6 +176,7 @@ async def run_structured_case(
                     outcome = await decide_and_submit(
                         snapshot, generate=generator, submit=submit, observe=observe,
                         request_limit=limits.request_limit,
+                        decision_schema_id=decision_schema_id,
                     )
                     final_output = outcome.get("final_output", "")
                     if outcome["status"] == "invalid_proposal":
@@ -206,12 +214,14 @@ async def run_structured_case(
     evaluated = grade_scenario(report, scenario, data_dir=data_dir)
     evaluated.update({
         "workflow_mode": MODE, "model_tool_selection_evaluated": False,
-        "decision_policy_id": DECISION_POLICY_ID,
+        "decision_policy_id": DECISION_POLICY_ID, **schema_metadata,
         "submission_actor": "application_controller", "termination": termination,
         "active_stage": active_stage, "active_stage_outcome": report["active_stage_outcome"],
         "proposal_status": report["proposal_status"],
         "outcome_stages": [
             {"stage": item["stage"], "decision_policy_id": item["decision_policy_id"],
+             "decision_schema_id": item["decision_schema_id"],
+             "decision_schema_sha256": item["decision_schema_sha256"],
              **grade_scenario(item, scenario, data_dir=data_dir)}
             for item in stages
         ],
@@ -224,14 +234,18 @@ async def run_structured_case(
     return evaluated
 
 
-def _structured_subprocess(command, **kwargs):
+def _structured_subprocess(
+    command, *, decision_schema_id: str = DEFAULT_DECISION_SCHEMA_ID, **kwargs,
+):
     """Reuse the existing outer watchdog, selecting the explicit structured worker."""
 
+    decision_schema_metadata(decision_schema_id)  # Fail before starting a child process.
     expected = "mwalimulens.multi_scenario_eval"
     if len(command) < 3 or command[1:3] != ["-m", expected]:
         raise ValueError("Unexpected evaluation subprocess command")
     child = [*command]
     child[2] = "mwalimulens.structured_review"
+    child.extend(["--decision-schema", decision_schema_id])
     return subprocess.run(child, **kwargs)
 
 
@@ -239,6 +253,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scenarios", nargs="+", choices=[s.ident for s in SCENARIOS],
                         default=["longitudinal-pattern"])
+    parser.add_argument(
+        "--decision-schema", choices=DECISION_SCHEMA_IDS, default=DEFAULT_DECISION_SCHEMA_ID,
+        help="Opt-in outcome-bound generation contract; legacy schema remains the default.",
+    )
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--request-limit", type=int, default=6)
     parser.add_argument("--deadline-seconds", type=float, default=540)
@@ -256,19 +274,22 @@ def main(argv: list[str] | None = None) -> int:
             scenario_by_id(args.scenario), state_path=args.state, report_path=args.report,
             result_path=args.result,
             execution_limits=ExecutionLimits(args.request_limit, args.deadline_seconds),
+            decision_schema_id=args.decision_schema,
         ))
         return 0 if result["status"] == "pass" else 2
     report = run_suite(
         output_root=args.output_dir, timeout=args.timeout, scenarios=tuple(args.scenarios),
         request_limit=args.request_limit, deadline_seconds=args.deadline_seconds,
-        runner=_structured_subprocess,
+        runner=partial(_structured_subprocess, decision_schema_id=args.decision_schema),
     )
     report["workflow_mode"] = MODE
     report["decision_policy_id"] = DECISION_POLICY_ID
+    report.update(decision_schema_metadata(args.decision_schema))
     report["model_tool_selection_evaluated"] = False
     path = Path(report["summary_path"])
     atomic_json(path, {key: value for key, value in report.items() if key != "summary_path"})
     print(f"Mode: {MODE}; validated application submission, not autonomous tool selection")
+    print(f"Decision schema: {args.decision_schema}")
     print(f"Summary: {path}")
     print(f"Structural passes: {report['passed']}/{report['scenario_count']}")
     return 0 if report["status"] == "pass" else 2
