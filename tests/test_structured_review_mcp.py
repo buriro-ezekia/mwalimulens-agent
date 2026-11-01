@@ -4,17 +4,23 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 
 import pytest
 from fastmcp import Client
 
 from mwalimulens import structured_review
+from mwalimulens.agent.candidate_contract import (
+    DECISION_POLICY_ID,
+    EvidenceSnapshot,
+    review_messages,
+)
 from mwalimulens.agent.execution import ExecutionLimits
 from mwalimulens.agent.ollama import OllamaSettings
 from mwalimulens.agent.orchestrator import EDUCATION_MCP_CLIENT_MODE
 from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR, build_server
 from mwalimulens.mcp_server.state import JsonStateStore
-from mwalimulens.multi_scenario_eval import scenario_by_id
+from mwalimulens.multi_scenario_eval import SCENARIOS, scenario_by_id
 
 
 def proposal():
@@ -65,6 +71,17 @@ def fake_generator(monkeypatch, responses):
     return calls
 
 
+def assert_policy_metadata(args):
+    for path in (
+        args["report_path"], args["result_path"],
+        args["report_path"].with_suffix(".progress.json"),
+    ):
+        report = json.loads(path.read_text(encoding="utf-8"))
+        assert report["decision_policy_id"] == DECISION_POLICY_ID
+        for stage in report["outcome_stages"]:
+            assert stage["decision_policy_id"] == DECISION_POLICY_ID
+
+
 def test_native_proposal_causes_one_real_mcp_action_after_validation(setup_case, monkeypatch):
     args, store = setup_case
     calls = fake_generator(monkeypatch, [proposal()])
@@ -85,6 +102,7 @@ def test_native_proposal_causes_one_real_mcp_action_after_validation(setup_case,
     assert raw["workflow_mode"] == "structured_proposal_v1"
     assert raw["outcome_stages"][0]["stage"] == "initial"
     assert raw["proposal_attempts"][0]["status"] == "valid"
+    assert_policy_metadata(args)
 
 
 def test_missing_claim_and_question_never_reach_mcp_until_model_repairs(setup_case, monkeypatch):
@@ -104,6 +122,7 @@ def test_missing_claim_and_question_never_reach_mcp_until_model_repairs(setup_ca
     assert len(store.pending_reviews()) == 1
     assert len(store.tool_calls()) == 2
     assert store.teacher_reviews() == store.profile_updates() == ()
+    assert_policy_metadata(args)
 
 
 def test_repeated_invalid_proposal_does_not_write_candidate(setup_case, monkeypatch):
@@ -118,6 +137,7 @@ def test_repeated_invalid_proposal_does_not_write_candidate(setup_case, monkeypa
     assert result["proposal_status"] == "invalid_proposal"
     assert store.pending_reviews() == ()
     assert [x["tool_name"] for x in store.tool_calls()] == ["get_competency_evidence"]
+    assert_policy_metadata(args)
 
 
 def test_explicit_single_assessment_abstention_does_not_submit(setup_case, monkeypatch):
@@ -131,6 +151,7 @@ def test_explicit_single_assessment_abstention_does_not_submit(setup_case, monke
     ))
     assert result["status"] == "pass"
     assert store.pending_reviews() == store.teacher_reviews() == store.profile_updates() == ()
+    assert_policy_metadata(args)
 
 
 def test_shared_one_request_budget_does_not_reset_for_proposal_repair(setup_case, monkeypatch):
@@ -160,6 +181,7 @@ def test_cancelled_inference_preserves_failed_result_and_propagates(setup_case, 
     assert report["active_stage_outcome"] == "unknown"
     assert args["result_path"].exists()
     assert store.pending_reviews() == store.teacher_reviews() == store.profile_updates() == ()
+    assert_policy_metadata(args)
 
 
 def test_existing_files_are_not_overwritten(setup_case, monkeypatch):
@@ -198,3 +220,154 @@ def test_explicit_paths_cannot_alias_derived_artifacts(setup_case, monkeypatch, 
         ))
     assert calls == []
     assert store.tool_calls() == ()
+
+
+def abstention(reason):
+    return {"outcome": "abstain", "candidate": None, "abstention_reason": reason}
+
+
+@pytest.mark.parametrize("scenario", SCENARIOS, ids=lambda case: case.ident)
+def test_shared_policy_preserves_complete_source_evidence(
+    setup_case, monkeypatch, scenario,
+):
+    args, store = setup_case
+    source_before = {
+        path: path.read_bytes()
+        for path in DEFAULT_DATA_DIR.rglob("*") if path.is_file()
+    }
+    calls = fake_generator(monkeypatch, [abstention(
+        "The available records do not support a defensible bounded statement."
+    )])
+    asyncio.run(structured_review.run_structured_case(scenario, **args))
+
+    payload = store.tool_calls()[0]["output"]
+    snapshot = EvidenceSnapshot.from_mcp(
+        payload, (scenario.learner, scenario.competency),
+    )
+    unrelated = EvidenceSnapshot.from_mcp({
+        "learner_id": "UNRELATED", "competency_code": "OTHER",
+        "evidence_count": 0, "evidence": [],
+    }, ("UNRELATED", "OTHER"))
+    assert len(calls) == 1
+    assert calls[0][0] == [
+        review_messages(unrelated)[0],
+        {"role": "user", "content": snapshot.payload_json},
+    ]
+    policy = calls[0][0][0]["content"]
+    for identifier in (scenario.ident, scenario.learner, scenario.competency):
+        assert identifier not in policy
+    for row in snapshot.records:
+        for field in ("evidence_id", "term_id", "source_ref"):
+            assert row[field] not in policy
+        if row["score"] is not None:
+            assert str(row["score"]) not in policy
+    for field in ("claim", "uncertainty", "suggested_teacher_question"):
+        assert proposal()["candidate"][field] not in policy
+    saved = json.loads(
+        args["state_path"].with_name("evidence_snapshot.json").read_text(encoding="utf-8")
+    )
+    assert saved == {"sha256": snapshot.sha256, "payload": payload}
+    assert {
+        path: path.read_bytes()
+        for path in DEFAULT_DATA_DIR.rglob("*") if path.is_file()
+    } == source_before
+    assert store.pending_reviews() == store.teacher_reviews() == store.profile_updates() == ()
+    assert_policy_metadata(args)
+
+
+def test_expected_outcome_and_scenario_labels_cannot_change_model_input(
+    setup_case, monkeypatch,
+):
+    args, _store = setup_case
+    original = scenario_by_id("longitudinal-pattern")
+    changed = replace(
+        original, expected="abstain",
+        ident="HIDDEN_SCENARIO_LABEL", category="HIDDEN_CATEGORY_LABEL",
+    )
+    calls = fake_generator(monkeypatch, [abstention(
+        "Comparability of these tasks prevents a defensible statement."
+    )])
+    first = asyncio.run(structured_review.run_structured_case(original, **args))
+
+    changed_args = dict(args)
+    for key in ("state_path", "report_path", "result_path"):
+        changed_args[key] = args[key].parent / "changed" / args[key].name
+    server = build_server(
+        data_dir=DEFAULT_DATA_DIR, state_path=changed_args["state_path"],
+    )
+    monkeypatch.setattr(
+        structured_review, "build_agent_mcp_client",
+        lambda **_kw: Client(server, mode=EDUCATION_MCP_CLIENT_MODE),
+    )
+    second = asyncio.run(structured_review.run_structured_case(changed, **changed_args))
+
+    assert len(calls) == 2
+    assert calls[0] == calls[1]
+    assert "HIDDEN_SCENARIO_LABEL" not in json.dumps(calls)
+    assert "HIDDEN_CATEGORY_LABEL" not in json.dumps(calls)
+    assert first["status"] == "fail"
+    assert second["status"] == "pass"
+    assert first["proposal_status"] == second["proposal_status"] == "abstained"
+
+
+@pytest.mark.parametrize("reason", [
+    "Comparability of these tasks prevents a defensible statement.",
+    "Insufficient consistent improvement or independent mastery to determine "
+    "a candidate based on the provided evidence.",
+    "The available observations do not support a defensible bounded statement.",
+])
+def test_valid_abstention_is_not_retried_to_satisfy_expected_candidate(
+    setup_case, monkeypatch, reason,
+):
+    args, store = setup_case
+    calls = fake_generator(monkeypatch, [abstention(reason)])
+    result = asyncio.run(structured_review.run_structured_case(
+        scenario_by_id("longitudinal-pattern"), **args,
+    ))
+    report = json.loads(args["report_path"].read_text(encoding="utf-8"))
+    assert len(calls) == 1
+    assert result["status"] == "fail"
+    assert result["proposal_status"] == "abstained"
+    assert report["final_output"] == "ABSTAIN: " + reason
+    assert report["proposal_attempts"] == [
+        {"attempt": 1, "status": "valid", "outcome": "abstain"},
+    ]
+    assert [call["tool_name"] for call in store.tool_calls()] == [
+        "get_competency_evidence",
+    ]
+    assert store.pending_reviews() == store.teacher_reviews() == store.profile_updates() == ()
+
+
+def test_cli_summary_records_decision_policy_without_running_a_model(tmp_path, monkeypatch):
+    summary_path = tmp_path / "summary.json"
+    monkeypatch.setattr(structured_review, "run_suite", lambda **_kw: {
+        "summary_path": str(summary_path), "status": "fail",
+        "passed": 0, "scenario_count": 1,
+    })
+    assert structured_review.main(["--output-dir", str(tmp_path)]) == 2
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["decision_policy_id"] == DECISION_POLICY_ID
+    assert summary["workflow_mode"] == "structured_proposal_v1"
+    assert summary["model_tool_selection_evaluated"] is False
+
+
+def test_in_progress_checkpoint_identifies_policy_before_model_response(setup_case, monkeypatch):
+    args, _store = setup_case
+
+    class InspectCheckpoint:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __call__(self, _messages, _schema):
+            checkpoint = json.loads(
+                args["report_path"].with_suffix(".progress.json").read_text(encoding="utf-8")
+            )
+            assert checkpoint["status"] == "in_progress"
+            assert checkpoint["decision_policy_id"] == DECISION_POLICY_ID
+            return json.dumps(abstention("No defensible bounded statement is supported."))
+
+    monkeypatch.setattr(structured_review, "OllamaJsonGenerator", InspectCheckpoint)
+    result = asyncio.run(structured_review.run_structured_case(
+        scenario_by_id("longitudinal-pattern"), **args,
+    ))
+    assert result["proposal_status"] == "abstained"

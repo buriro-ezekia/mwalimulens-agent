@@ -11,7 +11,11 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from mwalimulens.agent.candidate_contract import EvidenceSnapshot, decide_and_submit
+from mwalimulens.agent.candidate_contract import (
+    DECISION_POLICY_ID,
+    EvidenceSnapshot,
+    decide_and_submit,
+)
 from mwalimulens.agent.execution import ExecutionLimits, atomic_json
 from mwalimulens.agent.ollama import OllamaSettings, prewarm_ollama_async
 from mwalimulens.agent.open_weights_run import _pending_cancellation, build_open_weights_report
@@ -78,6 +82,7 @@ async def run_structured_case(
         ]
         report["submission_actor"] = "application_controller"
         report["model_tool_selection_evaluated"] = False
+        report["decision_policy_id"] = DECISION_POLICY_ID
         return report
 
     def observe(event: dict[str, Any]) -> None:
@@ -93,6 +98,7 @@ async def run_structured_case(
             active_stage = "submission"
         atomic_json(progress_path, {
             "workflow_mode": MODE, "status": "fail" if termination else "in_progress",
+            "decision_policy_id": DECISION_POLICY_ID,
             "active_stage": active_stage,
             "active_stage_outcome": "unknown", "events": events,
             "model_requests": requests, "outcome_stages": stages,
@@ -200,11 +206,13 @@ async def run_structured_case(
     evaluated = grade_scenario(report, scenario, data_dir=data_dir)
     evaluated.update({
         "workflow_mode": MODE, "model_tool_selection_evaluated": False,
+        "decision_policy_id": DECISION_POLICY_ID,
         "submission_actor": "application_controller", "termination": termination,
         "active_stage": active_stage, "active_stage_outcome": report["active_stage_outcome"],
         "proposal_status": report["proposal_status"],
         "outcome_stages": [
-            {"stage": item["stage"], **grade_scenario(item, scenario, data_dir=data_dir)}
+            {"stage": item["stage"], "decision_policy_id": item["decision_policy_id"],
+             **grade_scenario(item, scenario, data_dir=data_dir)}
             for item in stages
         ],
     })
@@ -256,6 +264,7 @@ def main(argv: list[str] | None = None) -> int:
         runner=_structured_subprocess,
     )
     report["workflow_mode"] = MODE
+    report["decision_policy_id"] = DECISION_POLICY_ID
     report["model_tool_selection_evaluated"] = False
     path = Path(report["summary_path"])
     atomic_json(path, {key: value for key, value in report.items() if key != "summary_path"})

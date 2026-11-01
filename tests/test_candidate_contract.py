@@ -9,10 +9,12 @@ import httpx
 import pytest
 
 from mwalimulens.agent.candidate_contract import (
+    DECISION_POLICY_ID,
     EvidenceSnapshot,
     ProposalRejected,
     ReviewDecision,
     decide_and_submit,
+    review_messages,
     validate_decision,
 )
 from mwalimulens.agent.structured_ollama import OllamaJsonGenerator
@@ -48,6 +50,23 @@ def candidate():
 def encoded(value=None):
     return json.dumps({"outcome": "candidate", "candidate": value or candidate(),
                        "abstention_reason": None})
+
+
+def test_versioned_policy_distinguishes_recorded_patterns_from_mastery():
+    policy = review_messages(snapshot())[0]["content"]
+    assert DECISION_POLICY_ID == "provisional_review_v2"
+    assert "bounded pattern in recorded evidence" in policy
+    assert "without establishing durable improvement or independent mastery" in policy
+    assert "about mastery limits the strength of the claim" in policy
+    assert "does not automatically prohibit a qualified observation for teacher review" in policy
+    assert "Multiple terms alone do not justify a candidate" in policy
+    assert (
+        "evidence comparability prevents even a narrowly qualified cross-term description" in policy
+    )
+    assert "Choose abstain with a reason and null candidate" in policy
+    assert "distinct supporting IDs spanning at least two terms" in policy
+    assert "relevant counter-evidence" in policy
+    assert "You cannot approve a candidate or modify a profile" in policy
 
 
 @pytest.mark.parametrize("field", list(candidate()))

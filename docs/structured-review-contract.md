@@ -36,6 +36,33 @@ https://docs.ollama.com/capabilities/structured-outputs
 https://ollama.com/blog/structured-outputs
 Native JSON-schema formatting is not proof that the interpretation is true.
 
+## Decision policy: provisional_review_v2
+
+The local probe `probe-a8f88a4583054e9e9c6c7b4257ba9cb0/suite-gea_ucu7/`
+returned one schema-valid abstention for `longitudinal-pattern`, citing
+insufficient consistent improvement or independent mastery. It made one model
+request, with no transport or validation error, no candidate submission and no
+teacher decision or profile update. That failed probe remains unchanged.
+
+The revised shared policy distinguishes a bounded description of recorded
+evidence from a claim of durable improvement or independent mastery. Uncertainty
+about mastery limits the strength of the claim; it does not automatically rule
+out a qualified observation for teacher review. Multiple terms alone do not
+justify a candidate. Abstention remains valid when missing evidence,
+incoherence or comparability limitations prevent even a narrowly qualified
+cross-term description. Required supporting and counter-evidence are unchanged.
+
+New structured reports, results, progress checkpoints, outcome stages and suite
+summaries record `decision_policy_id: provisional_review_v2`, independently of
+the unchanged `workflow_mode`. Historical reports without a policy identifier
+remain unversioned; do not attribute them to this revision or regrade them.
+The schema, validators, submission limits, execution budgets, teacher authority
+and evaluation rubric are unchanged. A valid abstention still ends the decision
+step immediately, regardless of its wording or the evaluator's expected outcome.
+Mocked regression tests protect these contracts and reporting provenance; they
+cannot establish improved live-model judgement. No live result exists for this
+policy revision yet.
+
 ## Honest provenance and evaluation
 
 Reports use `workflow_mode: structured_proposal_v1`,
