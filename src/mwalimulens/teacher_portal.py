@@ -75,6 +75,26 @@ def create_case(root: Path, mode: str = "seeded") -> Case:
     return Case(state, service, candidate, evidence, run_dir, mode, report)
 
 
+def _evidence_type(value: Any) -> str:
+    """Use readable labels without changing the underlying evidence type."""
+    labels = {"assessment": "Assessment", "practical_task": "Practical task",
+              "observation": "Observation", "attendance": "Attendance"}
+    return labels.get(str(value), str(value).replace("_", " ").capitalize())
+
+def _brand() -> str:
+    return (
+        '<a class="brand" href="/" aria-label="MwalimuLens learner review">'
+        '<span class="brand-mark" aria-hidden="true">ML</span>'
+        '<span class="brand-name">MwalimuLens<span>Teacher workspace</span></span></a>'
+    )
+
+def _evidence_links(identifiers: list[str], *, counter: bool = False) -> str:
+    style = " counter" if counter else ""
+    return "".join(
+        f'<a class="evidence-link{style}" href="#evidence-{h(ident)}">{h(ident)}</a>'
+        for ident in identifiers
+    ) or '<span class="hint">None recorded</span>'
+
 def _evidence(case: Case) -> str:
     supporting = set(case.candidate["supporting_evidence_ids"])
     opposing = set(case.candidate["counter_evidence_ids"])
@@ -88,10 +108,14 @@ def _evidence(case: Case) -> str:
         score = item.get("score")
         score_text = f"{score * 100:.0f}%" if isinstance(score, (float, int)) else "—"
         rows.append(
-            f'<tr class="{cls}"><td><code>{h(ident)}</code></td>'
-            f'<td>{h(item["term_id"])}</td><td>{h(item["evidence_type"])}</td>'
-            f'<td>{h(score_text)}</td><td>{h(item.get("observation") or "—")}</td>'
-            f'<td><span class="tag {cls}">{role}</span></td></tr>'
+            f'<tr id="evidence-{h(ident)}" class="{cls}">'
+            f'<th scope="row" data-label="Record"><code>{h(ident)}</code></th>'
+            f'<td data-label="Term">{h(item["term_id"])}</td>'
+            f'<td data-label="Type">{h(_evidence_type(item["evidence_type"]))}</td>'
+            f'<td data-label="Score" class="score">{h(score_text)}</td>'
+            f'<td data-label="Observation" class="observation">'
+            f'{h(item.get("observation") or "No observation recorded.")}</td>'
+            f'<td data-label="Role"><span class="tag {cls}">{role}</span></td></tr>'
         )
     return "".join(rows)
 
@@ -101,12 +125,18 @@ def _trend(case: Case) -> str:
     for item in case.evidence:
         score = item.get("score")
         if isinstance(score, (float, int)):
+            practical = item["evidence_type"] == "practical_task"
+            cls = " practical" if practical else ""
             bars.append(
-                f'<div class="trend"><span>{h(item["term_id"])}</span>'
-                f'<div class="track"><div style="width:{score * 100:.1f}%"></div></div>'
+                '<div class="trend">'
+                f'<div class="trend-label"><span>{h(item["term_id"])}</span>'
+                f'<small>{h(_evidence_type(item["evidence_type"]))} · '
+                f'{h(item["evidence_id"])}</small></div>'
+                f'<div class="track{cls}" aria-hidden="true">'
+                f'<div style="width:{score * 100:.1f}%"></div></div>'
                 f'<strong>{score * 100:.0f}%</strong></div>'
             )
-    return "".join(bars)
+    return "".join(bars) or '<p class="hint">No scored tasks are recorded for this case.</p>'
 
 
 def _audit(case: Case) -> str:
@@ -142,100 +172,259 @@ def _model_validation() -> str:
 def _review_form(case: Case, token: str) -> str:
     if not case.state.pending_reviews():
         review = case.state.teacher_reviews()[-1]
-        return (
-            '<div class="result" role="status"><h3>Review recorded</h3>'
-            f'<p><b>Decision:</b> {h(review["decision"].title())}</p>'
-            f'<p><b>Reason:</b> {h(review["reason"])}</p>'
-            f'<p><b>Final wording:</b> {h(review.get("final_claim"))}</p>'
-            f'<p><b>Synthetic profile notes:</b> {len(case.state.profile_updates())}</p>'
-            '</div>'
+        decision = {"approve": "Approved", "edit": "Revised", "reject": "Rejected"}.get(
+            review["decision"], str(review["decision"]).title(),
         )
-    return f'''<form method="post" action="/review/preview">
+        return (
+            '<div class="result" role="status"><span class="result-label">Review recorded</span>'
+            f'<h3>{h(decision)} by simulated teacher</h3>'
+            '<dl class="review-details">'
+            f'<dt>Reason</dt><dd>{h(review["reason"])}</dd>'
+            f'<dt>Final wording</dt><dd>{h(review.get("final_claim"))}</dd>'
+            f'<dt>Synthetic profile notes</dt><dd>{len(case.state.profile_updates())}</dd>'
+            '</dl></div><p class="hint">Start a new practice case to review another example.</p>'
+        )
+    return f'''<form class="decision-form" method="post" action="/review/preview">
 <input type="hidden" name="csrf" value="{h(token)}">
-<fieldset><legend>What is your decision?</legend><div class="choices">
+<fieldset><legend>Choose a decision</legend><div class="choices">
 <label><input type="radio" name="decision" value="approve" required>
-<b>Approve</b><small>Accept a provisional note.</small></label>
+<span><b>Approve</b><small>Retain the finding.</small></span></label>
 <label><input type="radio" name="decision" value="edit">
-<b>Revise</b><small>Improve the wording.</small></label>
+<span><b>Revise</b><small>Adjust the wording.</small></span></label>
 <label><input type="radio" name="decision" value="reject">
-<b>Reject</b><small>Keep the record unchanged.</small></label>
+<span><b>Reject</b><small>Do not add a note.</small></span></label>
 </div></fieldset>
-<label for="reason">Reason for your decision *</label>
-<textarea id="reason" name="reason" required maxlength="1200" rows="3"
-placeholder="Explain your decision using the evidence."></textarea>
-<label for="edited">Revised wording (required only when revising)</label>
-<textarea id="edited" name="edited_claim" maxlength="1200" rows="3"
-placeholder="Write the wording you want to retain."></textarea>
-<p class="hint">A confirmation step is required. This is a simulated reviewer, not
-an authenticated teacher.</p><button class="primary">Review decision</button></form>'''
+<div class="form-field"><label for="reason">Reason for your decision <span>*</span></label>
+<p id="reason-help" class="field-help">Refer to the evidence and any remaining uncertainty.</p>
+<textarea id="reason" name="reason" required maxlength="1200" rows="4"
+aria-describedby="reason-help" placeholder="Explain the evidence behind your decision."></textarea>
+</div>
+<div class="form-field revision-field"><label for="edited">Revised wording <span>*</span></label>
+<p id="edited-help" class="field-help">Required when revising. Keep the finding provisional.</p>
+<textarea id="edited" name="edited_claim" maxlength="1200" rows="4"
+aria-describedby="edited-help" placeholder="Write the wording you want to retain."></textarea></div>
+<div class="decision-next"><span class="step-dot" aria-hidden="true">2</span>
+<p>Check your decision on the next page.<br><strong>Nothing is saved until you confirm.</strong></p>
+</div><button class="button primary full-width" type="submit">Review decision
+<span aria-hidden="true">→</span></button>
+<p class="form-disclosure">Reviewer identity is simulated, not authenticated.</p></form>'''
 
 CSS = """
-:root{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#1b304a;
-background:#f4f7fa;font-size:15px}*{box-sizing:border-box}body{margin:0}
-main{max-width:1180px;margin:auto;padding:22px 20px 50px}
-header{background:#182d50;color:white;border-radius:16px;padding:28px 32px}
-header p{color:#d8e6f2;max-width:790px;line-height:1.5}
-.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#a6c6d6}
-h1{font-size:33px;margin:8px 0 10px}.toolbar{display:flex;gap:10px;flex-wrap:wrap}
-button{font:inherit;font-weight:650;cursor:pointer;border-radius:8px;padding:10px 16px;
-border:1px solid #bbc9d7;background:white;color:#1b304a}
-button.primary{background:#087e79;border-color:#087e79;color:white}
-button.light{background:transparent;color:white;border-color:#9eb6cb}
-button:hover,button:focus-visible{outline:2px solid #4bb8a9;outline-offset:2px}
-.card{background:white;border:1px solid #dce4ec;border-radius:14px;padding:21px;
-margin-top:17px;box-shadow:0 4px 16px #12233d07;min-width:0}
-h2{font-size:20px;margin:0 0 7px}h3{font-size:17px}
-.hint{font-size:13px;color:#56687b;line-height:1.5}
-.notice{background:#fff6e7;border-left:4px solid #cb8b2b;border-radius:6px;
-margin-top:15px;padding:12px 15px;font-size:13px}
-.flash{background:#eaf6f2;border-left:4px solid #087e79;padding:12px;margin-top:12px}
-.error{background:#fff0eb;border-left:4px solid #a93226;padding:12px;margin-top:12px}
-.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:17px}
-.metric{background:white;border:1px solid #dce4ec;border-radius:12px;padding:14px}
-.metric strong{display:block;font-size:27px}.metric span{font-size:12px;color:#56687b}
-.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(310px,1fr);gap:17px}
-.grid .card{margin-top:17px}.summary{border-left:4px solid #087e79;padding:3px 14px;margin:14px 0}
-.counter-note{background:#fff7e8;border-radius:8px;padding:12px 14px}
-.tag{font-size:12px;padding:3px 8px;background:#edf2f6;border-radius:15px;white-space:nowrap}
-.tag.counter{background:#fff0d8;color:#88530b}.tag.support{background:#e6f4ec;color:#116b4a}
-.status{display:inline-block;border-radius:20px;background:#fff0d8;color:#85550b;
-padding:5px 11px;font-size:12px;font-weight:700}
-.status.done{background:#e6f4ec;color:#116b4a}
-.trend{display:grid;grid-template-columns:90px 1fr 44px;align-items:center;gap:9px;
-margin:10px 0;font-size:13px}.track{background:#e8eef4;height:11px;border-radius:10px;
-overflow:hidden}.track div{background:#087e79;height:100%;border-radius:10px}
-.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{padding:10px;text-align:left;vertical-align:top;border-bottom:1px solid #e4eaf0}
-th{background:#eef2f6;color:#516278}tr.counter{background:#fffbf3}
-fieldset{border:0;padding:0;margin:16px 0}legend{font-weight:700;margin-bottom:12px}
-.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-.choices label{border:1px solid #cdd8e2;border-radius:9px;padding:12px;cursor:pointer}
-.choices label:has(input:checked){border:2px solid #087e79;background:#eaf6f2}
-.choices b,.choices small{display:block}.choices small{font-size:12px;color:#56687b}
-form>label{display:block;font-weight:650;margin:14px 0 6px}
-textarea{width:100%;font:inherit;border:1px solid #acbdce;border-radius:8px;
-padding:10px;resize:vertical}textarea:focus-visible{outline:2px solid #087e79}
-.result{background:#eaf6f2;padding:15px;border-radius:8px}
-details summary{cursor:pointer;font-weight:700;padding:8px 0}
-footer{color:#56687b;font-size:12px;margin-top:22px}
-@media(max-width:850px){.grid{grid-template-columns:1fr}}
-@media(max-width:570px){main{padding:12px}header{padding:21px}h1{font-size:27px}
-.metrics,.choices{grid-template-columns:1fr}}
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+font-size:15px;color:#203449;background:#f3f6f8;line-height:1.55;
+--ink:#183049;--muted:#586b7d;--line:#dce4ea;--teal:#087b72;--navy:#182f4c}
+*{box-sizing:border-box}body{margin:0}button,input,textarea{font:inherit}
+a{color:var(--teal);text-underline-offset:3px}p{margin:0 0 12px}
+h1,h2,h3{color:var(--ink);line-height:1.25;margin:0}h1{font-size:30px;
+font-weight:720;letter-spacing:-.8px}h2{font-size:19px;font-weight:700}
+h3{font-size:16px}code{font-family:ui-monospace,Consolas,monospace;font-size:.88em}
+button,a,input,textarea,summary{touch-action:manipulation}
+:focus-visible{outline:3px solid #087b72;outline-offset:4px}
+main{max-width:1424px;margin:auto;padding:0 36px 48px}
+.skip-link{position:absolute;left:16px;top:-70px;z-index:10;background:white;padding:12px}
+.skip-link:focus{top:10px}.sr-only{position:absolute;width:1px;height:1px;padding:0;
+margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:24px;
+min-height:92px;border-bottom:1px solid var(--line);margin-bottom:28px}
+.brand{display:inline-flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.brand-mark{width:44px;height:44px;display:grid;place-items:center;background:var(--navy);
+color:white;border-radius:12px;font-weight:750;font-size:16px;letter-spacing:-1px}
+.brand-name{font-size:19px;font-weight:750;letter-spacing:-.4px;line-height:1.2}
+.brand-name span{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;
+font-weight:550;color:var(--muted);margin-top:5px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.toolbar form{margin:0}
+.button,button{display:inline-flex;align-items:center;justify-content:center;gap:12px;
+min-height:44px;padding:10px 16px;border:1px solid #b9c8d4;border-radius:9px;
+background:white;color:var(--ink);font-weight:650;line-height:1.4;cursor:pointer;
+text-decoration:none;font-size:13px}button:hover,.button:hover{background:#edf3f5}
+button.primary,.button.primary{background:var(--teal);border-color:var(--teal);color:white}
+button.primary:hover{background:#05665e}.full-width{width:100%;justify-content:space-between}
+.page-heading{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}
+.eyebrow{color:var(--teal);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+font-weight:750;margin-bottom:8px}.page-heading p{color:var(--muted);margin-top:10px;
+max-width:680px;font-size:14px}.step-nav{display:flex;gap:6px;margin-top:9px;flex-shrink:0}
+.step-nav a{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:8px 10px;
+font-size:12px;color:#42596d;text-decoration:none;border-radius:8px;font-weight:600}
+.step-nav a:hover{background:#e7eff1}.step-nav span{display:grid;place-items:center;
+width:22px;height:22px;background:#e3eced;border-radius:50%;color:#1a625e;font-size:11px}
+.demo-notice{display:flex;align-items:center;gap:12px;background:#eef3f5;
+border:1px solid #dce5e9;border-radius:9px;padding:10px 14px;margin:10px 0 20px;
+color:#506378;font-size:12px}.notice-label{font-weight:700;color:#324c63;white-space:nowrap}
+.demo-notice p{margin:0;line-height:1.5}.mode-line{display:block;font-size:11px;color:#5a6d7d;
+margin-top:2px}.notice-icon{display:grid;place-items:center;width:23px;height:23px;
+border:1px solid #9eafbc;border-radius:50%;font-weight:750;font-size:12px;flex-shrink:0}
+.flash,.error{padding:14px 16px;margin:16px 0;border-radius:9px;overflow-wrap:anywhere}
+.flash{background:#e8f5ef;border:1px solid #aed8c6;color:#205b45}
+.error{background:#fff0eb;border:1px solid #e7b5a8;color:#8b3024}
+.case-strip{display:flex;align-items:center;justify-content:space-between;gap:24px;
+padding:19px 22px;background:var(--navy);color:white;border-radius:13px;margin-bottom:22px}
+.learner{display:flex;gap:13px;align-items:center;min-width:0}.avatar{width:44px;height:44px;
+display:grid;place-items:center;border-radius:50%;background:#304b65;color:#dfebf1;
+font-size:19px;font-weight:650;flex-shrink:0}.learner h2{color:white;font-size:18px}
+.learner h2 span{font-weight:450;font-size:12px;color:#c4d2df;margin-left:5px}
+.learner p{font-size:12px;color:#d4e0e9;margin:3px 0 0}.metrics{display:flex;gap:28px}
+.metric{min-width:92px;padding-left:24px;border-left:1px solid #405671}
+.metric strong{display:block;font-size:25px;font-weight:700;line-height:1.15}
+.metric span{display:block;font-size:11px;color:#d4e0e9;margin-top:5px}
+.workspace-grid{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:22px;align-items:start}
+.analysis-column{display:grid;gap:20px;min-width:0}
+.card{background:white;border:1px solid var(--line);
+border-radius:12px;padding:24px;min-width:0;box-shadow:0 3px 10px #162a3b03}
+.card:target{outline:2px solid #15857c;outline-offset:4px}
+.section-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;
+margin-bottom:18px}.section-heading h2{display:flex;align-items:center;gap:10px}
+.section-number{font-size:10px;color:#52796f;border:1px solid #c7dbd5;background:#eff6f3;
+width:26px;height:26px;display:inline-grid;place-items:center;border-radius:7px;font-weight:700}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;
+color:#855214;background:#fff3dc;border:1px solid #f1dfbc;border-radius:20px;padding:5px 10px}
+.status::before{content:'';width:5px;height:5px;background:currentColor;border-radius:50%}
+.status.done{color:#22604c;background:#e9f4ef;border-color:#bfd9cc}
+.subtle{font-size:12px;color:var(--muted)}.hint{font-size:12px;color:var(--muted);line-height:1.65}
+.finding{padding:18px 20px;background:#f4f9f7;border-left:3px solid var(--teal);
+border-radius:0 8px 8px 0}.finding h3{color:#356958;font-size:11px;text-transform:uppercase;
+letter-spacing:.8px;margin-bottom:9px}.finding p{font-size:17px;line-height:1.65;margin:0;
+color:#213f3b;overflow-wrap:anywhere}.counter-note{padding:17px 20px;margin-top:16px;
+background:#fff8ec;border:1px solid #f0e2c9;border-radius:8px}.counter-note h3{color:#785324;
+font-size:13px}.counter-note p{font-size:13px;margin:7px 0 0;overflow-wrap:anywhere}
+.teacher-question{margin:16px 0 0;padding-top:16px;border-top:1px solid var(--line)}
+.teacher-question h3{font-size:12px;color:var(--muted);font-weight:650;margin-bottom:6px}
+.teacher-question p{font-size:14px;margin:0;overflow-wrap:anywhere}
+.citations{display:grid;gap:10px;margin-top:20px}.citation-row{display:flex;align-items:center;
+flex-wrap:wrap;gap:6px}.citation-row>span{font-size:11px;color:var(--muted);min-width:115px}
+.evidence-link{display:inline-flex;align-items:center;min-height:30px;padding:3px 9px;
+border:1px solid #c7ded5;border-radius:6px;background:#f3f9f6;color:#20644e;
+font-size:11px;font-family:ui-monospace,Consolas,monospace;text-decoration:none}
+.evidence-link:hover{background:#e2f1e9}.evidence-link.counter{color:#84571b;
+border-color:#ead7b6;background:#fff9ef}.trend-note{margin-top:-9px}
+.legend{display:flex;flex-wrap:wrap;gap:18px;font-size:11px;color:var(--muted);margin:12px 0 18px}
+.legend span{display:flex;align-items:center;gap:7px}.legend i{width:9px;height:9px;
+border-radius:2px;background:var(--teal)}.legend i.practical{background:#6c8197}
+.trend{display:grid;grid-template-columns:145px minmax(0,1fr) 42px;align-items:center;
+gap:14px;padding:8px 0}.trend-label{font-size:12px;color:#31485f}
+.trend-label span{font-weight:650}
+.trend-label small{display:block;font-size:10px;color:var(--muted)}
+.track{background:#edf2f5;height:9px;border-radius:4px;overflow:hidden}
+.track>div{height:100%;background:var(--teal);border-radius:4px}
+.track.practical>div{background:#6c8197}.trend strong{font-size:12px;text-align:right;
+font-variant-numeric:tabular-nums}.chart-note{margin:16px 0 0;padding-top:14px;
+border-top:1px solid var(--line)}.table-wrap{overflow-x:auto;min-width:0;border-radius:7px}
+table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}
+caption{text-align:left;color:var(--muted);font-size:12px;padding:0 0 14px}
+th,td{padding:12px 8px;vertical-align:top;border-bottom:1px solid #e8edf1}
+thead th{background:#f2f6f8;color:#506477;font-size:10px;font-weight:700;
+letter-spacing:.4px;text-transform:uppercase}tbody th{font-weight:550}
+tbody tr:last-child>td,tbody tr:last-child>th{border-bottom:0}
+tbody tr.counter{background:#fffbf3}tbody tr:target{background:#eaf6f1;outline:2px solid #33897c;
+outline-offset:-2px}tbody td.observation{width:38%;min-width:140px;line-height:1.65}
+.score{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:650}
+.tag{display:inline-block;font-size:10px;line-height:1.5;padding:3px 7px;border-radius:5px;
+background:#eef3f6;color:#516a7f;white-space:nowrap}.tag.support{background:#e9f4ee;color:#28654d}
+.tag.counter{background:#fff0d6;color:#82541b}.decision-panel{position:sticky;top:20px}
+.decision-panel .card{padding:22px;border-top:3px solid var(--teal)}
+.decision-panel .section-heading{margin-bottom:12px}.decision-panel .hint{margin-bottom:0}
+fieldset{border:0;padding:0;margin:22px 0 20px;min-width:0}legend{font-size:12px;
+font-weight:700;margin-bottom:10px;padding:0}.choices{display:grid;gap:8px}
+.choices label{display:flex;align-items:center;gap:11px;border:1px solid #d3dee5;
+border-radius:8px;padding:12px;cursor:pointer;background:#fff}
+.choices label:hover{border-color:#82aaa2;background:#f8fbfa}
+.choices label:has(input:checked){border-color:var(--teal);background:#eef7f3;
+box-shadow:inset 0 0 0 1px var(--teal)}.choices input{accent-color:var(--teal);width:16px;
+height:16px;flex-shrink:0;margin:0}.choices b{display:block;font-size:12px;line-height:1.3}
+.choices small{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.form-field{margin-top:17px}.form-field>label{display:block;font-size:12px;font-weight:700}
+.form-field label span{color:#a45722}.field-help{font-size:11px;color:var(--muted);
+margin:5px 0 8px;line-height:1.5}textarea{width:100%;min-height:105px;border:1px solid #b8c8d3;
+border-radius:7px;padding:11px 12px;resize:vertical;background:#fcfdfd;color:var(--ink);
+font-size:13px;line-height:1.65}textarea::placeholder{color:#687b8b}
+.decision-next{display:flex;align-items:flex-start;gap:9px;padding:17px 0}
+.step-dot{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;
+background:#edf3f5;color:#607587;font-size:10px;flex-shrink:0}
+.decision-next p{font-size:11px;line-height:1.65;margin:0;color:var(--muted)}
+.decision-next strong{font-weight:600;color:#354f64}.form-disclosure{font-size:10px;
+text-align:center;margin:12px 0 0;color:var(--muted)}
+@supports selector(:has(*)){
+.decision-form:not(:has(input[value="edit"]:checked)) .revision-field{display:none}}
+.result{padding:18px;border:1px solid #bcd9ce;background:#eff8f3;border-radius:9px;
+overflow-wrap:anywhere}.result-label{font-size:10px;letter-spacing:.7px;text-transform:uppercase;
+color:#356b55;font-weight:700}.result h3{margin-top:8px;font-size:17px;color:#28563f}
+.review-details{margin:18px 0 0}.review-details dt{font-size:11px;color:var(--muted);
+font-weight:650;margin-top:15px}.review-details dd{margin:4px 0 0;font-size:13px;
+white-space:pre-wrap;overflow-wrap:anywhere}.result+.hint{margin-top:14px}
+.audit-card{padding:0;box-shadow:none}.audit-card summary{cursor:pointer;padding:17px 22px;
+font-size:12px;font-weight:650;color:#496076;min-height:52px}
+.audit-content{padding:0 22px 22px}.audit-content h3{font-size:14px;margin:12px 0}
+.audit-content p{font-size:12px}.audit-content td{overflow-wrap:anywhere}
+.confirm-shell{max-width:780px;margin:0 auto}.confirm-shell .card{padding:28px}
+.confirm-shell h1{margin-bottom:10px}.confirm-heading{margin:28px 0 22px}
+.confirm-heading p{font-size:14px;color:var(--muted)}.confirm-status{display:inline-block;
+font-size:11px;font-weight:650;padding:4px 9px;border-radius:5px;background:#fff3df;color:#835717;
+margin-bottom:12px}.confirmation-note{border:1px solid #d5e4e5;background:#f2f7f7;
+border-radius:8px;font-size:12px;padding:14px 16px;margin:24px 0;line-height:1.7}
+.confirm-shell .toolbar{padding-top:20px;border-top:1px solid var(--line)}
+section,aside,[id^="evidence-"]{scroll-margin-top:24px}
+@media(min-width:1021px) and (max-height:780px){.decision-panel{position:static}}
+@media(max-width:1200px){main{padding:0 24px 40px}.workspace-grid{
+grid-template-columns:minmax(0,1fr) 335px;gap:18px}.card{padding:20px}
+.step-nav a{padding:7px}.trend{grid-template-columns:130px minmax(0,1fr) 38px;gap:10px}}
+@media(max-width:1020px){.workspace-grid{grid-template-columns:minmax(0,1fr)}
+.decision-panel{position:static}.page-heading{display:block}.step-nav{margin:5px 0 16px}
+.decision-panel .card{padding:24px}.choices{grid-template-columns:repeat(3,minmax(0,1fr))}
+.decision-form .form-field{max-width:none}.case-strip{gap:20px}.metrics{gap:15px}
+.metric{padding-left:17px;min-width:75px}}
+@media(max-width:640px){:root{font-size:14px}main{padding:0 16px 30px}.topbar{min-height:76px;
+flex-wrap:wrap;gap:16px;padding:18px 0;margin-bottom:22px}.topbar>.toolbar{width:100%}
+.topbar>.toolbar form{flex:1}.topbar>.toolbar button{width:100%;padding:10px 9px;font-size:11px}
+h1{font-size:27px}.page-heading p{font-size:13px}.step-nav{justify-content:space-between;gap:2px}
+.step-nav a{font-size:11px;padding:6px}.demo-notice{align-items:flex-start;padding:11px;
+font-size:11px;gap:8px}.demo-notice .notice-label{display:block;margin-bottom:3px}
+.notice-icon{width:20px;height:20px;font-size:10px;margin-top:1px}.mode-line{margin-top:4px}
+.case-strip{display:block;padding:18px}.metrics{margin-top:19px;padding-top:16px;
+border-top:1px solid #405671;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.metric{min-width:0;padding:0 7px;border:0}.metric:first-child{padding-left:0}
+.metric strong{font-size:24px}.metric span{font-size:10px}.card{padding:18px}
+.section-heading{align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:15px}
+h2{font-size:17px}.section-number{width:23px;height:23px}.status{font-size:10px}
+.finding{padding:15px}.finding p{font-size:15px}.counter-note{padding:15px}
+.teacher-question p{font-size:13px}.citations{margin-top:16px}.citation-row>span{width:100%}
+.trend{grid-template-columns:112px minmax(0,1fr) 34px;gap:8px;padding:8px 0}
+.trend-label{font-size:11px}.trend-label small{font-size:9px}.trend strong{font-size:11px}
+.evidence-table,.evidence-table tbody{display:block}.evidence-table thead{position:absolute;
+width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.evidence-table caption{display:block}.evidence-table tr{display:grid;
+grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:8px;
+margin:0 0 12px;padding:10px;background:#fff}.evidence-table tr.counter{background:#fffbf3}
+.evidence-table th[scope="row"],.evidence-table td{display:block;padding:5px 7px;border:0;
+min-width:0;width:auto;font-size:12px}.evidence-table [data-label]::before{
+content:attr(data-label);display:block;font-size:10px;color:var(--muted);font-weight:500;
+margin-bottom:3px}.evidence-table td.observation{grid-column:1/-1;min-width:0;width:auto}
+.evidence-table td:last-child{grid-column:1/-1}.evidence-table .tag{font-size:10px}
+.decision-panel .card{padding:18px}.choices{grid-template-columns:minmax(0,1fr)}
+.choices label{min-height:64px}.choices b{font-size:13px}.choices small{font-size:12px}
+textarea{font-size:16px}.decision-form .full-width{font-size:14px;min-height:48px}
+.confirm-shell .card{padding:20px}.confirm-shell .toolbar,.confirm-shell .toolbar form{
+width:100%}.confirm-shell .toolbar button{width:100%}.review-details dd{font-size:14px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+@media print{body{background:#fff}main{padding:0;max-width:none}.topbar .toolbar,.step-nav,
+.skip-link,.decision-form{display:none}.workspace-grid{display:block}.decision-panel{
+position:static}.card{box-shadow:none;break-inside:avoid;margin-bottom:16px}.case-strip{
+background:white;color:#183049;border:1px solid #ccd6dd}.learner h2,.learner p,.metric span{
+color:#183049}.evidence-link{color:#183049}a{text-decoration:none}}
 """
 
 
 def _document(title: str, content: str) -> str:
     return (
-        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<!doctype html><html lang="en-GB"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<meta name="referrer" content="no-referrer">'
+        '<meta name="referrer" content="same-origin">'
         f'<title>{h(title)}</title><style>{CSS}</style></head>'
-        f'<body><main>{content}</main></body></html>'
+        '<body><a class="skip-link" href="#main-content">Skip to review content</a>'
+        f'<main id="main-content">{content}</main></body></html>'
     )
 
 
 def render_portal(case: Case, token: str, *, message: str = "", error: str = "") -> str:
-    """Responsive, self-contained, escaped teacher workflow page."""
+    """Render the evidence and review controls without changing application state."""
     current = case.state.review_candidate(case.candidate["review_id"])
     pending = len(case.state.pending_reviews())
     reviews = len(case.state.teacher_reviews())
@@ -249,55 +438,80 @@ def render_portal(case: Case, token: str, *, message: str = "", error: str = "")
     notification = f'<div class="flash" role="status">{h(message)}</div>' if message else ""
     problem = f'<div class="error" role="alert">{h(error)}</div>' if error else ""
     tool_count = len(case.state.tool_calls())
-    content = f'''<header><div class="eyebrow">MwalimuLens · Teacher workspace</div>
-<h1>Learner Progress Review</h1><p>Explore evidence across school terms, weigh uncertainty,
-and make a considered decision. The agent proposes; the teacher decides.</p>
+    record_count = len(case.evidence)
+    term_count = len({row["term_id"] for row in case.evidence})
+    support = _evidence_links(current["supporting_evidence_ids"])
+    counter = _evidence_links(current["counter_evidence_ids"], counter=True)
+    content = f'''<header class="topbar">{_brand()}
 <div class="toolbar"><form method="post" action="/case/start">
 <input type="hidden" name="csrf" value="{h(token)}">
 <input type="hidden" name="mode" value="seeded">
-<button class="light">New practice case</button></form>
+<button type="submit"><span aria-hidden="true">+</span> New practice case</button></form>
 <form method="post" action="/case/start">
 <input type="hidden" name="csrf" value="{h(token)}">
 <input type="hidden" name="mode" value="mcp">
-<button class="light">Run MCP evidence analysis</button>
-</form></div></header>
-<div class="notice"><strong>Demonstration environment:</strong> fictional learner evidence only.
-Reviewer identity is simulated, not authenticated. This runs locally on your computer,
-not as a public school service. <strong>{h(mode)}.</strong></div>
-{notification}{problem}
-<div class="metrics"><div class="metric"><strong>{pending}</strong>
-<span>Awaiting review</span></div>
+<button class="primary" type="submit">Run MCP evidence analysis
+<span aria-hidden="true">→</span></button></form></div></header>
+<div class="page-heading"><div><div class="eyebrow">Evidence-led teacher review</div>
+<h1>Learner Progress Review</h1>
+<p>Review the records, consider the uncertainty and decide what to retain.</p></div>
+<nav class="step-nav" aria-label="Review sections">
+<a href="#summary"><span>1</span> Summary</a>
+<a href="#evidence"><span>2</span> Evidence</a>
+<a href="#decision"><span>3</span> Decision</a></nav></div>
+<div class="demo-notice"><span class="notice-icon" aria-hidden="true">i</span>
+<p><strong class="notice-label">Demonstration environment:</strong> fictional learner evidence only.
+Reviewer identity is simulated, not authenticated.<span class="mode-line">{h(mode)}.</span></p>
+</div>{notification}{problem}
+<section class="case-strip" aria-label="Current learner and review status">
+<div class="learner"><span class="avatar" aria-hidden="true">A</span><div>
+<h2>Amani <span>(fictional)</span></h2><p>Mathematics · Fractions</p></div></div>
+<div class="metrics">
+<div class="metric"><strong>{pending}</strong><span>Awaiting review</span></div>
 <div class="metric"><strong>{reviews}</strong><span>Teacher decisions (simulated)</span></div>
 <div class="metric"><strong>{updates}</strong><span>Synthetic profile notes</span></div></div>
-<div class="grid"><section class="card"><h2>Evidence summary</h2>
-<p class="hint">Learner: Amani (fictional) · Mathematics · Fractions</p>
-<span class="status{status_class}">{h(status)}</span>
-<div class="summary"><h3>Provisional finding</h3><p>{h(current["claim"])}</p></div>
-<div class="counter-note"><b>What still needs attention</b>
-<p>{h(current["uncertainty"])}</p><p><b>Teacher question:</b>
-{h(current["suggested_teacher_question"])}</p></div>
-<p class="hint">Evidence supporting the finding: 
-{h(', '.join(current['supporting_evidence_ids']))}<br>
-Contradictory evidence: {h(', '.join(current['counter_evidence_ids']))}</p></section>
-<section class="card"><h2>Progress across terms</h2>
-<p class="hint">Scores describe assessed tasks, not a permanent ability label.</p>
-{_trend(case)}<p class="hint">Quantitative progress must be interpreted alongside
-classroom observations and practical work.</p></section></div>
-<section class="card"><h2>Evidence record</h2><p class="hint">Chronological records,
-including contradictory observations.</p><div class="table-wrap"><table>
-<thead><tr><th>ID</th><th>Term</th><th>Type</th><th>Score</th><th>Observation</th>
-<th>Role</th></tr></thead><tbody>{_evidence(case)}</tbody></table></div></section>
-<section class="card"><h2>Teacher's decision</h2>
+</section><div class="workspace-grid"><div class="analysis-column">
+<section id="summary" class="card" aria-labelledby="summary-title">
+<div class="section-heading"><h2 id="summary-title"><span class="section-number"
+aria-hidden="true">01</span> Evidence summary</h2>
+<span class="status{status_class}">{h(status)}</span></div>
+<div class="finding"><h3>Provisional finding</h3><p>{h(current["claim"])}</p></div>
+<div class="counter-note"><h3>What still needs attention</h3>
+<p>{h(current["uncertainty"])}</p></div>
+<div class="teacher-question"><h3>Teacher question</h3>
+<p>{h(current["suggested_teacher_question"])}</p></div>
+<div class="citations"><div class="citation-row"><span>Supporting evidence</span>{support}</div>
+<div class="citation-row"><span>Counter-evidence</span>{counter}</div></div></section>
+<section class="card" aria-labelledby="progress-title"><div class="section-heading">
+<h2 id="progress-title">Progress across terms</h2><span class="subtle">{term_count} terms</span>
+</div><p class="hint trend-note">Scores describe assessed tasks, not a permanent ability label.</p>
+<div class="legend" aria-label="Score types"><span><i aria-hidden="true"></i>Assessment</span>
+<span><i class="practical" aria-hidden="true"></i>Practical task</span></div>
+{_trend(case)}<p class="hint chart-note">Read each score alongside its task and classroom
+observations. Different tasks are not necessarily directly comparable.</p></section>
+<section id="evidence" class="card" aria-labelledby="evidence-title">
+<div class="section-heading"><h2 id="evidence-title"><span class="section-number"
+aria-hidden="true">02</span> Evidence record</h2>
+<span class="subtle">{record_count} records · {term_count} terms</span></div>
+<div class="table-wrap"><table class="evidence-table">
+<caption>Chronological records, including contradictory observations.</caption>
+<thead><tr><th scope="col">ID</th><th scope="col">Term</th><th scope="col">Type</th>
+<th scope="col">Score</th><th scope="col">Observation</th><th scope="col">Role</th></tr></thead>
+<tbody>{_evidence(case)}</tbody></table></div></section>
+<section class="card audit-card"><details><summary>Technical evidence and audit trail</summary>
+<div class="audit-content"><h3>Separate local-model validation</h3>{_model_validation()}
+<p class="hint">{h(mode)}. {tool_count} audited action(s). The human-review service
+is not exposed to the model's MCP tool allowlist.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Technical audit records">
+<table><caption class="sr-only">Audited actions for this case</caption><thead><tr>
+<th scope="col">Action</th><th scope="col">Result</th><th scope="col">Timestamp</th>
+</tr></thead><tbody>{_audit(case)}</tbody></table></div></div></details></section></div>
+<aside id="decision" class="decision-panel" aria-labelledby="decision-title"><section class="card">
+<div class="section-heading"><h2 id="decision-title"><span class="section-number"
+aria-hidden="true">03</span> Teacher's decision</h2></div>
 <p class="hint">Review the evidence before recording a decision.
-The model cannot approve its own candidate.</p>{_review_form(case, token)}</section>
-<section class="card"><details><summary>Technical evidence and audit trail</summary>
-<h3>Separate local-model validation</h3>{_model_validation()}
-<p class="hint">{h(mode)}. {tool_count} audited action(s). The human-review
-service is not exposed to the model's MCP tool allowlist.</p>
-<div class="table-wrap"><table><thead><tr><th>Action</th><th>Result</th><th>Timestamp</th>
-</tr></thead><tbody>{_audit(case)}</tbody></table></div></details></section>
-<footer>Offline-friendly local application · no external assets · synthetic learner data only.
-Original challenge evidence and published video remain unchanged.</footer>'''
+The model cannot approve its own candidate.</p>
+{_review_form(case, token)}</section></aside></div>'''
     return _document("MwalimuLens | Learner Progress Review", content)
 
 
@@ -306,20 +520,29 @@ def render_confirmation(case: Case, token: str, nonce: str, decision: str,
     outcome = "No profile note will be created." if decision == "reject" else (
         "One synthetic profile note will be created after this simulated human decision."
     )
-    content = f'''<header><div class="eyebrow">MwalimuLens · Human review</div>
-<h1>Confirm your decision</h1><p>Check the decision and rationale before
-recording them in the local audit trail.</p></header>
-<section class="card"><h2>{h(decision.title())} this finding?</h2>
-<p><b>Provisional finding:</b> {h(case.candidate['claim'])}</p>
-<p><b>Your rationale:</b> {h(reason)}</p>
-{f'<p><b>Revised wording:</b> {h(edited)}</p>' if decision == 'edit' else ''}
-<p class="notice">{h(outcome)} The reviewer is simulated and not authenticated.</p>
+    label = {"approve": "Approve", "edit": "Revise", "reject": "Reject"}.get(
+        decision, decision.title(),
+    )
+    revised = (
+        f'<dt>Revised wording</dt><dd>{h(edited)}</dd>' if decision == "edit" else ""
+    )
+    content = f'''<header class="topbar">{_brand()}
+<a class="button" href="/">← Back to evidence</a></header>
+<div class="confirm-shell"><div class="confirm-heading">
+<div class="eyebrow">Human review · confirmation</div><h1>Confirm your decision</h1>
+<p>Check the finding and your rationale before recording the decision.</p></div>
+<section class="card" aria-labelledby="confirmation-title">
+<span class="confirm-status">Not saved yet</span>
+<h2 id="confirmation-title">{h(label)} this finding?</h2>
+<dl class="review-details"><dt>Provisional finding</dt><dd>{h(case.candidate['claim'])}</dd>
+<dt>Your rationale</dt><dd>{h(reason)}</dd>{revised}</dl>
+<p class="confirmation-note">{h(outcome)} The reviewer is simulated and not authenticated.</p>
 <div class="toolbar"><form method="post" action="/review/submit">
 <input type="hidden" name="csrf" value="{h(token)}">
 <input type="hidden" name="nonce" value="{h(nonce)}">
-<button class="primary">Confirm simulated decision</button></form>
-<form method="get" action="/"><button>Go back without saving</button></form></div>
-</section>'''
+<button class="primary" type="submit">Confirm simulated decision</button></form>
+<a class="button" href="/">Go back without saving</a></div>
+</section></div>'''
     return _document("MwalimuLens | Confirm review", content)
 
 class TeacherPortal:
@@ -372,7 +595,7 @@ def make_handler(portal: TeacherPortal):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("X-Frame-Options", "DENY")
-            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Referrer-Policy", "same-origin")
             self.send_header("Content-Security-Policy",
                              "default-src 'none'; style-src 'unsafe-inline'; "
                              "form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
@@ -417,11 +640,14 @@ def make_handler(portal: TeacherPortal):
         def do_GET(self) -> None:
             if not self._trusted():
                 return
-            if self.path == "/favicon.ico":
+            # A browser may include an empty query when submitting a GET form.
+            # Ignore query text for read-only routes; POST routing stays exact.
+            path = self.path.partition("?")[0]
+            if path == "/favicon.ico":
                 self.send_response(204)
                 self.end_headers()
                 return
-            if self.path != "/":
+            if path != "/":
                 self.send_error(404)
                 return
             with portal.lock:
