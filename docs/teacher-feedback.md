@@ -20,7 +20,7 @@ live Qwen inference. The prototype is not approved for classroom deployment.
 1. Ask the practitioner to describe the learner's apparent progress in their own words.
 2. Ask which evidence supports the candidate and which evidence challenges it.
 3. Ask whether the uncertainty and suggested teacher question are useful.
-4. Demonstrate approve, edit and reject in **separate disposable sandbox runs**.
+4. Demonstrate **Approve**, **Revise** and **Reject** in separate disposable browser cases.
 5. Ask what evidence or safeguards would be needed before using this workflow in practice.
 
 Do not coach the participant towards approving a candidate. Record what they actually

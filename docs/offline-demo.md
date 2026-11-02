@@ -3,6 +3,10 @@
 **Purpose:** prepare a robust, honest presentation on the CPU-only Windows laptop.
 This checklist is not proof that a full offline rehearsal has already passed.
 
+**Status, 2 November 2026:** operator browser checks and an automated preflight PASS
+are recorded in the [release evidence](release-status.md). Connectivity-off observations
+are still outstanding. A normal browser walkthrough does not complete this checklist.
+
 ## Before travel (while connected)
 
 Verify the local environment and required dependencies:
@@ -11,12 +15,14 @@ Verify the local environment and required dependencies:
 .\.venv\Scripts\python.exe --version
 node --version
 npm --version
-ollama list
 Test-Path 'node_modules\@modelcontextprotocol\server-filesystem\dist\index.js'
 ```
 
-The required Qwen model should be `qwen2.5:3b`. Download or install any missing
-software **before** the offline rehearsal. Never put credentials or real learner data
+Install Python and Node prerequisites using the [README](../README.md#getting-started)
+**before** the offline rehearsal. The seeded interface and deterministic MCP workflow do
+not require Ollama. If a separately planned real-model check is included, confirm local
+Ollama and `qwen2.5:3b` availability beforehand with `ollama list`.
+Never put credentials or real learner data
 in the demonstration repository.
 
 ## Automated local preflight
@@ -24,12 +30,13 @@ in the demonstration repository.
 Run the following with the local environment prepared:
 
 ```powershell
-.\.venv\Scripts\python.exe -m mwalimulens.offline_preflight --run-mcp --check-model
+.\.venv\Scripts\python.exe -m mwalimulens.offline_preflight --run-mcp --output-dir 'D:\ML-runtime\preflight'
 ```
 
 The preflight checks installed Python/Node components, synthetic fixtures, the borrowed
-Filesystem MCP, a real fast MCP task and whether the local Ollama model is available.
-It writes a JSON report under `runtime/offline_preflight/`. A result of
+Filesystem MCP and a real fast deterministic MCP task. Add `--check-model` only when
+local model availability is part of the plan; that checks availability, not inference.
+It writes a JSON report in a fresh directory under the selected output path. A result of
 `automated_pass` means only the **automated** checks passed; it does not prove that
 Wi-Fi was disconnected or that a real Qwen inference completed. A failure is retained
 and reported rather than silently bypassed.
@@ -37,11 +44,11 @@ and reported rather than silently bypassed.
 ## Offline test (disconnect Wi-Fi)
 
 1. Disconnect the laptop from Wi-Fi and any other internet connection.
-2. Start the local Ollama service if it is not already running.
+2. Confirm the installed dependencies and short runtime directories are available locally.
 3. In PowerShell, launch the teacher workspace:
 
    ```powershell
-   .\.venv\Scripts\python.exe -m mwalimulens.teacher_portal
+   .\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --output-dir 'D:\ML-runtime\portal'
    ```
 
 4. Confirm the default seeded fictional case loads and remains usable without internet.
@@ -54,9 +61,10 @@ and reported rather than silently bypassed.
 8. Start a fresh case and choose **Reject**. Confirm that no profile note is created.
 9. Repeat the full workflow in a narrow browser window, checking that evidence and
    action buttons remain readable. Keep the technical audit collapsed until needed.
-10. Separately run a real Qwen task, if the laptop can complete it within the rehearsal
-    time, and report its actual execution time and outcome. Never call the deterministic
-    browser run a live Qwen inference.
+10. Record the commit, environment, date, actual connectivity state and each observed
+    result. If real Qwen inference is separately authorised within explicit bounds, record
+    its duration and outcome independently. It is not required to establish the seeded
+    and deterministic MCP interface observations.
 
 ## Fallback and stage delivery
 
@@ -73,6 +81,9 @@ show the separately recorded Qwen results with their exact provenance. Do not hi
 failed model attempts or claim real-school validation.
 
 ## Rehearsal record
+
+All Pending entries below refer specifically to the disconnected-network rehearsal,
+not to the completed connected browser checks. Do not fill them from automated PASS.
 
 | Gate | Observed result | Date |
 |---|---|---|

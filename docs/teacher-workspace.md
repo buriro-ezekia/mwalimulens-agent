@@ -1,19 +1,30 @@
-# MwalimuLens teacher workspace
+# MwalimuLens Learner Progress Review
 
 The teacher workspace brings longitudinal evidence review, a human decision and the resulting
 local audit trail into one responsive browser interface. It uses fictional learner records
 and keeps experimental state separate from the original published evidence.
+
+The integrated interface provides **Summary**, **Evidence** and **Decision** section links,
+evidence IDs that lead to their source rows, separate assessment/practical-task labels and a
+dedicated decision panel. Unscored observations remain visible without becoming zero scores.
+Scores from different tasks are not necessarily directly comparable. The narrow-screen layout
+keeps record labels and actions readable; the technical audit is expandable.
+
+The [release record](release-status.md) identifies the integrated commit, completed operator
+browser checks and remaining release gates.
 
 ## Start on Windows
 
 From the `product-development` branch, with the project's virtual environment installed:
 
 ```powershell
-.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --output-dir 'D:\ML-runtime\portal'
 ```
 
 The command opens a local browser page at an ephemeral `127.0.0.1` port. No external website,
 CDN or internet connection is needed for the interface. Press `Ctrl+C` in PowerShell to stop it.
+Use a short output path on Windows to avoid deeply nested runtime directories. Install Python
+and Node dependencies first, using the [README setup instructions](../README.md#getting-started).
 
 The first page uses a **seeded fictional candidate**. This makes the teacher workflow usable
 without starting the model or MCP clients. It does **not** demonstrate a new model inference.
@@ -30,7 +41,8 @@ It does **not** run Qwen inference. The separate committed real Qwen evidence re
 2. Choose **Approve**, **Revise** or **Reject**.
 3. Enter a reason, and revised wording if you selected Revise.
 4. Select **Review decision** to inspect the confirmation page. Nothing is saved yet.
-5. Select **Confirm simulated decision** to record the outcome. You may go back instead.
+5. Select **Confirm simulated decision** to record the outcome, or **Go back without saving**
+   to return to the evidence without recording a decision or profile note.
 6. Inspect the updated status, synthetic profile-note count and expandable audit trail.
 7. Use **New practice case** or **Run MCP evidence analysis** to start a separate fresh case.
 
@@ -60,16 +72,24 @@ The workspace is a **single-user demonstration**, not a production teacher porta
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q tests/test_teacher_portal.py
+.\.venv\Scripts\python.exe -m pytest -q tests/test_teacher_portal_layout.py tests/test_teacher_portal_navigation.py
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m ruff check .
 git status --short
 ```
 
-The first command exercises HTTP request boundaries, simulated review decisions, cancellation,
+The portal tests exercise HTTP request boundaries, simulated review decisions, cancellation,
 CSRF protection, input validation, HTML escaping, duplicate submissions and case isolation.
-The full tests and Ruff must pass on the target Windows environment before this is treated as
-ready for a verified product demonstration. Review the interface manually at normal browser zoom and on a narrow
-viewport. Keep the development PR in draft until that verification is complete.
+The layout/navigation tests also cover evidence links, preserved disclosures, read-only GET
+queries, exact POST routes and return without saving. They do not establish visual usability
+or educational quality.
+
+Operator screenshots/reports after the UI corrections cover the seeded and genuine deterministic
+MCP workflows, all three decisions, cancellation and narrow-screen presentation. The integrated
+commit also has hosted quality success. Those observations are recorded in the release record;
+they are not pending checks for the already integrated UI. For future behaviour changes, repeat
+the relevant browser checks on the intended device. The separate promotion review, PR #31,
+remains draft pending its remaining release gates.
 
 ## Educational usability and impact
 
@@ -83,7 +103,8 @@ cross-school generalisability is claimed until it has been evaluated.
 
 ## Outstanding verification gates
 
-The next steps are repeated real Qwen2.5 3B evaluation, practitioner feedback using fictional
-cases, and an offline presentation rehearsal. Before any real learner pilot, verified teacher
+The connectivity-off presentation rehearsal remains outstanding. Consistent real Qwen judgement
+and practitioner feedback using fictional cases are also unestablished; any new inference
+campaign requires separately authorised bounds. Before any real learner pilot, verified teacher
 authentication, role-based access, privacy safeguards, data retention and appropriate school
 approval are required.

@@ -13,6 +13,13 @@ Qwen model and the custom Education MCP. It reports all outcomes, including fail
 This first benchmark does **not** cover multiple learners, curricula, languages or schools.
 Those remain separate research and validation tasks.
 
+The implemented [four-scenario evaluator](multi-scenario-evaluation.md) is a separate
+workflow for longitudinal patterns, conflicting evidence, a single assessment and missing
+competency evidence. Recorded live attempts have varied and include failures. A consistent
+four-case pass and educational semantic reliability remain unestablished. See the
+[release record](release-status.md) for the distinction between historical model evidence,
+the completed native schema-compatibility observation and current software verification.
+
 ## Run on Windows
 
 From the `product-development` branch, after starting Ollama and confirming
@@ -64,7 +71,8 @@ use mock subprocess results; they do **not** demonstrate live Qwen reliability.
 .\.venv\Scripts\python.exe -m ruff check .
 ```
 
-For a stronger study, extend the evaluation contract to additional fictional learner
-scenarios with scenario-specific expected outcomes, including appropriate abstention.
-The current `open_weights_run` validator is tied to L001 / MATH-FRACTIONS, so simply
-changing the prompt would not produce a valid multi-scenario evaluation.
+The single-task `open_weights_run` validator remains tied to L001 / MATH-FRACTIONS;
+simply changing its prompt would not produce a valid multi-scenario evaluation. Use the
+separate scenario-specific evaluator for that purpose, preserving its expected outcomes
+and failures. Any further live campaign requires separately authorised bounds. Passing
+software tests or the one-request schema probe does not supply a new model success rate.

@@ -16,14 +16,23 @@ python -m ruff check .
 ```
 
 The `npm ci` step installs the pinned official Filesystem MCP server. This
-pipeline is designed to verify the 367-test repository baseline and linting;
-the number of tests may change as the product develops.
+pipeline runs the complete suite collected from its checked-out commit and Ruff.
+The integrated UI baseline has 727 operator-reported local passes. GitHub reports
+`ci/circleci: quality` success for integrated commit
+`b61666d4b04074b9a538881f7e09401150f73f82` at
+[CircleCI #118](https://circleci.com/gh/buriro-ezekia/mwalimulens-agent/118).
+The [release record](release-status.md) separates this hosted status from local
+test counts and earlier results. Test totals may change as the product develops.
 
 The job is deliberately **not** a live Qwen/Ollama benchmark, a classroom
 validation, a hosted product deployment or proof that the Windows recording
 workflow works. It runs in a Linux container with no Ollama or OBS service.
 
-## Enable CircleCI
+## Configuration and trigger checks
+
+CircleCI is already configured for this repository. The setup steps below are
+reference instructions for restoring a missing connection; do not create a
+duplicate project to repeat a completed quality run.
 
 1. Sign in at https://app.circleci.com/ and connect your GitHub account.
 2. Add the `buriro-ezekia/mwalimulens-agent` repository as a CircleCI project.
@@ -37,6 +46,11 @@ workflow works. It runs in a Linux container with no Ollama or OBS service.
 GitHub App and OAuth projects may use slightly different configuration and
 trigger screens. Follow CircleCI's repository onboarding rather than
 creating a second or duplicated configuration file.
+
+A successful GitHub commit status establishes the reported job outcome, not
+whether its event was a repository push or a manual/API trigger. Inspect the
+pipeline event before claiming automatic push-trigger configuration. Check each
+new commit independently; an earlier passing job is not evidence for a later head.
 
 ## Local parity
 

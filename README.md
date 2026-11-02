@@ -13,6 +13,10 @@ Development continues as a local prototype using fictional learner records. It i
 not a validated school information system, and its reviewer identity is simulated
 rather than authenticated.
 
+The [development release record](docs/release-status.md) identifies the integrated
+UI baseline, verification evidence and outstanding release gates. Development
+continues on `product-development`; promotion to `main` remains under draft review.
+
 ## What the workspace provides
 
 The Learner Progress Review workspace presents the current finding, its supporting

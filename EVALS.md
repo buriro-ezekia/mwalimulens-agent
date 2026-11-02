@@ -1,7 +1,14 @@
-# EVALS — MwalimuLens reliability evaluation
+# EVALS — MwalimuLens challenge evaluation
 
 This evaluation set exercises the **Education — The Long View / longitudinal strength tracking**
 workflow using committed synthetic data and real run evidence.
+
+This is the original 13-case challenge contract. Its recorded model result and
+historical failures are preserved; replaying the suite does not perform fresh Qwen
+inference. Current UI verification and release gates are recorded separately in
+[development release status](docs/release-status.md). The later
+[four-scenario evaluator](docs/multi-scenario-evaluation.md) and
+[structured workflow](docs/structured-review-contract.md) have separate reports.
 
 The suite deliberately distinguishes:
 
@@ -54,8 +61,9 @@ Promote only a healthy run:
 E12 and E13 are intentionally still marked **FAIL**. They are not rewritten as passes after the
 subsequent fixes. Their purpose is to show run variation and the failure-driven development path.
 
-The current successful Qwen run is E11. It demonstrates that the later implementation corrected
-the workflow while the earlier failures remain inspectable under `evidence/failures/`.
+The recorded successful Qwen challenge task is E11. It shows one completed workflow
+at the original evidence snapshot, while earlier failures remain inspectable under
+`evidence/failures/`. It is not a current multi-scenario reliability estimate.
 
 ## Promoted evidence
 
@@ -67,5 +75,9 @@ This suite uses synthetic learner data and a small number of longitudinal cases.
 challenge workflow, evidence integrity and safety boundaries; it does **not** establish educational
 validity across real schools, languages, curricula or learner populations.
 
-The real-model evidence currently contains one passing Qwen2.5 3B challenge task plus preserved
-failed runs. Broader repeated-model evaluation remains future work.
+The promoted real-model evidence contains one passing Qwen2.5 3B challenge task plus
+preserved failed runs. Later development includes repeatability and four-scenario
+harnesses and recorded live failures; a consistent four-case pass and semantic quality
+remain unestablished. The native outcome-schema compatibility observation returned a
+valid abstention with submission disabled. It does not replace E11, establish educational
+correctness or regrade any historical result.

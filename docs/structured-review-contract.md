@@ -60,8 +60,11 @@ The schema, validators, submission limits, execution budgets, teacher authority
 and evaluation rubric are unchanged. A valid abstention still ends the decision
 step immediately, regardless of its wording or the evaluator's expected outcome.
 Mocked regression tests protect these contracts and reporting provenance; they
-cannot establish improved live-model judgement. No live result exists for this
-policy revision yet.
+cannot establish improved live-model judgement. A later decision-only native
+Ollama probe with this policy and opt-in `review_decision_outcome_v2` returned
+a schema- and runtime-valid abstention. Submission was disabled. This is observed
+provider compatibility, not a passing candidate workflow or verified educational
+interpretation; see the [release evidence](release-status.md).
 
 ## Honest provenance and evaluation
 
@@ -124,7 +127,7 @@ a deadline could skip final reports or be swallowed. The corrections declare
 cancellation after timeout cleanup. Six added regression cases reproduced the
 path and cancellation defects before correction.
 
-On the corrected code, Ruff and `pip check` passed, the focused contract/MCP/
+At that earlier correction stage, Ruff and `pip check` passed, the focused contract/MCP/
 cleanup suite passed 45 tests, and the complete suite passed 539 tests. An earlier
 complete run had 532 passes and one `ConnectionAbortedError [WinError 10053]` in
 `test_nonexistent_route_does_not_mutate`; that test passed on focused retry and
@@ -132,12 +135,16 @@ in the final complete run without portal changes. Local tests used Python 3.14,
 PydanticAI 2.51.0, FastMCP 4.0.10, MCP 2.2.0 and HTTPX 0.28.1.
 
 These local results do not establish the cause of historical CircleCI failures
-#107/#108, whose failing logs were unavailable. Consult PR #33 for the current
-commit's hosted status. Live-model reliability, provider-side cancellation and
-semantic correctness remain unverified; no live Ollama/Qwen run was performed.
+#107/#108, whose failing logs were unavailable. These 539-test results are historical;
+consult the [release record](release-status.md) for the integrated UI baseline and
+its hosted status. No live Ollama/Qwen request was used for that engineering
+verification. The later single-request schema observation does not establish
+live-workflow reliability, provider-side cancellation or semantic correctness.
 
-Only after review and passing local/hosted checks, a single explicitly approved
-probe can be run with:
+The native outcome-schema compatibility observation is already recorded and need
+not be repeated for documentation reconciliation. If a further application-workflow
+probe is separately authorised after review and passing local/hosted checks, an
+example bounded single-scenario command is:
 
 ```powershell
 .\.venv\Scripts\python.exe -m mwalimulens.structured_review --timeout 600 --scenarios longitudinal-pattern

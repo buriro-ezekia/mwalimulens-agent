@@ -27,13 +27,13 @@ approval, revision and rejection decision to a human teacher.
 - The multi-scenario suite has four fictional cases:
   `longitudinal-pattern`, `conflicting-evidence`,
   `single-assessment`, `missing-competency`.
-- A completed live run reported **2/4**, with individual case durations
+- A historical completed live run reported **2/4**, with individual case durations
   187.95s, 311.06s, 134.88s and 23.93s respectively. Prior campaigns
   varied from 1/4 to 3/4. Historical failures must remain visible.
 - The model has at times falsely claimed that terms were missing, omitted
   tool arguments or counter-evidence, or attempted candidate actions with
   insufficient history.
-- Before further prompt tuning, inspect the latest local reports in
+- Before further prompt tuning, inspect the saved local reports in
   `runtime/multi_scenario/suite-1jy77zd1/`; they are **local runtime files**,
   not committed GitHub files. Use the no-rerun `--diagnose` CLI or read
   `result.json` and `report.json` for each case.
@@ -52,8 +52,11 @@ Use the repository virtual environment from PowerShell:
 ```
 
 - Review imports and run Ruff **before** invoking the expensive local model.
-- The last user-confirmed baseline was **422 tests passed**; new tests
-  should increase the count. Do not assume CI success on new commits.
+- The integrated UI baseline has **727 operator-reported tests passed**;
+  hosted quality also passed on `b61666d4b04074b9a538881f7e09401150f73f82`.
+  See `docs/release-status.md` for source commits, evidence scope and release gates.
+  New code requires appropriate regression coverage; documentation changes do not
+  require invented tests or an increased count. Do not assume CI success on new commits.
 - Keep tests self-contained; CI does not run live Ollama.
 - A successful live evaluation must report the exact per-scenario checks,
   candidate IDs, tools, errors, first-pass versus corrected outcomes and
