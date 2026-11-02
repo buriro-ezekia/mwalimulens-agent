@@ -1,9 +1,16 @@
 # Fictional multi-scenario Qwen evaluation
 
-This is a **new** product-evaluation workflow. It does not overwrite the
+This product-evaluation workflow does not overwrite the
 original single-task benchmark, the original submission or any files in
 `evidence/`. It uses the existing committed, explicitly fictional learners
 and evidence in `data/synthetic/`; no real pupil records are required.
+
+The [release record](release-status.md) separates current software verification
+from model evidence. The investigation sections below describe successive
+historical runs and engineering changes; each outcome belongs to its recorded
+suite and must not be treated as a new result on the integrated UI commit.
+A consistent four-case real Qwen pass and educational semantic reliability
+remain unestablished.
 
 ## Scenario matrix
 
@@ -230,8 +237,8 @@ Qwen can independently count terms or reason correctly. Recorded result
 files now include `evidence_preflight` and raw model reports include
 `candidate_action_available`. Historical failures remain untouched.
 
-The current real-model result is still **1/4 passing**. No claim of
-4/4 or improved generalisability should be made before a new run.
+At this historical stage, the recorded real-model result was **1/4 passing**.
+The safeguard itself supplies no new pass rate or improved generalisability.
 
 ## Grounding verification of explicit abstention claims
 
@@ -258,8 +265,8 @@ corrected outcomes.
 
 This verifier is intentionally narrow. It does not validate all possible
 natural-language claims or guarantee that a model's final interpretation
-is pedagogically sound. The last demonstrated real-model result remains
-**3/4** until a further local Qwen evaluation completes.
+is pedagogically sound. That historical campaign reported **3/4**; it does
+not establish a current four-case success rate.
 
 ## Duplicate candidate submission protection
 

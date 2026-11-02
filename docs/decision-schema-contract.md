@@ -64,9 +64,10 @@ record `decision_schema_id` and `decision_schema_sha256`, independently of
 Historical reports are not backfilled or regraded.
 
 This option is experimental. Do not run a live evaluation merely to test CLI
-help. A later separately authorised probe must identify the chosen contract and
-retain the unchanged source records and every failed attempt. It is not a repeat
-of the old A/B experiment because the format schema differs.
+help or repeat the completed compatibility observation. Any further separately
+authorised probe must identify the chosen contract and retain unchanged source
+records and every failed attempt. It is not a repeat of the old A/B experiment
+because the format schema differs.
 
 ## Verification and limitations
 
@@ -77,10 +78,18 @@ in-process server with mocked model responses and check application-issued
 submission, safety, cancellation, repair budgets and provenance. These are not
 live Qwen tests or educator validation.
 
-Compatibility with the user's installed native Ollama grammar converter remains
-unverified until an explicitly authorised probe or a matching converter-only
-check. A standards-valid schema and passing CI do not prove that this provider
-implements every constraint or that Qwen will choose a defensible outcome.
+One authorised native Ollama `review_decision_outcome_v2` request for
+`longitudinal-pattern` returned a schema- and runtime-valid abstention in
+102.326 seconds, without runtime error or termination. It was decision-only,
+with submission disabled, `application_workflow_test=false` and semantic quality
+unverified. The [release record](release-status.md) identifies the local case and
+the operator-reported evidence. No candidate submission or teacher decision was
+part of that observation, and the default remains `review_decision_v1`.
+
+This establishes observed compatibility for that request and provider instance.
+It does not demonstrate enforcement of every schema branch or constraint,
+consistent candidate generation, educational correctness or four-case reliability.
+Runtime validation remains authoritative even if a provider ignores a constraint.
 
 The JSON Schema combination reference describes `anyOf`; llama.cpp documents
 schema-conversion limits, including mixing alternatives with properties. Ollama

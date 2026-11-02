@@ -1,8 +1,8 @@
 # MwalimuLens product development and validation roadmap
 
-**Updated:** 26 October 2026  
-**Development branch:** `product-development`  
-**Original validated submission:** `6215b9efb79ffd022a835dabba386c5ccb8226e4`
+- **Updated:** 2 November 2026
+- **Development branch:** `product-development`
+- **Original validated submission:** `6215b9efb79ffd022a835dabba386c5ccb8226e4`
 
 ## Product goal
 
@@ -12,16 +12,19 @@ MwalimuLens helps educators interpret longitudinal learning evidence while reser
 
 The teacher-facing [Learner Progress Review](teacher-workspace.md) provides an assessment trend, chronological evidence, supporting and contradictory observations, uncertainty, an explicit review question and a browser-based human decision workflow. Approve, revise and reject decisions require confirmation and are persisted with the local audit record.
 
-The application supports a seeded fictional practice case and a separate deterministic workflow that makes real calls to the custom Education MCP and read-only Filesystem MCP. The deterministic workflow is not live Qwen inference. The separate Qwen2.5 3B evidence remains available as an independently validated model path.
+The application supports a seeded fictional practice case and a separate deterministic workflow that makes real calls to the custom Education MCP and read-only Filesystem MCP. The deterministic workflow is not live Qwen inference. The original Qwen2.5 3B challenge evidence remains a historical single-task result, separate from current model reliability.
+
+The integrated UI provides Summary, Evidence and Decision navigation, linked evidence records, separate assessment and practical-task score labels, a dedicated decision panel and narrow-screen presentation. Returning from confirmation without saving leaves the review and profile-note counts unchanged. The opt-in structured workflow and outcome-bound schema remain separate from the browser's deterministic analysis; the default schema is still `review_decision_v1`.
 
 The [model repeatability harness](model-reliability.md) records isolated attempts, timeouts, errors, tool traces and duration metrics. The [offline demonstration checks](offline-demo.md) cover local dependencies, MCP execution and manual network-disconnection rehearsal. A [teacher feedback protocol](teacher-feedback.md) supports exploratory usability assessment using synthetic data.
 
 ## Verified results and outstanding checks
 
-The latest locally reported development baseline is **367 pytest tests passed** and **Ruff: All checks passed**. Those results preceded the current naming-only cleanup and must be rechecked after it.
+The integrated UI baseline is `b61666d4b04074b9a538881f7e09401150f73f82`. The [release record](release-status.md) records **727 operator-reported local pytest passes**, local Ruff success and hosted CircleCI #118 success, with their exact scopes. It also identifies completed service/MCP acceptance and operator browser observations. Earlier 367/422-test figures are historical.
 
-- The browser workflow, evaluation harness and preflight modules are implemented.
-- Live repeated-Qwen reliability results on the target laptop remain outstanding; do not invent pass rates.
+- The browser workflow, evaluation harness and preflight modules are implemented; browser observations after the UI corrections are recorded as completed.
+- Real multi-scenario attempts and their failures are documented. A consistent four-scenario Qwen pass and educational semantic reliability remain unestablished.
+- One native Ollama outcome-schema probe returned a valid abstention. It establishes observed provider compatibility only, not a candidate workflow or educational correctness.
 - A manual disconnected-network rehearsal remains outstanding.
 - Teacher usability feedback and classroom impact have **not** been established.
 - Identity is simulated rather than authenticated; no real learner data, public write endpoint or multi-user school deployment is approved.
@@ -32,11 +35,11 @@ The latest locally reported development baseline is **367 pytest tests passed** 
 
 Provide a coherent teacher experience from retrieved evidence through review and audit. Display uncertainty and contradictory evidence prominently; keep technical details available on demand. Verify approve, revise and reject outcomes, duplicate rejection, cancellation, HTML safety and profile-note consequences.
 
-**Gate:** full pytest and Ruff pass; local browser review passes in seeded and real-MCP modes; no model-visible teacher-review tool.
+**Recorded status:** UI integration, software quality, operator functional acceptance and browser walkthroughs are recorded as completed. Preserve the human-only gate. Apply the [functional acceptance guide](functional-acceptance.md) to future behaviour changes rather than repeating completed execution for documentation reconciliation.
 
 ### P0 — Repeat local model evaluation
 
-Evaluate the Qwen model with multiple isolated attempts and openly retain success, failure and timeout evidence. The initial harness repeats one fictional learner task. Extend it to distinct scenarios and appropriate-abstention criteria before claiming broader reliability.
+The initial harness repeats one fictional learner task; the implemented [four-scenario evaluator](multi-scenario-evaluation.md) also covers conflicting evidence and appropriate abstention. Retain successes, failures, timeouts and first-pass versus corrected outcomes. Plan any further live campaign separately, with explicit bounds. No further inference is needed to repeat the completed schema-compatibility observation.
 
 **Gate:** an auditable run-level report, grounded metrics and explicit hardware and timing information.
 
@@ -57,6 +60,8 @@ Before considering real learner data, design verified identity, role-based autho
 ## Product change-control
 
 Develop on `product-development`, keep the original submission history identifiable by its exact SHA, and avoid mixing experimental evaluations into promoted historical evidence.
+
+The separate release review remains [draft PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31). `main` retains the historical challenge source, and the `gh-pages` website remains separate. A conflict-free development merge does not authorise stable-source promotion or website publication. Complete the connectivity-off rehearsal and obtain explicit release sign-off before changing that boundary.
 
 After each change:
 
