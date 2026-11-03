@@ -6,9 +6,10 @@ approval, revision and rejection decision to a human teacher.
 
 ## Scope and source of truth
 
-- Develop on `product-development`; do not modify `main`, the
-  `submission-final-2026-10-05` snapshot or any original evidence under
-  `evidence/`.
+- Develop on `product-development`. Promote source to `main` only through a
+  reviewed release PR after explicit owner authorisation; source publication
+  does not authorise a website deployment or real-learner use. Never rewrite
+  the `submission-final-2026-10-05` snapshot or original evidence under `evidence/`.
 - Study `src/mwalimulens/agent/open_weights_run.py`,
   `src/mwalimulens/multi_scenario_eval.py`,
   `src/mwalimulens/agent/grounding.py`,

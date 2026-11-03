@@ -1,7 +1,9 @@
 # Continuous integration with CircleCI
 
-MwalimuLens uses a CircleCI configuration at `.circleci/config.yml` on the
-`product-development` branch to automate its existing code-quality checks.
+MwalimuLens uses the committed `.circleci/config.yml` to automate its code-quality
+checks. It is included in the source release and maintained on `product-development`.
+Repository connections and branch triggers are configured separately in CircleCI;
+the YAML alone does not prove that a particular branch or commit has run.
 
 ## Checks
 
@@ -36,10 +38,10 @@ duplicate project to repeat a completed quality run.
 
 1. Sign in at https://app.circleci.com/ and connect your GitHub account.
 2. Add the `buriro-ezekia/mwalimulens-agent` repository as a CircleCI project.
-3. Select the existing `.circleci/config.yml` file on the
-   `product-development` branch as the configuration source, if prompted.
-4. Configure the repository/branch trigger for `product-development`, then
-   run the first pipeline.
+3. Select the existing `.circleci/config.yml` file as the configuration source,
+   if prompted.
+4. Check triggers for the intended development or release branch, then inspect
+   the pipeline created for the exact commit.
 5. Inspect both the pytest and Ruff steps. Record the pipeline URL and
    whether the job actually passed.
 

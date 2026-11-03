@@ -61,7 +61,7 @@ Before considering real learner data, design verified identity, role-based autho
 
 Develop on `product-development`, keep the original submission history identifiable by its exact SHA, and avoid mixing experimental evaluations into promoted historical evidence.
 
-The separate release review remains [draft PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31). `main` retains the historical challenge source, and the `gh-pages` website remains separate. A conflict-free development merge does not authorise stable-source promotion or website publication. The disconnected MCP rehearsal is now recorded; review the exact release source and obtain explicit release sign-off before changing that boundary.
+Source releases use `main`; development continues on `product-development`. The original challenge remains preserved at its exact commit and `submission-final-2026-10-05` snapshot, with the `gh-pages` website separate. The owner authorised final source-release review and proceeding on 3 November 2026. The [final review](final-release-review-2026-11-03.md) records the bounded scope and [PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31) records integration. Future source promotions require reviewed changes and owner authorisation; website publication and real-learner use require their own decisions.
 
 After each change:
 
