@@ -74,14 +74,41 @@ class JsonStateStore:
         self,
         review: dict[str, Any],
         event: dict[str, Any],
-    ) -> None:
-        """Atomically persist a pending review and its successful action audit."""
+    ) -> dict[str, Any]:
+        """Atomically reuse identical pending reviews while auditing every attempt."""
 
+        fields = (
+            "learner_id", "competency_code", "claim", "uncertainty",
+            "suggested_teacher_question",
+        )
+        evidence_fields = ("supporting_evidence_ids", "counter_evidence_ids")
         with self._lock:
             state = self._load()
+            prior = next(
+                (
+                    item for item in state["pending_reviews"]
+                    if item.get("status") == "pending_teacher_review"
+                    and all(item.get(key) == review.get(key) for key in fields)
+                    and all(
+                        set(item.get(key, [])) == set(review.get(key, []))
+                        for key in evidence_fields
+                    )
+                ),
+                None,
+            )
+            audited = dict(event)
+            if prior is not None:
+                audited["output"] = dict(prior)
+                audited["duplicate_submission"] = True
+                state["tool_calls"].append(audited)
+                self._write(state)
+                return dict(prior)
+
+            audited["duplicate_submission"] = False
             state["pending_reviews"].append(review)
-            state["tool_calls"].append(event)
+            state["tool_calls"].append(audited)
             self._write(state)
+            return dict(review)
 
     def record_teacher_review_action(
         self,

@@ -1,0 +1,34 @@
+version: 2.1
+
+jobs:
+  quality:
+    docker:
+      - image: cimg/python:3.13-node
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Check Python and Node versions
+          command: |
+            python --version
+            node --version
+            npm --version
+      - run:
+          name: Install project and test dependencies
+          command: |
+            python -m pip install --disable-pip-version-check -e ".[dev]"
+            python -m pip check
+      - run:
+          name: Install pinned MCP runtime dependency
+          command: npm ci --no-audit --no-fund
+      - run:
+          name: Run complete Python test suite
+          command: python -m pytest -q
+      - run:
+          name: Run Ruff lint checks
+          command: python -m ruff check .
+
+workflows:
+  quality-checks:
+    jobs:
+      - quality

@@ -2,6 +2,10 @@
 
 **Repository audit date:** 4 October 2026
 
+**Historical challenge audit.** This records the original submission, not the
+current product release. The integrated UI, subsequent software verification and
+remaining promotion gates are recorded in [development release status](release-status.md).
+
 This note records the final repository-side review after the demo video was recorded and published.
 
 ## Strong, inspectable requirements
