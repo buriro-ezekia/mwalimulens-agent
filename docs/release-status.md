@@ -1,10 +1,13 @@
-# Development release status and verification
+# Source-release status and verification
 
 **Reviewed:** 3 November 2026
 
-**Release review:** [draft PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31)
+**Release review and integration record:** [PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31)
 
-**Status:** integrated development prototype; promotion to `main` remains on hold.
+**Scope:** synthetic-only local prototype source release. The owner authorised
+final release review and proceeding on 3 November 2026. The
+[final review](final-release-review-2026-11-03.md) records its scope and residual limits;
+PR #31 records the exact integration state and source commits.
 
 ## Source and release boundary
 
@@ -14,12 +17,14 @@ The reviewed UI baseline on `product-development` is
 reconciliation changes Markdown only. The application remains a local,
 single-user prototype using fictional learners and a simulated reviewer.
 
-`main` retains the original challenge submission at
-`6215b9efb79ffd022a835dabba386c5ccb8226e4`. The
-`submission-final-2026-10-05` snapshot, original `evidence/` records, historical
+Source releases use `main`, with ongoing development on `product-development`.
+The original challenge is preserved at commit
+`6215b9efb79ffd022a835dabba386c5ccb8226e4` and the
+`submission-final-2026-10-05` snapshot. Original `evidence/` records, historical
 failures and [published challenge video](https://youtu.be/Zh9V_Ptc4ME) remain
 historical evidence. The separate `gh-pages` website is outside this change.
-This development update does not promote source to `main` or publish a website.
+This source-release approval does not authorise a website publication, a new
+model-evaluation campaign or real-learner use.
 
 ## Integrated teacher workflow
 
@@ -97,7 +102,7 @@ published head and hosted quality result separately.
 | Intended-device browser review | Operator-reported completed after the UI fixes |
 | Release documentation | Reconciled; local links, repository contracts, Ruff, dependency integrity and full pytest passed for the documentation change |
 | Connectivity-off rehearsal | PASS for the operator-confirmed disconnected MCP workflow, cancellation and narrow-window usability; see the [dated record](offline-rehearsal-2026-11-03.md) for scope and provenance limits |
-| Final promotion decision | Still outstanding; keep PR #31 draft and unmerged pending explicit release sign-off and review of any publication consequences |
+| Final source-release decision | Owner authorised proceeding on 3 November; independent runtime/documentation review found no blocker for the bounded source release. See the [final review](final-release-review-2026-11-03.md) and PR #31 for exact-head quality and integration status. |
 
 Consistent real-model judgement across the four fictional scenarios, practitioner
 feedback and classroom suitability remain unestablished. A valid abstention or a

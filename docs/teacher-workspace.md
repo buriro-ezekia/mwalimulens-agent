@@ -15,7 +15,8 @@ browser checks and remaining release gates.
 
 ## Start on Windows
 
-From the `product-development` branch, with the project's virtual environment installed:
+From the released `main` source or the `product-development` checkout, with the project's
+virtual environment installed:
 
 ```powershell
 .\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --output-dir 'D:\ML-runtime\portal'
@@ -88,8 +89,8 @@ Operator screenshots/reports after the UI corrections cover the seeded and genui
 MCP workflows, all three decisions, cancellation and narrow-screen presentation. The integrated
 commit also has hosted quality success. Those observations are recorded in the release record;
 they are not pending checks for the already integrated UI. For future behaviour changes, repeat
-the relevant browser checks on the intended device. The separate promotion review, PR #31,
-remains draft pending its remaining release gates.
+the relevant browser checks on the intended device. The [final source-release review](final-release-review-2026-11-03.md)
+records the release scope; PR #31 records its integration state.
 
 ## Educational usability and impact
 
@@ -105,7 +106,9 @@ cross-school generalisability is claimed until it has been evaluated.
 
 The disconnected deterministic MCP rehearsal is operator-confirmed as passed on 3 November 2026;
 the [dated record](offline-rehearsal-2026-11-03.md) identifies the screenshots, cancellation and
-narrow-window observations and their provenance limits. Final release promotion remains pending.
+narrow-window observations and their provenance limits. The owner authorised proceeding with
+the bounded source release; its [final review](final-release-review-2026-11-03.md) does not
+establish model or classroom validity.
 Consistent real Qwen judgement
 and practitioner feedback using fictional cases are also unestablished; any new inference
 campaign requires separately authorised bounds. Before any real learner pilot, verified teacher

@@ -75,3 +75,7 @@ inference evidence or verified product-version fallback recording was supplied.
 The disconnected MCP rehearsal gate is closed on this stated evidence. Exact
 release-source provenance and the broader promotion consequences remain part
 of final release review; PR #31 remains draft pending explicit promotion sign-off.
+
+**Subsequent release review, 3 November:** the owner later authorised final source-release
+review and proceeding. The [final review](final-release-review-2026-11-03.md) and PR #31
+record that later decision and integration, without changing the rehearsal observations above.

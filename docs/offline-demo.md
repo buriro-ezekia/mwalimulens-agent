@@ -7,8 +7,9 @@ The checklist alone is not evidence; the observations below record what was conf
 execution, review cancellation and usable narrow-window presentation after supplying
 practice/MCP decision screenshots. The [rehearsal record](offline-rehearsal-2026-11-03.md)
 separates screenshot observations, operator confirmation and unverified provenance.
-The connectivity-off MCP rehearsal is recorded as PASS within that scope. Final source
-promotion remains a separate decision in the [release review](release-status.md).
+The connectivity-off MCP rehearsal is recorded as PASS within that scope. The
+[source-release review](final-release-review-2026-11-03.md) records the subsequent
+owner-authorised source promotion, separately from model and classroom validation.
 
 ## Before travel (while connected)
 

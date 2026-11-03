@@ -13,9 +13,9 @@ Development continues as a local prototype using fictional learner records. It i
 not a validated school information system, and its reviewer identity is simulated
 rather than authenticated.
 
-The [development release record](docs/release-status.md) identifies the integrated
-UI baseline, verification evidence and outstanding release gates. Development
-continues on `product-development`; promotion to `main` remains under draft review.
+The [source-release record](docs/release-status.md) identifies the integrated UI,
+verification evidence and release scope. Source releases use `main`; development
+continues on `product-development`. This is a synthetic-only local prototype release.
 
 ## What the workspace provides
 
@@ -61,10 +61,10 @@ The commands below use PowerShell. A short checkout and short runtime directory
 are preferable on Windows, particularly when a workflow creates nested case and
 report folders.
 
-### Install the development build
+### Install the released source
 
 ```powershell
-git clone --branch product-development https://github.com/buriro-ezekia/mwalimulens-agent.git D:\MwalimuLens
+git clone --branch main https://github.com/buriro-ezekia/mwalimulens-agent.git D:\MwalimuLens
 Set-Location 'D:\MwalimuLens'
 
 python -m venv .venv
@@ -74,6 +74,8 @@ npm.cmd ci --no-audit --no-fund
 
 Complete dependency installation while connected to the internet. Do not replace
 an existing checkout or discard local work merely to use the example path.
+Contributors can select `product-development` for ongoing development; the original
+challenge remains reproducible from the preserved `submission-final-2026-10-05` snapshot.
 
 ### Open the teacher workspace
 
