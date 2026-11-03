@@ -1,11 +1,14 @@
 # Offline demonstration rehearsal
 
 **Purpose:** prepare a robust, honest presentation on the CPU-only Windows laptop.
-This checklist is not proof that a full offline rehearsal has already passed.
+The checklist alone is not evidence; the observations below record what was confirmed.
 
-**Status, 2 November 2026:** operator browser checks and an automated preflight PASS
-are recorded in the [release evidence](release-status.md). Connectivity-off observations
-are still outstanding. A normal browser walkthrough does not complete this checklist.
+**Status, 3 November 2026:** the operator confirmed disconnected deterministic MCP
+execution, review cancellation and usable narrow-window presentation after supplying
+practice/MCP decision screenshots. The [rehearsal record](offline-rehearsal-2026-11-03.md)
+separates screenshot observations, operator confirmation and unverified provenance.
+The connectivity-off MCP rehearsal is recorded as PASS within that scope. Final source
+promotion remains a separate decision in the [release review](release-status.md).
 
 ## Before travel (while connected)
 
@@ -82,17 +85,20 @@ failed model attempts or claim real-school validation.
 
 ## Rehearsal record
 
-All Pending entries below refer specifically to the disconnected-network rehearsal,
-not to the completed connected browser checks. Do not fill them from automated PASS.
+The following results come from the screenshots and explicit operator confirmation,
+not from automated PASS alone. See the linked record for their precise scopes.
 
 | Gate | Observed result | Date |
 |---|---|---|
-| Seeded local browser without internet | Pending | |
-| Real Education and borrowed MCP calls offline | Pending | |
-| Human revise/reject decisions and audit | Pending | |
-| Local Qwen task (if run), measured duration | Pending | |
-| Mobile/narrow-screen legibility | Pending | |
-| Recorded fallback verified | Pending | |
+| Seeded practice decisions | Approve/Revise/Reject observed; connectivity was explicitly confirmed for the MCP portion | 2-3 November 2026 |
+| Real Education and borrowed MCP calls offline | PASS: successful audit; all internet connections disconnected, operator-confirmed | 3 November 2026 |
+| Human revise/reject decisions and audit | PASS: MCP Revise creates one note; Reject creates none | 3 November 2026 |
+| Return without saving | PASS: 1 pending / 0 decisions / 0 profile notes, operator-confirmed | 3 November 2026 |
+| Narrow-window legibility and controls | PASS, operator-confirmed; exact dimensions not recorded | 3 November 2026 |
+| Local Qwen task, measured duration | Not part of this rehearsal; no new inference evidence supplied | Not applicable |
+| Product-version recorded fallback | Not supplied; separate presentation follow-up | Not recorded |
 
-The product demonstration is ready only after the observed results are recorded.
-No real learner records or unauthenticated production write endpoints are permitted.
+The recorded PASS concerns the local deterministic demonstration, not model reliability
+or release approval. A fallback recording and any separately authorised model task
+retain their own evidence requirements. No real learner records or unauthenticated
+production write endpoints are permitted.

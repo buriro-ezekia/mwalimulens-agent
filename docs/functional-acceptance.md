@@ -14,7 +14,9 @@ reported as completed. Their local JSON, logs and screenshots have not been comm
 
 These are completed checks within their recorded scopes. The commands below reproduce them
 when behaviour changes; no additional acceptance or model run is required merely to reconcile
-documentation. The actual disconnected-network rehearsal remains separate and outstanding.
+documentation. The [disconnected MCP rehearsal](offline-rehearsal-2026-11-03.md) was subsequently
+confirmed by the operator on 3 November 2026, including cancellation and narrow-window usability.
+Its screenshot observations and provenance limits are recorded separately from service acceptance.
 
 ## Automated teacher decisions
 

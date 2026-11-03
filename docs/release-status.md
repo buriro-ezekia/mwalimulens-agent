@@ -1,6 +1,6 @@
 # Development release status and verification
 
-**Reviewed:** 2 November 2026
+**Reviewed:** 3 November 2026
 
 **Release review:** [draft PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31)
 
@@ -57,6 +57,7 @@ as such; their raw logs and screenshots are not committed in this repository.
 | Browser walkthrough after UI corrections | Operator screenshots/reports cover Approve, Revise, Reject, genuine deterministic MCP analysis, narrow-screen presentation and return without saving; [UI verification record](https://github.com/buriro-ezekia/mwalimulens-agent/pull/35) | Observed demonstration, not a formal usability study or a disconnected-network rehearsal |
 | Automated offline preflight | Operator reported PASS after using a shorter output directory; recorded in the UI verification record | Does not prove that connectivity was deliberately disconnected |
 | Native Ollama schema compatibility | One authorised `review_decision_outcome_v2` request returned a schema- and runtime-valid abstention; [release review record](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31) | Observed compatibility only; no candidate submission, educational-quality verdict or four-case pass |
+| Disconnected MCP browser rehearsal | On 3 November, screenshots showed successful MCP analysis, Revise and Reject; the operator confirmed internet disconnection, unchanged cancellation counts and usable narrow-window presentation; [rehearsal record](offline-rehearsal-2026-11-03.md) | Operator-confirmed network/visual observations; no exact laptop HEAD, raw state JSON or fresh model inference established |
 
 The operator-supplied native probe completed in **102.326 seconds** for
 `longitudinal-pattern`, with no runtime error or termination. Its local case is
@@ -95,7 +96,7 @@ published head and hosted quality result separately.
 | Seeded and genuine MCP functional acceptance | Operator-reported PASS; completed checks need not be repeated for a documentation-only change |
 | Intended-device browser review | Operator-reported completed after the UI fixes |
 | Release documentation | Reconciled; local links, repository contracts, Ruff, dependency integrity and full pytest passed for the documentation change |
-| Connectivity-off rehearsal | Still outstanding; record actual observations using the [offline checklist](offline-demo.md) |
+| Connectivity-off rehearsal | PASS for the operator-confirmed disconnected MCP workflow, cancellation and narrow-window usability; see the [dated record](offline-rehearsal-2026-11-03.md) for scope and provenance limits |
 | Final promotion decision | Still outstanding; keep PR #31 draft and unmerged pending explicit release sign-off and review of any publication consequences |
 
 Consistent real-model judgement across the four fictional scenarios, practitioner
