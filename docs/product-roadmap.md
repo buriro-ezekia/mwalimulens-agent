@@ -1,6 +1,6 @@
 # MwalimuLens product development and validation roadmap
 
-- **Updated:** 2 November 2026
+- **Updated:** 3 November 2026
 - **Development branch:** `product-development`
 - **Original validated submission:** `6215b9efb79ffd022a835dabba386c5ccb8226e4`
 
@@ -25,7 +25,7 @@ The integrated UI baseline is `b61666d4b04074b9a538881f7e09401150f73f82`. The [r
 - The browser workflow, evaluation harness and preflight modules are implemented; browser observations after the UI corrections are recorded as completed.
 - Real multi-scenario attempts and their failures are documented. A consistent four-scenario Qwen pass and educational semantic reliability remain unestablished.
 - One native Ollama outcome-schema probe returned a valid abstention. It establishes observed provider compatibility only, not a candidate workflow or educational correctness.
-- A manual disconnected-network rehearsal remains outstanding.
+- The disconnected deterministic MCP browser rehearsal is operator-confirmed as passed on 3 November; [the dated record](offline-rehearsal-2026-11-03.md) separates observed outcomes from network/visual confirmation and notes the uncaptured laptop Git HEAD.
 - Teacher usability feedback and classroom impact have **not** been established.
 - Identity is simulated rather than authenticated; no real learner data, public write endpoint or multi-user school deployment is approved.
 
@@ -47,7 +47,7 @@ The initial harness repeats one fictional learner task; the implemented [four-sc
 
 Rehearse the teacher interface and genuine MCP calls with connectivity deliberately disabled. Check local dependencies, files, CPU responsiveness and readability. Do not confuse a recorded fallback with a live model run.
 
-**Gate:** completed manual rehearsal with observed results documented.
+**Recorded status:** the operator-confirmed disconnected MCP workflow, cancellation and narrow-window usability passed on 3 November 2026. Practice decisions are also shown in screenshots. See the [rehearsal record](offline-rehearsal-2026-11-03.md) for exact coverage. This does not establish new model reliability, a verified fallback video or final release approval.
 
 ### P1 — Classroom usability and suitability
 
@@ -61,7 +61,7 @@ Before considering real learner data, design verified identity, role-based autho
 
 Develop on `product-development`, keep the original submission history identifiable by its exact SHA, and avoid mixing experimental evaluations into promoted historical evidence.
 
-The separate release review remains [draft PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31). `main` retains the historical challenge source, and the `gh-pages` website remains separate. A conflict-free development merge does not authorise stable-source promotion or website publication. Complete the connectivity-off rehearsal and obtain explicit release sign-off before changing that boundary.
+The separate release review remains [draft PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31). `main` retains the historical challenge source, and the `gh-pages` website remains separate. A conflict-free development merge does not authorise stable-source promotion or website publication. The disconnected MCP rehearsal is now recorded; review the exact release source and obtain explicit release sign-off before changing that boundary.
 
 After each change:
 

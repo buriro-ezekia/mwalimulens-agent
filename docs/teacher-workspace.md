@@ -103,7 +103,10 @@ cross-school generalisability is claimed until it has been evaluated.
 
 ## Outstanding verification gates
 
-The connectivity-off presentation rehearsal remains outstanding. Consistent real Qwen judgement
+The disconnected deterministic MCP rehearsal is operator-confirmed as passed on 3 November 2026;
+the [dated record](offline-rehearsal-2026-11-03.md) identifies the screenshots, cancellation and
+narrow-window observations and their provenance limits. Final release promotion remains pending.
+Consistent real Qwen judgement
 and practitioner feedback using fictional cases are also unestablished; any new inference
 campaign requires separately authorised bounds. Before any real learner pilot, verified teacher
 authentication, role-based access, privacy safeguards, data retention and appropriate school
