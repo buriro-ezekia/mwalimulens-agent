@@ -52,6 +52,12 @@ Qwen2.5 3B run is documented separately in `evidence/open_weights_run.json`.
 See [the demonstration guide](docs/demo-guide.md) for the original sequence and
 presentation requirements.
 
+For the current workspace presentation, use the
+[Nairobi demonstration and technical walkthrough](docs/nairobi-demo-walkthrough.md).
+It provides suggested timings, spoken text, decision reasons, code navigation
+and recovery steps, with actual Qwen evidence distinguished from authored examples.
+Practitioner feedback remains pending.
+
 ## Getting started
 
 Use Python **3.11 or newer**. Genuine Filesystem MCP calls also require Node.js
