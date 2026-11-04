@@ -2,6 +2,9 @@
 
 **Reviewed:** 3 November 2026
 
+**Evidence attribution corrected:** 4 November 2026; see the
+[semantic-failure triage record](semantic-failure-triage.md).
+
 **Release review and integration record:** [PR #31](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31)
 
 **Scope:** synthetic-only local prototype source release. The owner authorised
@@ -61,17 +64,28 @@ as such; their raw logs and screenshots are not committed in this repository.
 | Seeded and genuine deterministic MCP acceptance | Operator reported Approve, Revise/Edit, Reject and `genuine_mcp` PASS, command exits 0; [acceptance record](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31#issuecomment-6559965672) | Earlier development acceptance; real Qwen inference explicitly NOT RUN |
 | Browser walkthrough after UI corrections | Operator screenshots/reports cover Approve, Revise, Reject, genuine deterministic MCP analysis, narrow-screen presentation and return without saving; [UI verification record](https://github.com/buriro-ezekia/mwalimulens-agent/pull/35) | Observed demonstration, not a formal usability study or a disconnected-network rehearsal |
 | Automated offline preflight | Operator reported PASS after using a shorter output directory; recorded in the UI verification record | Does not prove that connectivity was deliberately disconnected |
-| Native Ollama schema compatibility | One authorised `review_decision_outcome_v2` request returned a schema- and runtime-valid abstention; [release review record](https://github.com/buriro-ezekia/mwalimulens-agent/pull/31) | Observed compatibility only; no candidate submission, educational-quality verdict or four-case pass |
+| Saved structured-workflow case | The supplied `report.json` and matching `result.json` record `structured_proposal_v1`, a valid abstention and a failed expected-candidate scenario; model time **102.326 s** | No schema ID was recorded; this is not the native v2 compatibility observation |
+| Native Ollama schema compatibility | The separate supplied `result(1).json` records `observed_compatibility_pass` for `review_decision_outcome_v2`, with a schema- and runtime-valid abstention; request **72.085 s**, total **72.969 s** | One request, no retries, MCP calls or submissions; no educational-quality verdict or four-case pass |
 | Disconnected MCP browser rehearsal | On 3 November, screenshots showed successful MCP analysis, Revise and Reject; the operator confirmed internet disconnection, unchanged cancellation counts and usable narrow-window presentation; [rehearsal record](offline-rehearsal-2026-11-03.md) | Operator-confirmed network/visual observations; no exact laptop HEAD, raw state JSON or fresh model inference established |
 
-The operator-supplied native probe completed in **102.326 seconds** for
-`longitudinal-pattern`, with no runtime error or termination. Its local case is
-`runtime/structured_review/v2-1101104704/suite-lttkzu86/longitudinal-pattern`.
-It was decision-only, with submission disabled and
-`application_workflow_test=false`; semantic quality remains unverified.
-The reported evidence-snapshot SHA-256 is
+Earlier documentation incorrectly attributed the **102.326-second** structured
+case to the native v2 compatibility probe. That structured case is stored at
+`runtime/structured_review/v2-1101104704/suite-lttkzu86/longitudinal-pattern/`.
+Its valid abstention still failed the existing expected-candidate rubric. The
+directory name does not establish a schema version, and its recorded grade is
+unchanged.
+
+The separate native compatibility result came from
+`runtime/provider_compatibility_v2_attempt/result.json` in the Windows
+`mwalimulens-v2-provider-check` checkout, at source commit
+`38029952b75c56d6168dd6d8eb653e618f883f6c`. It records stable source, no schema
+issues and the evidence-snapshot SHA-256
 `19cacb3f7bf1d6331bac13eb4fa6d37e308154170cfb4840e072f0d81fe64543`.
-These local artefacts have not been promoted into `evidence/`.
+Its v2 schema SHA-256 is
+`9d286bfa299bcdf508090b63760684af2bbebfff52b5ac9fb31f84ec05a3a53f`.
+These local artefacts have not been promoted into `evidence/`; semantic quality
+remains unverified. The [triage record](semantic-failure-triage.md) separates
+these sources from the subsequent qualitative audit and missing suite files.
 
 The 367-, 422-, 539-, 550- and 681-test results cited in earlier work belong to
 earlier development stages. They are not the integrated UI baseline. Historical

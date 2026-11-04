@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import subprocess
 from datetime import UTC, datetime
@@ -48,7 +49,10 @@ async def run_structured_case(
     )
     snapshot_path = state_path.with_name("evidence_snapshot.json")
     progress_path = report_path.with_suffix(".progress.json")
-    artifact_paths = (state_path, report_path, result_path, snapshot_path, progress_path)
+    proposals_path = state_path.with_name("proposals.json")
+    artifact_paths = (
+        state_path, report_path, result_path, snapshot_path, progress_path, proposals_path,
+    )
     if len(set(artifact_paths)) != len(artifact_paths):
         raise ValueError("All review artifact paths must be different")
     if any(path.exists() for path in artifact_paths):
@@ -73,6 +77,18 @@ async def run_structured_case(
     deadline_scope: asyncio.Timeout | None = None
     final_output = ""
     submission_attempted = False
+    proposals: list[dict[str, Any]] = []
+
+    def save_proposals() -> None:
+        atomic_json(proposals_path, {
+            "artifact_version": "structured_proposals_v1",
+            "workflow_mode": MODE, "decision_policy_id": DECISION_POLICY_ID,
+            **schema_metadata,
+            "evidence_sha256": snapshot.sha256 if snapshot else None,
+            "attempts": proposals,
+            "input_note": "Logical generation inputs, not the exact HTTP request envelope.",
+            "semantic_quality_verified": False,
+        })
 
     def raw_report(text: str, stage_error=None) -> dict[str, Any]:
         report = build_open_weights_report(
@@ -166,6 +182,25 @@ async def run_structured_case(
                         keep_alive=settings.keep_alive,
                     )
 
+                    async def generate(messages, schema):
+                        # Keep ordinary synthetic case evidence separate from request telemetry.
+                        attempt = {
+                            "attempt": len(proposals) + 1,
+                            "generation_input": json.loads(json.dumps({
+                                "messages": messages, "format": schema,
+                            }, ensure_ascii=False, allow_nan=False)),
+                            "status": "started", "raw_output": None,
+                        }
+                        proposals.append(attempt)
+                        save_proposals()
+                        raw = await generator(messages, schema)
+                        attempt.update({
+                            "status": "returned", "raw_output": raw,
+                            "raw_output_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+                        })
+                        save_proposals()
+                        return raw
+
                     async def submit(arguments):
                         nonlocal submission_attempted
                         if submission_attempted:
@@ -174,7 +209,7 @@ async def run_structured_case(
                         return await audited_call(client, "flag_pattern_for_review", arguments)
 
                     outcome = await decide_and_submit(
-                        snapshot, generate=generator, submit=submit, observe=observe,
+                        snapshot, generate=generate, submit=submit, observe=observe,
                         request_limit=limits.request_limit,
                         decision_schema_id=decision_schema_id,
                     )

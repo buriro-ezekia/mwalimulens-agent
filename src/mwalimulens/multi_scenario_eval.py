@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import re
 import subprocess
@@ -526,6 +527,103 @@ def run_suite(
     return {"summary_path": str(path), **summary}
 
 
+def recorded_decision_diagnostics(report: dict[str, Any]) -> dict[str, Any]:
+    """Describe recorded contract outcomes without inferring truth from wording."""
+
+    attempts = report.get("proposal_attempts", [])
+    valid = [
+        item for item in attempts if isinstance(item, dict) and item.get("status") == "valid"
+    ] if isinstance(attempts, list) else []
+    outcome = valid[-1].get("outcome") if valid else None
+    return {
+        **{key: report.get(key) for key in (
+            "workflow_mode", "decision_policy_id", "decision_schema_id",
+            "decision_schema_sha256", "evidence_sha256", "proposal_status",
+            "expected_outcome",
+        )},
+        "proposal_attempts": attempts,
+        "recorded_valid_outcome": outcome,
+        "interpretation": (
+            "recorded_valid_abstention" if outcome == "abstain"
+            else "recorded_valid_candidate" if outcome == "candidate"
+            else "unknown"
+        ),
+        "semantic_assessment": "unknown", "manual_semantic_review_required": True,
+        "semantic_quality_verified": False,
+        "note": "Recorded validation only; missing schema identifiers are not backfilled.",
+    }
+
+
+def diagnose_saved_case(directory: Path) -> dict[str, Any]:
+    """Inspect one case without a suite summary, writes, inference or regrading."""
+
+    root = Path(directory).expanduser().resolve()
+    if not root.is_dir():
+        raise ValueError("Saved case directory does not exist")
+
+    def reject_constant(value):
+        raise ValueError(f"Non-JSON numeric constant: {value}")
+
+    files: dict[str, Any] = {}
+    for name in ("report.json", "result.json", "evidence_snapshot.json", "proposals.json"):
+        path = root / name
+        if not path.is_file():
+            files[name] = {"status": "unavailable"}
+            continue
+        data = path.read_bytes()
+        payload = json.loads(data.decode("utf-8-sig"), parse_constant=reject_constant)
+        if not isinstance(payload, dict):
+            raise ValueError(f"{name} must contain a JSON object")
+        files[name] = {
+            "status": "available", "sha256": hashlib.sha256(data).hexdigest(),
+            "recorded": payload,
+        }
+    report = files["report.json"].get("recorded", {})
+    result = {
+        "case": str(root), "files": files,
+        "recorded_decision": recorded_decision_diagnostics(report),
+        "original_status": files["result.json"].get("recorded", {}).get("status"),
+        "semantic_assessment": "unknown", "semantic_quality_verified": False,
+        "note": "Inspection completed does not mean the saved model or workflow passed.",
+    }
+    from mwalimulens.saved_review_diagnostics import diagnose_decision, load_saved_snapshot
+
+    saved_snapshot = files["evidence_snapshot.json"].get("recorded")
+    snapshot = load_saved_snapshot(saved_snapshot) if saved_snapshot is not None else None
+    proposals = files["proposals.json"].get("recorded")
+    for source in (report, proposals or {}):
+        if snapshot is not None and source.get("evidence_sha256") not in (None, snapshot.sha256):
+            raise ValueError("Case evidence hash does not match the saved snapshot")
+    if proposals is not None:
+        attempts = proposals.get("attempts")
+        if not isinstance(attempts, list) or not all(isinstance(item, dict) for item in attempts):
+            raise ValueError("proposals.json must contain an attempts list of objects")
+        diagnostics = []
+        for attempt in attempts:
+            raw = attempt.get("raw_output")
+            if raw is not None and not isinstance(raw, str):
+                raise ValueError("Saved proposal raw_output must be text or null")
+            if raw is not None and attempt.get("raw_output_sha256") != hashlib.sha256(
+                raw.encode("utf-8")
+            ).hexdigest():
+                raise ValueError("Saved proposal output hash mismatch")
+            diagnostic = diagnose_decision(raw, attempt.get("generation_input"), snapshot)
+            for layer in (
+                "request_validation", "request_evidence_alignment", "snapshot_validation",
+            ):
+                if diagnostic[layer]["status"] == "invalid":
+                    raise ValueError("; ".join(diagnostic[layer]["issues"]))
+            if diagnostic["wire_schema"]["status"] == "error":
+                raise ValueError("; ".join(diagnostic["wire_schema"]["issues"]))
+            if diagnostic["json"]["status"] == "valid" and diagnostic["wire_schema"][
+                "status"
+            ] == "unavailable" and diagnostic["request_validation"]["status"] == "valid":
+                raise ValueError("; ".join(diagnostic["wire_schema"]["issues"]))
+            diagnostics.append({"attempt": attempt.get("attempt"), **diagnostic})
+        result["proposal_diagnostics"] = diagnostics
+    return result
+
+
 def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
     """Inspect existing run evidence without rerunning Qwen or changing grades."""
 
@@ -595,6 +693,7 @@ def diagnose_saved_suite(directory: Path) -> dict[str, Any]:
             reason = "passed"
         entry.update({
             "status": evaluated.get("status"),
+            "recorded_decision": recorded_decision_diagnostics(report),
             "classification": reason,
             "failed_checks": failed,
             "semantic_review_flags": evaluated.get("semantic_review_flags", []),
@@ -654,8 +753,11 @@ def main(argv: list[str] | None = None) -> int:
         "--scenarios", nargs="+", choices=[case.ident for case in SCENARIOS],
         help="Run only the named scenarios (default: all four).",
     )
-    parser.add_argument("--diagnose", type=Path,
-                        help="Inspect an existing suite without running Qwen.")
+    inspection = parser.add_mutually_exclusive_group()
+    inspection.add_argument("--diagnose", type=Path,
+                            help="Inspect an existing suite without running Qwen.")
+    inspection.add_argument("--diagnose-case", type=Path,
+                            help="Inspect a saved report/result pair without a suite summary.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--single-run", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--scenario", choices=[s.ident for s in SCENARIOS])
@@ -663,11 +765,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--result", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
-    if args.diagnose is not None:
+    if args.diagnose is not None or args.diagnose_case is not None:
         try:
-            diagnostic = diagnose_saved_suite(args.diagnose)
-        except (OSError, KeyError, ValueError) as exc:
-            print(f"Cannot inspect saved suite: {exc}", file=sys.stderr)
+            diagnostic = (
+                diagnose_saved_suite(args.diagnose) if args.diagnose is not None
+                else diagnose_saved_case(args.diagnose_case)
+            )
+        except (OSError, KeyError, ValueError, UnicodeError) as exc:
+            print(f"Cannot inspect saved evidence: {exc}", file=sys.stderr)
             return 2
         print(json.dumps(diagnostic, indent=2, ensure_ascii=False))
         return 0

@@ -1,11 +1,19 @@
 # Decision-only schema visibility diagnostic
 
-The saved `runtime/structured_review/v2-1101104704/suite-lttkzu86/longitudinal-pattern/`
-probe used `provisional_review_v2` and returned one schema-valid abstention about
-consistent improvement or independent mastery. It completed one model request
-(102.326 seconds), created no candidate, and recorded no runtime error or
-termination. Its result remains a historical failure; this experiment neither
-regrades it nor changes the decision policy.
+The supplied `report.json` and matching `result.json` for
+`runtime/structured_review/v2-1101104704/suite-lttkzu86/longitudinal-pattern/`
+record a `structured_proposal_v1` case under `provisional_review_v2`. Its first
+proposal was a valid abstention about consistent improvement or independent
+mastery; model time was **102.326 seconds**. The expected-candidate scenario
+failed, and that grade remains unchanged. The report records no schema ID;
+the `v2` directory name does not establish the format schema used.
+
+Earlier documentation incorrectly attributed this structured case to the
+separate native `review_decision_outcome_v2` compatibility result. That result
+records **72.085 seconds** for the request and **72.969 seconds** overall. See the
+[triage record](semantic-failure-triage.md) for the corrected provenance and the
+limits of the later qualitative audit. This diagnostic does not regrade either
+record or change the decision policy.
 
 [Ollama's structured-output documentation](https://docs.ollama.com/capabilities/structured-outputs)
 recommends including the schema in the prompt as well as supplying it through
@@ -19,7 +27,7 @@ a candidate or improve judgement.
   `ReviewDecision.model_json_schema()` supplied through `format`.
 - **B:** identical policy, evidence and format schema, with only a clearly
   identified output-contract block appended to the system message. The block is
-  the exact format schema serialized with sorted keys. It contains no example
+  the exact format schema serialised with sorted keys. It contains no example
   answer or extra decision instruction.
 
 Both conditions use the unchanged production `OllamaJsonGenerator`: temperature
@@ -59,7 +67,7 @@ message/schema inputs. Preparation contacts no model; its model digest remains
 explicitly unverified. Existing source and historical output locations are
 rejected as output roots.
 
-After separate authorization, the same command with `--run` prepares a fresh
+After separate authorisation, the same command with `--run` prepares a fresh
 comparison and executes it immediately. It does not replay or overwrite an old
 prepared directory. Before any request it verifies that the persisted inputs
 match the current policy, schema and snapshots. Complete the context preflight
@@ -97,11 +105,11 @@ further generation via `stop_reason`, while the condition's original `status`
 remains intact. No close is retried. A completed-but-invalid response with successful cleanup remains
 recorded and the comparison continues normally.
 
-## Context preflight before an authorized live comparison
+## Context preflight before an authorised live comparison
 
 Keep the following evidence in a new diagnostic directory, separate from the
 original prepared inputs and historical reports. No live preflight or generation
-is authorized by this change.
+is authorised by this change.
 
 1. Record the Ollama version, installed model digest, model parameters, exact
    prompt template/renderer and matching tokenizer identity/version. Capture
@@ -117,7 +125,7 @@ is authorized by this change.
    configuration evidence. A model family's architectural maximum or an
    assumed default does not establish the allocation used by these requests.
    If the model is not loaded and allocation cannot be established without
-   additional execution, leave preflight incomplete and seek authorization for
+   additional execution, leave preflight incomplete and seek authorisation for
    that separate step; do not add an uncounted warm-up generation.
 3. Count all eight complete rendered A/B inputs with the exact matching
    tokenizer and template: policy/system text, full evidence, B's exact schema
@@ -126,7 +134,7 @@ is authorized by this change.
    per-condition token counts. Require **input tokens + the unchanged 1024-token
    output allowance <= verified effective context** for every condition.
    Character counts, byte counts or evidence-only token counts are insufficient.
-4. Keep any available truncation diagnostics. After an authorized run, compare
+4. Keep any available truncation diagnostics. After an authorised run, compare
    the recorded counts against
    [`prompt_eval_count`](https://docs.ollama.com/api/chat) and provider logs;
    a completed response or that metric alone does not prove the entire input
