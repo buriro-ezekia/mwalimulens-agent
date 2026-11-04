@@ -87,8 +87,10 @@ AI-assisted qualitative assessment, pending educator moderation, with no new
 semantic grade or required candidate wording.
 
 One observation cannot establish reliability, a causal schema effect or the
-source of the model's decision. The next work is an offline review of alignment
-between the policy, scenario expectations and evidence-grounded reason quality.
+source of the model's decision. The subsequent
+[offline alignment review](policy-rubric-alignment.md) separates policy,
+scenario expectations and evidence-grounded reason quality, with a manual
+review rubric and a completed AI-assisted assessment pending educator moderation.
 The present evidence does not justify changing prompts, defaults or the recorded
 rubric, forcing a candidate, or making another Qwen request.
 

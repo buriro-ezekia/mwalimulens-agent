@@ -81,15 +81,17 @@ not treated as evidence validation. Structural pass/fail, semantic cautions,
 manual teacher review and historical failures remain separate. Missing or
 invalid proposals cannot be relabelled as successful evidence-based abstention.
 
-The current structural rubric requires supporting and counter-evidence; this
-path keeps that rule. It does not prove the relevance of the counter-evidence,
+Candidate acceptance requires supporting and counter-evidence; a genuine
+abstention has no candidate IDs. This path keeps those contracts. Candidate
+checks do not prove the relevance of the counter-evidence,
 assessment comparability, instructional usefulness or classroom effectiveness.
 The original scenario semantic warnings and human review remain necessary.
 
 ## Execution limits and safety
 
-The existing outer suite runner still enforces a 600-second watchdog and at
-least 30 seconds of margin. One 540-second internal deadline covers retrieval,
+The outer suite runner defaults to a 600-second watchdog; configured deadlines
+must leave at least 30 seconds before it. The default 540-second internal
+deadline covers retrieval,
 preload, generation, validation, submission and cleanup. The request budget is
 shared; this path needs at most two proposal requests, even if the configured
 shared limit is larger. All six artefact paths (state, report, result, evidence
@@ -151,10 +153,15 @@ verification. The later single-request schema observation does not establish
 live-workflow reliability, provider-side cancellation or semantic correctness.
 
 The native outcome-schema compatibility observation need not be repeated. The
-[failure-triage record](semantic-failure-triage.md) defines the next proposed
-single-scenario validation, with one generation, explicit deadlines and opt-in
-outcome schema. That plan requires separate authorisation before live inference.
-It also documents `--diagnose-case` for existing saved reports and automatic
+separately authorised [4 November Windows validation](semantic-validation-2026-11-04.md)
+completed with one valid abstention and a failed expected-candidate case. It
+used a 210-second internal deadline and 240-second outer timeout. The
+[alignment review](policy-rubric-alignment.md) explains why contract validity and
+scenario acceptance differ. The CLI now labels its count **Scenario acceptance
+passes**; recorded grades and result keys are unchanged.
+
+The [failure-triage record](semantic-failure-triage.md) documents `--diagnose-case`
+for existing saved reports and automatic
 layered inspection when a new proposal capture is available. Diagnostics are
 read-only; exit 0 means inspection completed, not that the model passed.
 Do not claim the reliability problem is solved until actual local Qwen results

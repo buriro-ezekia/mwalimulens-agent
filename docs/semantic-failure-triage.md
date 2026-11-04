@@ -127,8 +127,10 @@ output, report, result and first-pass outcome. Read-only review verified the
 saved schema and evidence alignment. The rationale remains under-justified for
 the policy's bounded-description task; structural validity does not resolve that
 semantic concern. This single observation cannot establish four-scenario
-reliability or a benefit from the opt-in schema. Further work begins with offline
-review of the interpretation and rubric, rather than another model run.
+reliability or a benefit from the opt-in schema. The subsequent
+[offline alignment review](policy-rubric-alignment.md) is complete and provides
+a separate manual semantic rubric. Qualified human moderation remains pending;
+no repeated model run is needed for that review.
 
 ## Software verification
 

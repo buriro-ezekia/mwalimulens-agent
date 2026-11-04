@@ -326,7 +326,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Mode: {MODE}; validated application submission, not autonomous tool selection")
     print(f"Decision schema: {args.decision_schema}")
     print(f"Summary: {path}")
-    print(f"Structural passes: {report['passed']}/{report['scenario_count']}")
+    print(f"Scenario acceptance passes: {report['passed']}/{report['scenario_count']}")
     return 0 if report["status"] == "pass" else 2
 
 

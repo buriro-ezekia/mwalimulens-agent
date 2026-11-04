@@ -81,3 +81,9 @@ harnesses and recorded live failures; a consistent four-case pass and semantic q
 remain unestablished. The native outcome-schema compatibility observation returned a
 valid abstention with submission disabled. It does not replace E11, establish educational
 correctness or regrade any historical result.
+
+The later [policy and rubric alignment review](docs/policy-rubric-alignment.md)
+distinguishes decision-contract validity, fixed scenario acceptance and manual
+semantic judgement. Its [review rubric](docs/semantic-review-rubric.md) supplies
+a separate, non-scoring process; it does not revise this original challenge
+contract or its recorded results.
