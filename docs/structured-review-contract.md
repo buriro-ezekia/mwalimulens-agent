@@ -92,8 +92,8 @@ The existing outer suite runner still enforces a 600-second watchdog and at
 least 30 seconds of margin. One 540-second internal deadline covers retrieval,
 preload, generation, validation, submission and cleanup. The request budget is
 shared; this path needs at most two proposal requests, even if the configured
-shared limit is larger. All five artefact paths (state, report, result, evidence
-snapshot and progress checkpoint) must be distinct and absent before execution.
+shared limit is larger. All six artefact paths (state, report, result, evidence
+snapshot, progress checkpoint and proposal capture) must be distinct and absent before execution.
 Existing snapshots and checkpoints receive the same protection as final reports.
 
 Cancellation produces a failed report and result and propagates; it is not
@@ -102,8 +102,17 @@ deadline preserves the original deadline termination and writes final reports
 before propagating, including when cleanup raises another exception.
 Checkpoints record active stages and preserve
 completed outcomes. No prompts, arguments or private reasoning are copied into
-request telemetry. The complete synthetic evidence and validated candidate
-remain in the ordinary case artefacts. No school or real-pupil deployment is
+request telemetry. New structured runs save logical generation inputs and exact
+returned proposal text in `proposals.json`, including invalid proposals and
+repairs. Each returned output has a SHA-256 hash; the capture also records the
+evidence hash, policy and schema. Inputs are captured before generation and
+outputs before validation or submission. A proposal-capture write failure stops
+submission. A started attempt without returned text remains unknown; no output
+is reconstructed. These inputs are not an exact HTTP request capture and do not
+include hidden reasoning. Historical runs are not backfilled.
+
+The complete synthetic evidence and validated candidate remain in ordinary case
+artefacts. No school or real-pupil deployment is
 permitted by this change. Provider-side compute cancellation remains unverified.
 
 ## Verification before live inference
@@ -123,7 +132,7 @@ Local review reproduced three defects: an undeclared `httpx` import prevented
 test collection; derived snapshot/checkpoint paths could overwrite existing
 artefacts or collide with explicit paths; and cancellation during cleanup after
 a deadline could skip final reports or be swallowed. The corrections declare
-`httpx>=0.28,<1`, check all five paths before execution, and distinguish external
+`httpx>=0.28,<1`, checked the then-five paths before execution, and distinguished external
 cancellation after timeout cleanup. Six added regression cases reproduced the
 path and cancellation defects before correction.
 
@@ -141,17 +150,12 @@ its hosted status. No live Ollama/Qwen request was used for that engineering
 verification. The later single-request schema observation does not establish
 live-workflow reliability, provider-side cancellation or semantic correctness.
 
-The native outcome-schema compatibility observation is already recorded and need
-not be repeated for documentation reconciliation. If a further application-workflow
-probe is separately authorised after review and passing local/hosted checks, an
-example bounded single-scenario command is:
-
-```powershell
-.\.venv\Scripts\python.exe -m mwalimulens.structured_review --timeout 600 --scenarios longitudinal-pattern
-```
-
-The output is stored separately under `runtime/structured_review/suite-*/`.
-Read its `summary.json`, `<scenario>/report.json` and `<scenario>/result.json`.
-The legacy `mwalimulens.multi_scenario_eval` remains unchanged for comparison.
+The native outcome-schema compatibility observation need not be repeated. The
+[failure-triage record](semantic-failure-triage.md) defines the next proposed
+single-scenario validation, with one generation, explicit deadlines and opt-in
+outcome schema. That plan requires separate authorisation before live inference.
+It also documents `--diagnose-case` for existing saved reports and automatic
+layered inspection when a new proposal capture is available. Diagnostics are
+read-only; exit 0 means inspection completed, not that the model passed.
 Do not claim the reliability problem is solved until actual local Qwen results
 and semantic review establish that the revised workflow meets its requirements.

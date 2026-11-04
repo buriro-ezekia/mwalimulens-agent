@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from dataclasses import replace
 
@@ -194,7 +195,9 @@ def test_existing_files_are_not_overwritten(setup_case, monkeypatch):
     assert args["state_path"].read_text(encoding="utf-8") == '{"historical":true}'
 
 
-@pytest.mark.parametrize("name", ["evidence_snapshot.json", "report.progress.json"])
+@pytest.mark.parametrize(
+    "name", ["evidence_snapshot.json", "report.progress.json", "proposals.json"],
+)
 def test_existing_derived_artifacts_are_not_overwritten(setup_case, monkeypatch, name):
     args, store = setup_case
     historical = args["state_path"].with_name(name)
@@ -209,7 +212,9 @@ def test_existing_derived_artifacts_are_not_overwritten(setup_case, monkeypatch,
     assert store.tool_calls() == ()
 
 
-@pytest.mark.parametrize("name", ["evidence_snapshot.json", "report.progress.json"])
+@pytest.mark.parametrize(
+    "name", ["evidence_snapshot.json", "report.progress.json", "proposals.json"],
+)
 def test_explicit_paths_cannot_alias_derived_artifacts(setup_case, monkeypatch, name):
     args, store = setup_case
     args["result_path"] = args["state_path"].with_name(name)
@@ -371,3 +376,75 @@ def test_in_progress_checkpoint_identifies_policy_before_model_response(setup_ca
         scenario_by_id("longitudinal-pattern"), **args,
     ))
     assert result["proposal_status"] == "abstained"
+
+
+def test_raw_proposals_preserve_invalid_and_repaired_outputs_outside_telemetry(
+    setup_case, monkeypatch,
+):
+    args, store = setup_case
+    raw_outputs = [
+        '  {"outcome": "candidate", "abstention_reason": "null", "candidate": {}}\n',
+        json.dumps(proposal(), indent=2) + "\n",
+    ]
+    inputs = []
+
+    class Generate:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __call__(self, messages, schema):
+            saved = json.loads(args["state_path"].with_name("proposals.json").read_text())
+            assert saved["attempts"][-1]["status"] == "started"
+            inputs.append(json.loads(json.dumps({"messages": messages, "format": schema})))
+            return raw_outputs[len(inputs) - 1]
+
+    monkeypatch.setattr(structured_review, "OllamaJsonGenerator", Generate)
+    result = asyncio.run(structured_review.run_structured_case(
+        scenario_by_id("longitudinal-pattern"), **args,
+    ))
+    saved = json.loads(args["state_path"].with_name("proposals.json").read_text())
+    assert [attempt["raw_output"] for attempt in saved["attempts"]] == raw_outputs
+    assert [attempt["generation_input"] for attempt in saved["attempts"]] == inputs
+    assert [attempt["raw_output_sha256"] for attempt in saved["attempts"]] == [
+        hashlib.sha256(raw.encode()).hexdigest() for raw in raw_outputs
+    ]
+    assert result["status"] == "pass"
+    assert len(store.pending_reviews()) == 1
+    report = json.loads(args["report_path"].read_text())
+    assert saved["evidence_sha256"] == report["evidence_sha256"]
+    assert saved["decision_schema_sha256"] == report["decision_schema_sha256"]
+    assert "generation_input" not in json.dumps(report["model_requests"])
+    assert "raw_output" not in json.dumps(report["events"])
+
+
+def test_interrupted_generation_has_no_fabricated_raw_proposal(setup_case, monkeypatch):
+    args, store = setup_case
+    fake_generator(monkeypatch, [RuntimeError("Provider failed before returning")])
+    result = asyncio.run(structured_review.run_structured_case(
+        scenario_by_id("longitudinal-pattern"), **args,
+    ))
+    attempt = json.loads(args["state_path"].with_name("proposals.json").read_text())["attempts"][0]
+    assert result["status"] == "fail"
+    assert attempt["status"] == "started"
+    assert attempt["raw_output"] is None
+    assert "raw_output_sha256" not in attempt
+    assert store.pending_reviews() == ()
+
+
+def test_proposal_persistence_failure_prevents_candidate_submission(setup_case, monkeypatch):
+    args, store = setup_case
+    calls = fake_generator(monkeypatch, [proposal()])
+    real_write = structured_review.atomic_json
+
+    def write(path, payload):
+        if path.name == "proposals.json" and payload["attempts"][-1]["status"] == "returned":
+            raise OSError("Synthetic disk failure")
+        real_write(path, payload)
+
+    monkeypatch.setattr(structured_review, "atomic_json", write)
+    result = asyncio.run(structured_review.run_structured_case(
+        scenario_by_id("longitudinal-pattern"), **args,
+    ))
+    assert len(calls) == 1
+    assert result["status"] == "fail"
+    assert store.pending_reviews() == store.teacher_reviews() == store.profile_updates() == ()

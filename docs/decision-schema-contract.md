@@ -59,7 +59,7 @@ versions fail before retrieval, generation or creation of case artefacts.
 
 New reports, results, progress checkpoints, stage outcomes and suite summaries
 record `decision_schema_id` and `decision_schema_sha256`, independently of
-`decision_policy_id`. The hash uses UTF-8 canonical serialization with
+`decision_policy_id`. The hash uses UTF-8 canonical serialisation with
 `sort_keys=True`, `ensure_ascii=False`, `allow_nan=False` and standard JSON spacing.
 Historical reports are not backfilled or regraded.
 
@@ -78,13 +78,21 @@ in-process server with mocked model responses and check application-issued
 submission, safety, cancellation, repair budgets and provenance. These are not
 live Qwen tests or educator validation.
 
-One authorised native Ollama `review_decision_outcome_v2` request for
-`longitudinal-pattern` returned a schema- and runtime-valid abstention in
-102.326 seconds, without runtime error or termination. It was decision-only,
-with submission disabled, `application_workflow_test=false` and semantic quality
-unverified. The [release record](release-status.md) identifies the local case and
-the operator-reported evidence. No candidate submission or teacher decision was
-part of that observation, and the default remains `review_decision_v1`.
+The separate supplied native Ollama result, uploaded as `result(1).json`, records
+`observed_compatibility_pass` for `review_decision_outcome_v2`. One request returned
+a schema- and runtime-valid abstention in **72.085 seconds**; total time was
+**72.969 seconds**. It made no retries, MCP calls or submissions. Its source
+commit is `38029952b75c56d6168dd6d8eb653e618f883f6c`; the
+[release record](release-status.md) identifies the local result path and hashes.
+Semantic quality remains unverified, and the default remains `review_decision_v1`.
+
+Earlier documentation incorrectly attached **102.326 seconds** and the saved
+`suite-lttkzu86` structured case to this compatibility observation. The supplied
+report and matching result for that case record `structured_proposal_v1`, no
+schema ID and a failed expected-candidate scenario after a valid abstention.
+Its directory name is not schema provenance. The
+[triage record](semantic-failure-triage.md) preserves this distinction and the
+original grade.
 
 This establishes observed compatibility for that request and provider instance.
 It does not demonstrate enforcement of every schema branch or constraint,

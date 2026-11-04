@@ -42,14 +42,13 @@ MCP run does not establish the quality or reliability of a model's educational
 judgement. Previously committed model results appear separately in the technical
 audit section; they are not presented as new inference in the browser session.
 
-### Fast judge demo
+### Original challenge demonstration
 
-The original fast judge demo uses a deterministic local model to demonstrate the
-Education MCP and borrowed Filesystem MCP calls with fictional evidence. It is not
-presented as the open-weights evidence. The real Qwen2.5 3B run is documented
-separately in `evidence/open_weights_run.json`, rather than being attributed to the
-scripted demonstration. See [the demonstration guide](docs/demo-guide.md) for the
-original sequence and presentation requirements.
+The original short demonstration uses a deterministic local model to show the
+Education MCP and borrowed Filesystem MCP calls with fictional evidence. The real
+Qwen2.5 3B run is documented separately in `evidence/open_weights_run.json`.
+See [the demonstration guide](docs/demo-guide.md) for the original sequence and
+presentation requirements.
 
 ## Getting started
 
@@ -287,6 +286,7 @@ Further guidance: [architecture](ARCHITECTURE.md), [evaluation](EVALS.md),
 [borrowed Filesystem MCP](docs/borrowed-filesystem-mcp.md),
 [teacher feedback](docs/teacher-feedback.md),
 [CPU inference](docs/ollama-performance.md),
+[saved model-failure triage](docs/semantic-failure-triage.md),
 [request-sequence analysis](docs/request-sequence-optimisation.md) and
 [workflow timing](docs/workflow-timing.md).
 

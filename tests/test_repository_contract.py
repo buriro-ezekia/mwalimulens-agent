@@ -31,7 +31,7 @@ def test_readme_states_product_boundary_and_theme() -> None:
     assert "longitudinal strength tracking" in content
     assert "teacher decides" in content
     assert "borrowed filesystem mcp" in content
-    assert "fast judge demo" in content
+    assert "original challenge demonstration" in content
     assert "real qwen2.5 3b" in content
 
 
@@ -75,11 +75,11 @@ def test_challenge_contract_tracks_one_command_evidence() -> None:
     assert "present" in content
 
 
-def test_readme_separates_fast_demo_from_real_qwen_evidence() -> None:
+def test_readme_separates_challenge_demo_from_real_qwen_evidence() -> None:
     content = normalise_whitespace(read("README.md").lower())
 
     assert "deterministic local model" in content
-    assert "not presented as the open-weights evidence" in content
+    assert "qwen2.5 3b run is documented separately" in content
     assert "evidence/open_weights_run.json" in content
 
 

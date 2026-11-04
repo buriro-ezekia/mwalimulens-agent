@@ -22,6 +22,9 @@ approval, revision and rejection decision to a human teacher.
   the model. Pending candidates cannot modify a learner profile.
 - Distinguish model reasoning reliability from application-enforced safety:
   a gate may block a wrong action without making the model's reasoning right.
+- Write every repository `README.md` in natural, professional UK English.
+  Keep explanations direct and evidence-based. Preserve commands, identifiers,
+  file paths and exact quotations when editing prose.
 
 ## Current reliability investigation
 
