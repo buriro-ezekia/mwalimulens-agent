@@ -53,7 +53,7 @@ See [the demonstration guide](docs/demo-guide.md) for the original sequence and
 presentation requirements.
 
 For the current workspace presentation, use the
-[Nairobi demonstration and technical walkthrough](docs/nairobi-demo-walkthrough.md).
+[demonstration and technical walkthrough](docs/demo-walkthrough.md).
 It provides suggested timings, spoken text, decision reasons, code navigation
 and recovery steps, with actual Qwen evidence distinguished from authored examples.
 Practitioner feedback remains pending.

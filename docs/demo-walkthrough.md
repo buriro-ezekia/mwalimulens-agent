@@ -1,4 +1,4 @@
-# Nairobi demonstration and technical walkthrough
+# Demonstration and technical walkthrough
 
 Use this guide to present the current fictional-data prototype and explain its
 implementation. The suggested slots are **five minutes for the product** and
@@ -253,12 +253,12 @@ offline test for every later path or unlimited model/provider availability.
 | Genuine MCP segment fails | Say that this attempt failed, retain its audit and return to the source walkthrough. Do not repeat it to manufacture a passing outcome. |
 | Browser or display becomes unavailable | Continue the technical explanation and use existing screenshots as labelled recorded evidence. Do not call them a live run. |
 
-Before travel, after stopping the portal, copy the complete output root to a
+Before presenting, after stopping the portal, copy the complete output root to a
 separate local backup. A Qwen result needs its full bundle, not just the two
 report files previously shared for review. For a new dated copy:
 
 ```powershell
-$demoBackup = 'D:\ML-runtime\nairobi-backup-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+$demoBackup = 'D:\ML-runtime\demo-backup-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
 if (Test-Path -LiteralPath $demoBackup) { throw 'Choose a new backup destination.' }
 Copy-Item -LiteralPath 'D:\ML-runtime\portal' -Destination $demoBackup -Recurse -ErrorAction Stop
 if (-not (Test-Path -LiteralPath (Join-Path $demoBackup 'qwen-m1292e06'))) {
