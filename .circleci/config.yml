@@ -6,7 +6,13 @@ jobs:
       - image: cimg/python:3.13-node
     resource_class: small
     steps:
-      - checkout
+      - run:
+          name: Check out the exact public source commit over HTTPS
+          command: |
+            git init
+            git remote add origin https://github.com/buriro-ezekia/mwalimulens-agent.git
+            git fetch --no-tags --depth=1 origin "$CIRCLE_SHA1"
+            git checkout --detach "$CIRCLE_SHA1"
       - run:
           name: Check Python and Node versions
           command: |

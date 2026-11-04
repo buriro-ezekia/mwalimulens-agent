@@ -161,6 +161,13 @@ Rejected saved records are not read again by the renderer; their counts are
 shown as unverified. Redirected directories are rejected even when their
 destination lies within the output root, covering Windows junction behaviour.
 
+Hosted build #135 stopped before tests when GitHub refused CircleCI's SSH
+checkout key. The public repository's CI now fetches the exact `CIRCLE_SHA1`
+over HTTPS; the Python, dependency, npm, pytest and Ruff gates remain in place.
+CircleCI's [configuration reference](https://circleci.com/docs/reference/configuration-reference/#checkout)
+documents why HTTPS checkout uses a custom command. The development pull request
+records subsequent hosted results separately from this infrastructure failure.
+
 Connecting the workflow to the interface does not resolve the recorded model
 reasoning limitations or establish classroom suitability. The
 [4 November saved observation](semantic-validation-2026-11-04.md) and
