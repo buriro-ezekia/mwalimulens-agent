@@ -268,7 +268,10 @@ def candidate_semantic_review_flags(
 def grade_scenario(
     report: dict[str, Any], scenario: Scenario, data_dir: Path = DEFAULT_DATA_DIR
 ) -> dict[str, Any]:
-    """Apply deterministic structural checks plus non-scoring semantic cautions."""
+    """Check the expected outcome, workflow structure and safety, without semantic grading.
+
+    Semantic cautions remain separate and do not affect the acceptance result.
+    """
 
     dataset = load_synthetic_dataset(data_dir)
     evidence = dataset.competency_evidence(scenario.learner, scenario.competency)

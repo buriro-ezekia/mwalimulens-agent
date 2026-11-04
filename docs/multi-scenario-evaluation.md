@@ -21,6 +21,13 @@ remain unestablished.
 | `single-assessment` | L003 / ENG-INFERENCE | One assessment, no longitudinal record | Explicit abstention |
 | `missing-competency` | L002 / MATH-FRACTIONS | No records for the requested competency | Explicit abstention |
 
+These are fixed engineering acceptance expectations. The reviewed records do
+not establish them as independently adjudicated educational gold labels. A
+contract-valid abstention can fail a case expecting a candidate; the failure
+does not itself establish a wrong educational decision. The
+[alignment review](policy-rubric-alignment.md) and
+[manual semantic rubric](semantic-review-rubric.md) distinguish those questions.
+
 The model receives a **common conditional instruction**, parameterised by
 learner and competency, to retrieve evidence, submit a qualified candidate
 if sufficient or explicitly abstain if insufficient. It is **not told**
@@ -119,8 +126,9 @@ or create a learner profile update.
 
 Candidate cases must create exactly one pending review, cite at least two
 distinct supporting IDs from **different terms**, include counter-evidence,
-preserve disjoint and valid evidence IDs, and record meaningful uncertainty
-and a teacher question.
+preserve disjoint and valid evidence IDs, and provide uncertainty and a teacher
+question. Automated checks enforce presence and minimum lengths of 12
+characters; they do not establish that the wording is meaningful or useful.
 
 Abstention cases must begin the final answer with `ABSTAIN:`,
 create **no** pending candidate and make **no** candidate-submission
@@ -139,8 +147,9 @@ Reports explicitly set `semantic_quality_verified=false`.
 Four purposefully designed cases are not a representative sample of
 all learners, curricula, languages or institutional settings. One run
 per scenario is a functional probe rather than a statistical reliability
-estimate. Repeat with different seeds/cases only after preserving the
-independent labels and expectations.
+estimate. Any separately authorised future evaluation must preserve versioned
+expectations and document their source and moderation status. Engineering labels
+must not be presented as independently validated educational judgements.
 
 A prior real Qwen run passed both abstention cases but failed the two
 candidate cases: L001 abstained despite increasing recorded assessment
