@@ -29,18 +29,19 @@ create one synthetic profile note after confirmation; Reject creates none. A
 pending finding does not update a learner profile, and the model cannot approve
 its own work.
 
-### Three distinct execution paths
+### Three workspace modes
 
 | Path | What happens | Model inference |
 | --- | --- | --- |
 | Practice case | A seeded fictional finding opens directly in the teacher workspace. | None |
 | MCP evidence analysis | Deterministic orchestration calls the Education MCP and read-only Filesystem MCP servers, then prepares a finding for review. | No Qwen inference |
-| Local model evaluation | Qwen2.5 3B runs through local Ollama under the evaluation workflow. | Real local inference |
+| Local Qwen review, when enabled | The application retrieves Education MCP evidence and asks local Qwen2.5 3B for a structured candidate or abstention. | One bounded local generation per explicit action |
 
 These paths serve different purposes. A successful practice case or deterministic
 MCP run does not establish the quality or reliability of a model's educational
-judgement. Previously committed model results appear separately in the technical
-audit section; they are not presented as new inference in the browser session.
+judgement. The current case identifies its execution mode and audit evidence.
+Historical model results remain labelled separately. Standalone model-evaluation
+workflows also retain their own reports and scenario grades.
 
 ### Original challenge demonstration
 
@@ -53,8 +54,8 @@ presentation requirements.
 ## Getting started
 
 Use Python **3.11 or newer**. Genuine Filesystem MCP calls also require Node.js
-**20 or newer** and npm. Ollama and the `qwen2.5:3b` model are needed only for the
-separate real-model workflow, not for opening a practice case.
+**20 or newer** and npm. Local Qwen review and model evaluation require Ollama with
+`qwen2.5:3b` installed; opening a practice case requires neither.
 
 The commands below use PowerShell. A short checkout and short runtime directory
 are preferable on Windows, particularly when a workflow creates nested case and
@@ -89,13 +90,31 @@ window running while using the workspace; press **Ctrl+C** to stop it. The first
 page is a practice case and does not call Ollama. Select **Run MCP evidence
 analysis** to start a separate deterministic case using genuine MCP calls.
 
+To expose the optional **Run local Qwen review** action, use a checkout containing
+the portal integration and start it with:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --enable-qwen --output-dir 'D:\ML-runtime\portal'
+```
+
+Startup still opens a practice case. Only selecting **Run local Qwen review**
+starts inference. The browser shows progress, then the actual candidate,
+abstention reason or error. A valid candidate enters the same teacher confirmation
+flow. An abstention creates no pending candidate, decision or profile note; an
+error offers no decision controls. The Qwen path uses Education MCP and local
+Ollama without the borrowed Filesystem MCP. See the
+[portal Qwen guide](docs/portal-qwen-integration.md) for prerequisites, limits and
+verification scope. Until this integration reaches a source release, use its
+development checkout for this mode.
+
 The interface uses local styles and system fonts rather than external assets.
 Offline operation still needs to be checked on the intended device after all
 required dependencies have been installed.
 
 ## Reviewing a case
 
-Read the provisional finding and its uncertainty before choosing a decision.
+For a case with a pending candidate, read the finding and its uncertainty before
+choosing a decision.
 Follow the evidence identifiers to inspect the underlying records, including
 counter-evidence. Assessment and practical-task scores are labelled separately;
 their percentages should not be treated as directly comparable without considering
@@ -112,6 +131,11 @@ count. Start a **New practice case** for an independent example. Technical tool
 activity and previously committed model evidence remain available in the
 expandable audit section.
 
+While a Qwen job is running, case changes and review actions are blocked. Progress
+requests only read the current job. An abstention displays the model's reason
+without a teacher-decision form; an error retains its diagnostic files. Neither
+state substitutes a seeded finding for the actual outcome.
+
 ## Technical design
 
 The Python domain layer loads the fictional learner fixtures and orders evidence
@@ -123,6 +147,10 @@ PydanticAI orchestrates model and tool interactions. FastMCP client tooling limi
 the model-visible tool set. The borrowed
 `@modelcontextprotocol/server-filesystem@2026.8.31` server provides read-only access
 to the reference material in `data/reference/`.
+
+The portal's Qwen mode uses the native structured workflow in an isolated child
+process. The application controls Education MCP retrieval and validated candidate
+submission; the model selects no action tools in this path.
 
 ```text
 Fictional learner records
@@ -163,9 +191,10 @@ candidate or abstention and validates the response before submitting a candidate
 through MCP. Required fields, evidence membership, distinct evidence roles and
 cross-term support remain runtime checks.
 
-`review_decision_v1` remains the default schema. The optional
+`review_decision_v1` remains the standalone workflow's default schema. The optional
 `review_decision_outcome_v2` schema expresses the existing candidate/abstention
-field dependencies more precisely. Schema validity is not a judgement of
+field dependencies more precisely; the enabled portal Qwen mode selects it
+explicitly. Schema validity is not a judgement of
 educational correctness. The decision policy, `provisional_review_v2`, permits a
 qualified description of recorded evidence without requiring a claim of durable
 improvement or independent mastery. Genuine abstention remains possible.
@@ -210,7 +239,7 @@ Follow the [functional acceptance guide](docs/functional-acceptance.md) and
 
 ### Model evaluation
 
-Real Qwen evaluation is separate from interface and service testing. The
+Browser Qwen review does not replace model evaluation. The
 [four-scenario protocol](docs/multi-scenario-evaluation.md) covers longitudinal
 patterns, conflicting evidence, a single assessment and missing competency
 evidence. The [repeatability harness](docs/model-reliability.md) records independent
@@ -282,6 +311,7 @@ secure persistence, data minimisation and retention arrangements.
 
 Further guidance: [architecture](ARCHITECTURE.md), [evaluation](EVALS.md),
 [teacher workspace](docs/teacher-workspace.md),
+[portal Qwen integration](docs/portal-qwen-integration.md),
 [Education MCP](docs/education-mcp.md),
 [borrowed Filesystem MCP](docs/borrowed-filesystem-mcp.md),
 [teacher feedback](docs/teacher-feedback.md),

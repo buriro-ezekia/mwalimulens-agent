@@ -1,6 +1,6 @@
 # MwalimuLens product development and validation roadmap
 
-- **Updated:** 3 November 2026
+- **Updated:** 4 November 2026
 - **Development branch:** `product-development`
 - **Original validated submission:** `6215b9efb79ffd022a835dabba386c5ccb8226e4`
 
@@ -12,9 +12,14 @@ MwalimuLens helps educators interpret longitudinal learning evidence while reser
 
 The teacher-facing [Learner Progress Review](teacher-workspace.md) provides an assessment trend, chronological evidence, supporting and contradictory observations, uncertainty, an explicit review question and a browser-based human decision workflow. Approve, revise and reject decisions require confirmation and are persisted with the local audit record.
 
-The application supports a seeded fictional practice case and a separate deterministic workflow that makes real calls to the custom Education MCP and read-only Filesystem MCP. The deterministic workflow is not live Qwen inference. The original Qwen2.5 3B challenge evidence remains a historical single-task result, separate from current model reliability.
+The application offers three workspace modes: a seeded fictional practice case,
+a deterministic workflow using the custom Education MCP and read-only Filesystem
+MCP, and optional local Qwen review enabled with `--enable-qwen`. Only the last
+mode performs live inference. It displays progress and the actual candidate,
+abstention or error from an isolated job. The original Qwen2.5 3B challenge result
+is separate historical evidence.
 
-The integrated UI provides Summary, Evidence and Decision navigation, linked evidence records, separate assessment and practical-task score labels, a dedicated decision panel and narrow-screen presentation. Returning from confirmation without saving leaves the review and profile-note counts unchanged. The opt-in structured workflow and outcome-bound schema remain separate from the browser's deterministic analysis; the default schema is still `review_decision_v1`.
+The integrated UI provides Summary, Evidence and Decision navigation, linked evidence records, separate assessment and practical-task score labels, a dedicated decision panel and narrow-screen presentation. Returning from confirmation without saving leaves the review and profile-note counts unchanged. The Qwen browser path selects the opt-in outcome-bound schema explicitly and uses the same human-confirmation flow for a validated candidate. An abstention or error offers no decision controls. The standalone workflow's default remains `review_decision_v1`.
 
 The [model repeatability harness](model-reliability.md) records isolated attempts, timeouts, errors, tool traces and duration metrics. The [offline demonstration checks](offline-demo.md) cover local dependencies, MCP execution and manual network-disconnection rehearsal. A [teacher feedback protocol](teacher-feedback.md) supports exploratory usability assessment using synthetic data.
 
@@ -25,6 +30,13 @@ The integrated UI baseline is `b61666d4b04074b9a538881f7e09401150f73f82`. The [r
 - The browser workflow, evaluation harness and preflight modules are implemented; browser observations after the UI corrections are recorded as completed.
 - Real multi-scenario attempts and their failures are documented. A consistent four-scenario Qwen pass and educational semantic reliability remain unestablished.
 - One native Ollama outcome-schema probe returned a valid abstention. It establishes observed provider compatibility only, not a candidate workflow or educational correctness.
+- The [4 November Windows validation](semantic-validation-2026-11-04.md) completed
+  one structured generation and returned a valid abstention, failing the fixed
+  expected-candidate scenario. The [alignment review](policy-rubric-alignment.md)
+  separates workflow expectations from semantic judgement.
+- Portal Qwen integration passed **848 tests**, Ruff, dependency integrity and
+  documentation-link checks. The new intended-device browser walkthrough remains
+  outstanding; earlier deterministic browser observations do not verify this path.
 - The disconnected deterministic MCP browser rehearsal is operator-confirmed as passed on 3 November; [the dated record](offline-rehearsal-2026-11-03.md) separates observed outcomes from network/visual confirmation and notes the uncaptured laptop Git HEAD.
 - Teacher usability feedback and classroom impact have **not** been established.
 - Identity is simulated rather than authenticated; no real learner data, public write endpoint or multi-user school deployment is approved.
@@ -37,9 +49,30 @@ Provide a coherent teacher experience from retrieved evidence through review and
 
 **Recorded status:** UI integration, software quality, operator functional acceptance and browser walkthroughs are recorded as completed. Preserve the human-only gate. Apply the [functional acceptance guide](functional-acceptance.md) to future behaviour changes rather than repeating completed execution for documentation reconciliation.
 
-### P0 — Repeat local model evaluation
+### P0 — Verify local Qwen integration
 
-The initial harness repeats one fictional learner task; the implemented [four-scenario evaluator](multi-scenario-evaluation.md) also covers conflicting evidence and appropriate abstention. Retain successes, failures, timeouts and first-pass versus corrected outcomes. Plan any further live campaign separately, with explicit bounds. No further inference is needed to repeat the completed schema-compatibility observation.
+The [portal integration](portal-qwen-integration.md) connects one bounded local
+generation to progress, candidate, abstention and error states. It uses real
+Education MCP retrieval, with one request, no prewarm or repair, a 210-second
+internal deadline and a 240-second watchdog. A candidate enters the existing
+human-only confirmation flow; abstention and error states cannot create a teacher
+decision or profile note.
+
+**Recorded status:** implementation and offline software verification complete
+with 848 passing tests. Tests use mocked model responses with genuine MCP access. The intended-device
+Qwen browser walkthrough remains outstanding and requires separately agreed live
+inference bounds. Preserve duplicate-launch rejection, case isolation and stale
+confirmation protection.
+
+### P0 — Review model reasoning against the evidence
+
+Use the [manual semantic rubric](semantic-review-rubric.md) and saved inputs to
+review source fidelity, policy alignment, comparability and reason quality. The
+implemented [four-scenario evaluator](multi-scenario-evaluation.md) keeps its
+fixed workflow expectations; those labels do not establish educational truth.
+Retain failures and distinguish first-pass results from corrected outcomes.
+Any further live campaign needs explicit bounds; portal integration itself is
+not evidence that model reasoning has improved.
 
 **Gate:** an auditable run-level report, grounded metrics and explicit hardware and timing information.
 

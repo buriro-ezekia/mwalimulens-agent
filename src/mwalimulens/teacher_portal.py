@@ -34,11 +34,17 @@ def h(value: Any) -> str:
 class Case:
     state: Any
     service: Any
-    candidate: dict[str, Any]
+    candidate: dict[str, Any] | None
     evidence: list[dict[str, Any]]
     run_dir: Path
     mode: str
     report: dict[str, Any] | None = None
+    analysis_status: str = "candidate"
+    stage: str = "complete"
+    abstention_reason: str = ""
+    analysis_error: str = ""
+    request_count: int = 0
+    worker_active: bool = False
 
 
 def create_case(root: Path, mode: str = "seeded") -> Case:
@@ -96,8 +102,9 @@ def _evidence_links(identifiers: list[str], *, counter: bool = False) -> str:
     ) or '<span class="hint">None recorded</span>'
 
 def _evidence(case: Case) -> str:
-    supporting = set(case.candidate["supporting_evidence_ids"])
-    opposing = set(case.candidate["counter_evidence_ids"])
+    candidate = case.candidate or {}
+    supporting = set(candidate.get("supporting_evidence_ids", []))
+    opposing = set(candidate.get("counter_evidence_ids", []))
     rows = []
     for item in case.evidence:
         ident = item["evidence_id"]
@@ -170,6 +177,8 @@ def _model_validation() -> str:
 
 
 def _review_form(case: Case, token: str) -> str:
+    if case.candidate is None or case.analysis_status != "candidate":
+        return '<p class="hint">There is no completed candidate to review.</p>'
     if not case.state.pending_reviews():
         review = case.state.teacher_reviews()[-1]
         decision = {"approve": "Approved", "edit": "Revised", "reject": "Rejected"}.get(
@@ -239,6 +248,7 @@ background:white;color:var(--ink);font-weight:650;line-height:1.4;cursor:pointer
 text-decoration:none;font-size:13px}button:hover,.button:hover{background:#edf3f5}
 button.primary,.button.primary{background:var(--teal);border-color:var(--teal);color:white}
 button.primary:hover{background:#05665e}.full-width{width:100%;justify-content:space-between}
+button:disabled{opacity:.55;cursor:wait}
 .page-heading{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}
 .eyebrow{color:var(--teal);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
 font-weight:750;margin-bottom:8px}.page-heading p{color:var(--muted);margin-top:10px;
@@ -412,27 +422,162 @@ color:#183049}.evidence-link{color:#183049}a{text-decoration:none}}
 """
 
 
-def _document(title: str, content: str) -> str:
+def _document(title: str, content: str, *, refresh: bool = False) -> str:
+    reload_page = '<meta http-equiv="refresh" content="2;url=/">' if refresh else ""
     return (
         '<!doctype html><html lang="en-GB"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         '<meta name="referrer" content="same-origin">'
-        f'<title>{h(title)}</title><style>{CSS}</style></head>'
+        f'<title>{h(title)}</title>{reload_page}<style>{CSS}</style></head>'
         '<body><a class="skip-link" href="#main-content">Skip to review content</a>'
         f'<main id="main-content">{content}</main></body></html>'
     )
 
 
-def render_portal(case: Case, token: str, *, message: str = "", error: str = "") -> str:
+def _toolbar(token: str, *, qwen_enabled: bool, run_nonce: str, busy: bool) -> str:
+    disabled = ' disabled aria-disabled="true"' if busy else ""
+    qwen = f'''<form method="post" action="/case/start">
+<input type="hidden" name="csrf" value="{h(token)}">
+<input type="hidden" name="mode" value="qwen">
+<input type="hidden" name="run_nonce" value="{h(run_nonce)}">
+<button type="submit"{disabled} title="One local model request; up to four minutes">
+Run local Qwen review</button></form>''' if qwen_enabled else ""
+    return f'''<div class="toolbar"><form method="post" action="/case/start">
+<input type="hidden" name="csrf" value="{h(token)}">
+<input type="hidden" name="mode" value="seeded">
+<button type="submit"{disabled}><span aria-hidden="true">+</span> New practice case</button></form>
+<form method="post" action="/case/start">
+<input type="hidden" name="csrf" value="{h(token)}">
+<input type="hidden" name="mode" value="mcp">
+<button class="primary" type="submit"{disabled}>Run MCP evidence analysis
+<span aria-hidden="true">→</span></button></form>{qwen}</div>'''
+
+
+def _mode_text(case: Case) -> str:
+    if case.mode == "qwen":
+        return "Local Qwen review; one bounded model request"
+    return ("Live MCP calls with a deterministic model; no Qwen inference" if case.mode == "mcp"
+            else "Seeded fictional case; no MCP client or model inference")
+
+
+def _qwen_validation(case: Case) -> str:
+    report = case.report or {}
+    requests = report.get("model_requests") or []
+    request = requests[0] if isinstance(requests, list) and requests else {}
+    request = request if isinstance(request, dict) else {}
+    return (
+        '<h3>Current local Qwen attempt</h3>'
+        '<dl class="review-details">'
+        f'<dt>Requested model</dt><dd>{h(report.get("model", "qwen2.5:3b"))}</dd>'
+        f'<dt>Model requests recorded</dt><dd>{case.request_count}</dd>'
+        f'<dt>Request duration (seconds)</dt><dd>{h(request.get("seconds"))}</dd>'
+        f'<dt>Input / output tokens</dt><dd>{h(request.get("input_tokens"))} / '
+        f'{h(request.get("output_tokens"))}</dd>'
+        f'<dt>Proposal outcome</dt><dd>'
+        f'{h(report.get("proposal_status", case.analysis_status))}</dd>'
+        f'<dt>Policy</dt><dd>{h(report.get("decision_policy_id"))}</dd>'
+        f'<dt>Schema</dt><dd>{h(report.get("decision_schema_id"))}</dd>'
+        f'<dt>Evidence hash</dt><dd><code>{h(report.get("evidence_sha256"))}</code></dd>'
+        f'<dt>Local artefacts</dt><dd>{h(case.run_dir)}</dd></dl>'
+        '<p class="hint">One request maximum, with no prewarm or repair. '
+        'The internal deadline is 210 seconds and the outer timeout is 240 seconds. '
+        'The application controls MCP calls; autonomous model tool selection is not assessed. '
+        'Semantic quality remains unverified.</p>'
+    )
+
+
+def _noncandidate_portal(case: Case, token: str, *, toolbar: str,
+                         message: str, error: str) -> str:
+    running = case.analysis_status == "running"
+    abstained = case.analysis_status == "abstained"
+    heading = ("Local Qwen review in progress" if running else
+               "No finding proposed" if abstained else "Local Qwen review could not be completed")
+    stages = {
+        "queued": "Starting the local review", "retrieval": "Retrieving source evidence",
+        "generation": "Waiting for the local model", "validation": "Checking the model response",
+        "submission": "Recording a pending candidate", "initial": "Waiting for the local model",
+    }
+    detail = (
+        stages.get(case.stage, "The local review is running") if running else
+        case.abstention_reason if abstained else
+        case.analysis_error or "No completed, verified candidate is available from this attempt."
+    )
+    explanation = (
+        "Allow up to four minutes for this local attempt. One model request is allowed. "
+        "This page refreshes to show progress; "
+        "refreshing does not start another request." if running else
+        "The model abstained. No candidate was created, and there is no decision to confirm."
+        if abstained else
+        "Review is disabled for this attempt. Any partial progress is retained "
+        "in its local artefacts. "
+        "A timeout does not establish that the model service has stopped computing."
+    )
+    try:
+        counts = [len(case.state.pending_reviews()), len(case.state.teacher_reviews()),
+                  len(case.state.profile_updates())]
+        audit = _audit(case)
+    except (OSError, ValueError, KeyError, TypeError):
+        counts, audit = [None, None, None], ""
+    metrics = "".join(
+        f'<div class="metric"><strong>{h(value)}</strong><span>{label}</span></div>'
+        for value, label in zip(counts, (
+            "Unverified pending records" if counts[0] else "Awaiting review",
+            "Teacher decisions (simulated)", "Synthetic profile notes",
+        ), strict=True)
+    )
+    notification = f'<div class="flash" role="status">{h(message)}</div>' if message else ""
+    problem = f'<div class="error" role="alert">{h(error)}</div>' if error else ""
+    content = f'''<header class="topbar">{_brand()}{toolbar}</header>
+<div class="page-heading"><div><div class="eyebrow">Evidence-led teacher review</div>
+<h1>Learner Progress Review</h1>
+<p>Read the source records and the outcome of this local attempt.</p>
+</div><nav class="step-nav" aria-label="Review sections"><a href="#summary">Summary</a>
+<a href="#evidence">Evidence</a><a href="#decision">Decision</a></nav></div>
+<div class="demo-notice"><p><strong>Demonstration environment:</strong>
+fictional learner evidence only. Reviewer identity is simulated, not authenticated.
+<span class="mode-line">{h(_mode_text(case))}.</span>
+</p></div>{notification}{problem}
+<section class="case-strip" aria-label="Current learner and review status">
+<div class="learner"><span class="avatar" aria-hidden="true">A</span><div>
+<h2>Amani <span>(fictional)</span></h2><p>Mathematics · Fractions</p></div></div>
+<div class="metrics">{metrics}</div></section>
+<div class="workspace-grid"><div class="analysis-column">
+<section id="summary" class="card" aria-live="polite"><h2>{h(heading)}</h2>
+<div class="finding"><h3>{'Progress' if running else 'Reason'}</h3><p>{h(detail)}</p></div>
+<p class="hint">{h(explanation)}</p></section>
+<section class="card"><h2>Progress across terms</h2>{_trend(case)}
+<p class="hint">These are fictional source records, not a model finding. Different tasks
+are not necessarily directly comparable.</p></section>
+<section id="evidence" class="card"><h2>Source evidence</h2>
+<p class="hint">{'Source records for this case; retrieval may still be in progress.' if running
+else 'Review the source records independently of the model outcome.'}</p>
+<div class="table-wrap"><table class="evidence-table">
+<caption>Chronological fictional records</caption>
+<thead><tr><th>ID</th><th>Term</th><th>Type</th><th>Score</th><th>Observation</th><th>Role</th></tr></thead>
+<tbody>{_evidence(case)}</tbody></table></div></section>
+<section class="card audit-card"><details><summary>Technical evidence and audit trail</summary>
+<div class="audit-content">{_qwen_validation(case)}<div class="table-wrap"><table>
+<caption>Audited actions for this attempt</caption><thead><tr><th>Action</th><th>Result</th>
+<th>Timestamp</th></tr></thead><tbody>{audit}</tbody></table></div></div></details></section></div>
+<aside id="decision" class="decision-panel" aria-labelledby="decision-title"><section class="card">
+<h2 id="decision-title">Teacher's decision</h2><p class="hint">There is no completed candidate
+to approve, revise or reject. The model cannot approve its own candidate.</p>
+</section></aside></div>'''
+    return _document("MwalimuLens | Local Qwen review", content,
+                     refresh=running or case.worker_active)
+
+
+def render_portal(case: Case, token: str, *, message: str = "", error: str = "",
+                  qwen_enabled: bool = False, run_nonce: str = "", busy: bool = False) -> str:
     """Render the evidence and review controls without changing application state."""
+    toolbar = _toolbar(token, qwen_enabled=qwen_enabled, run_nonce=run_nonce, busy=busy)
+    if case.candidate is None or case.analysis_status != "candidate":
+        return _noncandidate_portal(case, token, toolbar=toolbar, message=message, error=error)
     current = case.state.review_candidate(case.candidate["review_id"])
     pending = len(case.state.pending_reviews())
     reviews = len(case.state.teacher_reviews())
     updates = len(case.state.profile_updates())
-    mode = (
-        "Live MCP calls with a deterministic model; no Qwen inference"
-        if case.mode == "mcp" else "Seeded fictional case; no MCP client or model inference"
-    )
+    mode = _mode_text(case)
     status = "Awaiting teacher review" if pending else "Reviewed by simulated teacher"
     status_class = "" if pending else " done"
     notification = f'<div class="flash" role="status">{h(message)}</div>' if message else ""
@@ -442,16 +587,10 @@ def render_portal(case: Case, token: str, *, message: str = "", error: str = "")
     term_count = len({row["term_id"] for row in case.evidence})
     support = _evidence_links(current["supporting_evidence_ids"])
     counter = _evidence_links(current["counter_evidence_ids"], counter=True)
+    validation = (_qwen_validation(case) if case.mode == "qwen" else
+                  '<h3>Separate local-model validation</h3>' + _model_validation())
     content = f'''<header class="topbar">{_brand()}
-<div class="toolbar"><form method="post" action="/case/start">
-<input type="hidden" name="csrf" value="{h(token)}">
-<input type="hidden" name="mode" value="seeded">
-<button type="submit"><span aria-hidden="true">+</span> New practice case</button></form>
-<form method="post" action="/case/start">
-<input type="hidden" name="csrf" value="{h(token)}">
-<input type="hidden" name="mode" value="mcp">
-<button class="primary" type="submit">Run MCP evidence analysis
-<span aria-hidden="true">→</span></button></form></div></header>
+{toolbar}</header>
 <div class="page-heading"><div><div class="eyebrow">Evidence-led teacher review</div>
 <h1>Learner Progress Review</h1>
 <p>Review the records, consider the uncertainty and decide what to retain.</p></div>
@@ -499,7 +638,7 @@ aria-hidden="true">02</span> Evidence record</h2>
 <th scope="col">Score</th><th scope="col">Observation</th><th scope="col">Role</th></tr></thead>
 <tbody>{_evidence(case)}</tbody></table></div></section>
 <section class="card audit-card"><details><summary>Technical evidence and audit trail</summary>
-<div class="audit-content"><h3>Separate local-model validation</h3>{_model_validation()}
+<div class="audit-content">{validation}
 <p class="hint">{h(mode)}. {tool_count} audited action(s). The human-review service
 is not exposed to the model's MCP tool allowlist.</p>
 <div class="table-wrap" tabindex="0" role="region" aria-label="Technical audit records">
@@ -517,6 +656,8 @@ The model cannot approve its own candidate.</p>
 
 def render_confirmation(case: Case, token: str, nonce: str, decision: str,
                         reason: str, edited: str) -> str:
+    if case.candidate is None or case.analysis_status != "candidate":
+        raise ValueError("No completed candidate is available for confirmation")
     outcome = "No profile note will be created." if decision == "reject" else (
         "One synthetic profile note will be created after this simulated human decision."
     )
@@ -548,17 +689,108 @@ def render_confirmation(case: Case, token: str, nonce: str, decision: str,
 class TeacherPortal:
     """Single-user local HTTP interface with a per-session CSRF token."""
 
-    def __init__(self, output_root: Path, case: Case) -> None:
+    def __init__(self, output_root: Path, case: Case, *, qwen_enabled: bool = False,
+                 qwen_job_factory=None) -> None:
         self.output_root = output_root
         self.case = case
         self.token = secrets.token_urlsafe(32)
         self.lock = threading.RLock()
         self.confirmations: dict[str, tuple[float, str, str, str, str]] = {}
+        self.qwen_enabled = qwen_enabled
+        self.run_nonce = secrets.token_urlsafe(32)
+        self.qwen_job = None
+        self.qwen_job_factory = qwen_job_factory
+
+    def _sync_qwen(self) -> None:
+        """Read progress and completed output without starting or mutating a workflow."""
+        if self.qwen_job is None:
+            return
+        view = self.qwen_job.snapshot()
+        status = view.get("status")
+        if status not in {"running", "candidate", "abstained", "error"}:
+            status = "error"
+        self.case.analysis_status = status
+        self.case.worker_active = bool(view.get("worker_active", status == "running"))
+        self.case.stage = str(view.get("stage") or "queued")
+        self.case.report = view.get("report")
+        self.case.candidate = view.get("candidate") if status == "candidate" else None
+        self.case.abstention_reason = str(view.get("abstention_reason") or "")
+        self.case.analysis_error = str(view.get("error") or "")
+        self.case.request_count = int(view.get("request_count") or 0)
+        if view.get("evidence"):
+            self.case.evidence = view["evidence"]
+
+    def _busy(self) -> bool:
+        return self.qwen_job is not None and (
+            self.case.analysis_status == "running" or self.case.worker_active
+        )
+
+    def _page(self, *, message: str = "", error: str = "") -> str:
+        return render_portal(
+            self.case, self.token, message=message, error=error,
+            qwen_enabled=self.qwen_enabled, run_nonce=self.run_nonce, busy=self._busy(),
+        )
+
+    def _start_qwen(self) -> None:
+        from mwalimulens.domain import load_synthetic_dataset
+        from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR
+        from mwalimulens.mcp_server.service import EducationToolService, _evidence_payload
+        from mwalimulens.mcp_server.state import JsonStateStore
+
+        dataset = load_synthetic_dataset(DEFAULT_DATA_DIR)
+        if not dataset.learners or any(not learner.synthetic for learner in dataset.learners):
+            raise ValueError("Only fictional learner data is permitted")
+        factory = self.qwen_job_factory
+        if factory is None:
+            from mwalimulens.portal_qwen import QwenJob
+
+            factory = QwenJob
+        job = factory(self.output_root)
+        store = JsonStateStore(job.state_path)
+        evidence = [
+            _evidence_payload(row)
+            for row in dataset.competency_evidence("L001", "MATH-FRACTIONS")
+        ]
+        replacement = Case(
+            store, EducationToolService(dataset, store), None, evidence, job.run_dir, "qwen",
+            analysis_status="running", stage="queued",
+        )
+        if self.qwen_job is not None:
+            self.qwen_job.close()
+        self.case = replacement
+        self.qwen_job = job
+        self.confirmations.clear()
+        self.run_nonce = secrets.token_urlsafe(32)
+        try:
+            job.start()
+        except (OSError, RuntimeError, ValueError):
+            self.qwen_job = None
+            self.case.analysis_status = "error"
+            self.case.analysis_error = (
+                "The local Qwen attempt could not start. Check its local artefacts."
+            )
+            try:
+                job.close()
+            except (OSError, RuntimeError, ValueError):
+                pass  # A failed cleanup must not restore a reviewable candidate.
+            raise
+        self._sync_qwen()
 
     def _new_case(self, mode: str) -> None:
         replacement = create_case(self.output_root, mode)
+        if self.qwen_job is not None:
+            self.qwen_job.close()
+        self.qwen_job = None
         self.case = replacement
         self.confirmations.clear()
+        self.run_nonce = secrets.token_urlsafe(32)
+
+    def close(self) -> None:
+        """Stop the owned worker when the local application is closed."""
+        with self.lock:
+            if self.qwen_job is not None:
+                self.qwen_job.close()
+                self._sync_qwen()
 
 
 def make_handler(portal: TeacherPortal):
@@ -632,7 +864,9 @@ def make_handler(portal: TeacherPortal):
                 self._bad("Ambiguous form data")
                 return None
             fields = {key: values[0] for key, values in parsed.items()}
-            if not hmac.compare_digest(fields.get("csrf", ""), portal.token):
+            if not hmac.compare_digest(
+                fields.get("csrf", "").encode("utf-8"), portal.token.encode("utf-8"),
+            ):
                 self._bad("Form token is invalid", 403)
                 return None
             return fields
@@ -651,7 +885,8 @@ def make_handler(portal: TeacherPortal):
                 self.send_error(404)
                 return
             with portal.lock:
-                self._send(render_portal(portal.case, portal.token))
+                portal._sync_qwen()
+                self._send(portal._page())
 
         def do_POST(self) -> None:
             if not self._trusted():
@@ -663,24 +898,51 @@ def make_handler(portal: TeacherPortal):
             if fields is None:
                 return
             with portal.lock:
+                portal._sync_qwen()
+                if portal._busy():
+                    self._bad("A local Qwen review is already running. Wait for its outcome.", 409)
+                    return
                 if self.path == "/case/start":
                     mode = fields.get("mode", "")
-                    if mode not in {"seeded", "mcp"}:
+                    if mode not in {"seeded", "mcp", "qwen"}:
                         self._bad("Unsupported analysis mode")
+                        return
+                    if mode == "qwen":
+                        if not portal.qwen_enabled:
+                            self._bad("Local Qwen review is not enabled for this session.", 403)
+                            return
+                        if not hmac.compare_digest(
+                            fields.get("run_nonce", "").encode("utf-8"),
+                            portal.run_nonce.encode("utf-8"),
+                        ):
+                            self._bad("This model request has expired or already been used.", 409)
+                            return
+                        previous_case = portal.case
+                        try:
+                            portal._start_qwen()
+                        except (OSError, RuntimeError, ValueError):
+                            if portal.case is not previous_case:
+                                self._send(portal._page(), 422)
+                            else:
+                                self._bad(
+                                    "The Qwen attempt could not start; "
+                                    "the previous case remains.", 422,
+                                )
+                            return
+                        self._send(portal._page(), 202 if portal._busy() else 200)
                         return
                     try:
                         portal._new_case(mode)
                     except (OSError, RuntimeError, ValueError) as exc:
-                        self._send(render_portal(portal.case, portal.token,
-                                                 error=f"Analysis failed: {exc}"), 422)
+                        self._send(portal._page(error=f"Analysis failed: {exc}"), 422)
                         return
-                    self._send(render_portal(portal.case, portal.token,
-                                             message="A fresh fictional case is ready."))
+                    self._send(portal._page(message="A fresh fictional case is ready."))
                     return
 
                 if self.path == "/review/preview":
-                    if not portal.case.state.pending_reviews():
-                        self._bad("This case has already been reviewed", 409)
+                    if (portal.case.candidate is None or portal.case.analysis_status != "candidate"
+                            or not portal.case.state.pending_reviews()):
+                        self._bad("There is no pending, completed candidate to review.", 409)
                         return
                     decision = fields.get("decision", "").strip().lower()
                     reason = fields.get("reason", "").strip()
@@ -707,6 +969,9 @@ def make_handler(portal: TeacherPortal):
                     return
 
                 nonce = fields.get("nonce", "")
+                if portal.case.candidate is None or portal.case.analysis_status != "candidate":
+                    self._bad("There is no completed candidate to confirm.", 409)
+                    return
                 confirmation = portal.confirmations.pop(nonce, None)
                 if confirmation is None:
                     self._bad("Confirmation expired or already used", 409)
@@ -725,11 +990,9 @@ def make_handler(portal: TeacherPortal):
                         edited_claim=edited if decision == "edit" else None,
                     )
                 except (ValueError, KeyError) as exc:
-                    self._send(render_portal(portal.case, portal.token,
-                                             error=f"Review could not be recorded: {exc}"), 409)
+                    self._send(portal._page(error=f"Review could not be recorded: {exc}"), 409)
                     return
-                self._send(render_portal(portal.case, portal.token,
-                                         message="Your simulated decision has been recorded."))
+                self._send(portal._page(message="Your simulated decision has been recorded."))
 
     return Handler
 
@@ -749,6 +1012,8 @@ def serve(portal: TeacherPortal, *, port: int = 0,
             server.serve_forever(poll_interval=0.2)
         except KeyboardInterrupt:
             pass
+        finally:
+            portal.close()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -756,13 +1021,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--initial-mode", choices=("seeded", "mcp"), default="seeded")
+    parser.add_argument("--enable-qwen", action="store_true",
+                        help="Enable explicit, bounded local Qwen requests in the browser.")
     parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args(argv)
     if not 0 <= args.port <= 65535:
         parser.error("port must be between 0 and 65535")
     try:
         root = args.output_dir.expanduser().resolve()
-        portal = TeacherPortal(root, create_case(root, args.initial_mode))
+        portal = TeacherPortal(root, create_case(root, args.initial_mode),
+                               qwen_enabled=args.enable_qwen)
         serve(portal, port=args.port, open_browser=not args.no_open)
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"Teacher workspace could not start: {exc}", file=sys.stderr)

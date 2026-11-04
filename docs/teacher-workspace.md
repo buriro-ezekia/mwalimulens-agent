@@ -1,8 +1,7 @@
 # MwalimuLens Learner Progress Review
 
 The teacher workspace brings longitudinal evidence review, a human decision and the resulting
-local audit trail into one responsive browser interface. It uses fictional learner records
-and keeps experimental state separate from the original published evidence.
+local audit trail into one responsive browser interface. It uses fictional learner records.
 
 The integrated interface provides **Summary**, **Evidence** and **Decision** section links,
 evidence IDs that lead to their source rows, separate assessment/practical-task labels and a
@@ -36,7 +35,37 @@ browser then displays the actual pending candidate, evidence and audited calls f
 fresh run. This mode requires the existing Node.js MCP dependencies to be installed locally.
 It does **not** run Qwen inference. The separate committed real Qwen evidence remains distinct.
 
+### Enable local Qwen review
+
+Use a checkout containing the portal integration, with Ollama running locally and
+`qwen2.5:3b` already installed:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --enable-qwen --output-dir 'D:\ML-runtime\portal'
+```
+
+The flag exposes **Run local Qwen review**. Startup still shows a practice case;
+it does not run inference. Selecting the action starts one isolated background
+job using real Education MCP retrieval and one bounded local Qwen generation.
+This mode does not use the borrowed Filesystem MCP.
+
+| Qwen state | What the workspace shows |
+| --- | --- |
+| Running | Progress from the current job; case changes and review actions are blocked. Read-only progress requests do not start another generation. |
+| Candidate | The validated finding, evidence and existing teacher-decision form; confirmation is still required. |
+| Abstention | The model's actual reason, with **0 pending / 0 decisions / 0 profile notes** and no decision form. |
+| Error | The actual failure and retained diagnostic files, with no decision form or substituted practice finding. |
+
+Only one Qwen job may run at a time. Duplicate submissions are rejected, and
+changing cases invalidates earlier confirmation controls. Each job retains its
+own files under a `qwen-*` directory. The [Qwen integration guide](portal-qwen-integration.md)
+describes execution limits, audit interpretation and verification requirements.
+This mode requires the development integration until it is included in a source
+release.
+
 ## Complete a teacher review
+
+These steps apply to a pending candidate from any of the three modes:
 
 1. Read the evidence summary, chronological records and highlighted counter-evidence.
 2. Choose **Approve**, **Revise** or **Reject**.
@@ -45,7 +74,8 @@ It does **not** run Qwen inference. The separate committed real Qwen evidence re
 5. Select **Confirm simulated decision** to record the outcome, or **Go back without saving**
    to return to the evidence without recording a decision or profile note.
 6. Inspect the updated status, synthetic profile-note count and expandable audit trail.
-7. Use **New practice case** or **Run MCP evidence analysis** to start a separate fresh case.
+7. Start a separate case using **New practice case**, **Run MCP evidence analysis**
+   or, when enabled, **Run local Qwen review**.
 
 Reject creates no profile note. Approve or Revise creates one synthetic profile note through
 the existing `EducationToolService.record_teacher_review` method. Repeated confirmation
@@ -61,12 +91,15 @@ The workspace is a **single-user demonstration**, not a production teacher porta
 - The HTTP server binds **only to `127.0.0.1`**, uses a randomly selected port by default,
   checks the `Host` and browser `Origin`, requires a per-session form token and an explicit
   one-time confirmation, and does not load external assets.
-- All consequential writes go through the existing human-only service method. The language
-  model's MCP tool allowlist remains unchanged and excludes `record_teacher_review`.
+- Teacher decisions and profile notes go through the existing human-only service method.
+  The application may submit a validated pending candidate, but the model cannot call
+  `record_teacher_review` or record a teacher decision.
+- Qwen jobs require an explicit form submission with a session token and one-use nonce.
+  The child uses only local `qwen2.5:3b` at `127.0.0.1:11434`; the browser cannot
+  select a remote provider, another model or larger execution limits.
 - The browser never sends credentials or learner data to a cloud API.
 - The server does not serve arbitrary files or expose a public write endpoint. Local processes
   with access to the same computer are **not** treated as separate trusted users.
-- The original challenge evidence, historical failures and published video are untouched.
 - The local JSON store and simulated identity are **not sufficient for real school use**.
 
 ## Verify
@@ -85,12 +118,21 @@ The layout/navigation tests also cover evidence links, preserved disclosures, re
 queries, exact POST routes and return without saving. They do not establish visual usability
 or educational quality.
 
+The Qwen integration requires separate regression coverage for progress, valid candidates,
+valid abstentions, failures, duplicate launches and stale confirmations. Tests use mocked
+native model responses with genuine MCP access; they do not perform live inference.
+
 Operator screenshots/reports after the UI corrections cover the seeded and genuine deterministic
 MCP workflows, all three decisions, cancellation and narrow-screen presentation. The integrated
 commit also has hosted quality success. Those observations are recorded in the release record;
 they are not pending checks for the already integrated UI. For future behaviour changes, repeat
 the relevant browser checks on the intended device. The [final source-release review](final-release-review-2026-11-03.md)
 records the release scope; PR #31 records its integration state.
+
+Those completed observations cover the earlier seeded and deterministic modes. The new Qwen
+browser path still needs an intended-device walkthrough under separately agreed inference
+bounds, covering progress and each outcome. No live model request was made to implement or
+test this integration.
 
 ## Educational usability and impact
 
@@ -109,8 +151,8 @@ the [dated record](offline-rehearsal-2026-11-03.md) identifies the screenshots, 
 narrow-window observations and their provenance limits. The owner authorised proceeding with
 the bounded source release; its [final review](final-release-review-2026-11-03.md) does not
 establish model or classroom validity.
-Consistent real Qwen judgement
-and practitioner feedback using fictional cases are also unestablished; any new inference
+The Qwen browser walkthrough, consistent real Qwen judgement and practitioner feedback using
+fictional cases remain unestablished; any new inference
 campaign requires separately authorised bounds. Before any real learner pilot, verified teacher
 authentication, role-based access, privacy safeguards, data retention and appropriate school
 approval are required.
