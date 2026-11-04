@@ -520,11 +520,12 @@ def _qwen_validation(case: Case) -> str:
     requests = report.get("model_requests") or []
     request = requests[0] if isinstance(requests, list) and requests else {}
     request = request if isinstance(request, dict) else {}
+    request_count = "Not verified" if case.stage == "saved_error" else case.request_count
     return (
         '<h3>Current local Qwen attempt</h3>'
         '<dl class="review-details">'
         f'<dt>Requested model</dt><dd>{h(report.get("model", "qwen2.5:3b"))}</dd>'
-        f'<dt>Model requests recorded</dt><dd>{case.request_count}</dd>'
+        f'<dt>Model requests recorded</dt><dd>{h(request_count)}</dd>'
         f'<dt>Request duration (seconds)</dt><dd>{h(request.get("seconds"))}</dd>'
         f'<dt>Input / output tokens</dt><dd>{h(request.get("input_tokens"))} / '
         f'{h(request.get("output_tokens"))}</dd>'
@@ -568,6 +569,9 @@ def _noncandidate_portal(case: Case, token: str, *, toolbar: str,
         "A timeout does not establish that the model service has stopped computing."
     )
     try:
+        if case.stage == "saved_error":
+            # Rejected artefacts (including linked state) must not be read by rendering.
+            raise ValueError("Saved state was not verified")
         counts = [len(case.state.pending_reviews()), len(case.state.teacher_reviews()),
                   len(case.state.profile_updates())]
         audit = _audit(case)

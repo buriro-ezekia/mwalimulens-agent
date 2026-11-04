@@ -150,13 +150,16 @@ on the intended device; earlier seeded and deterministic MCP rehearsals do not
 cover them. No additional inference is required to inspect or reopen saved files.
 The development pull request records the exact published head and hosted checks.
 
-Saved-review reopening and case identity subsequently passed **882 tests in
-46.84 s**, Ruff, dependency integrity and whitespace checks, with **54 relative
-documentation links** resolving. The 34 additional regression cases cover
+Saved-review reopening and case identity subsequently passed **883 tests in
+35.51 s**, Ruff, dependency integrity and whitespace checks, with **54 relative
+documentation links** resolving. The 35 additional regression cases cover
 read-only reopening, candidates and abstentions, retained human decisions,
 inconsistent or missing records, fixture drift, path restrictions, form tokens,
 busy-worker rejection, stale confirmations and direct CLI reopening. These
 checks used no live model and establish no new visual acceptance result.
+Rejected saved records are not read again by the renderer; their counts are
+shown as unverified. Redirected directories are rejected even when their
+destination lies within the output root, covering Windows junction behaviour.
 
 Connecting the workflow to the interface does not resolve the recorded model
 reasoning limitations or establish classroom suitability. The

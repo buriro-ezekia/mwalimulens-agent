@@ -44,7 +44,7 @@ def saved_run_path(output_root: Path, run_id: str) -> Path:
     _require(isinstance(run_id, str) and re.fullmatch(r"qwen-[A-Za-z0-9_-]+", run_id)
              is not None, "Choose a saved Qwen review ID")
     path = root / run_id
-    _require(not path.is_symlink() and path.is_dir() and path.resolve().parent == root,
+    _require(not path.is_symlink() and path.is_dir() and path.resolve() == path,
              "Saved review is not a local job directory")
     return path
 
@@ -258,7 +258,7 @@ class QwenJob:
         except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError) as exc:
             # Do not read further artefacts after a rejected path or malformed bundle.
             job._terminal = _view(
-                "error", "error", error=f"Saved review could not be verified: {exc}",
+                "error", "saved_error", error=f"Saved review could not be verified: {exc}",
             )
         return job
 

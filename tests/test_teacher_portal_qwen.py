@@ -574,16 +574,22 @@ def test_failed_saved_path_does_not_change_current_case(harness, run_id):
     assert file_bytes(portal.output_root) == before
 
 
-def test_unverifiable_saved_attempt_opens_error_without_fallback(harness):
+def test_unverifiable_saved_attempt_opens_error_without_fallback(harness, monkeypatch):
     portal, port, factory = harness()
     folder = portal.output_root / "qwen-incomplete"
     folder.mkdir()
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("Rendering a rejected saved case must not read its unverified state")
+
+    for method in ("pending_reviews", "teacher_reviews", "profile_updates", "tool_calls"):
+        monkeypatch.setattr(JsonStateStore, method, forbidden)
     before = file_bytes(portal.output_root)
     status, html, _ = request(port, "POST", "/case/open", {
         "csrf": portal.token, "run_id": folder.name,
     })
     assert status == 200 and "Saved review could not be verified" in html
     assert folder.name in html and "no model request was made" in html
+    assert "Not verified" in html
     assert "/review/preview" not in html
     assert portal.case.candidate is None and factory.jobs == []
     request(port)

@@ -45,7 +45,7 @@ The integrated UI baseline is `b61666d4b04074b9a538881f7e09401150f73f82`. The [r
   records a Windows abstention screenshot and matching job/report files. Candidate,
   error and narrow-window acceptance for this path remain unverified; earlier
   deterministic browser observations do not verify them.
-- Saved-review reopening and visible case identity passed **882 tests**, Ruff,
+- Saved-review reopening and visible case identity passed **883 tests**, Ruff,
   dependency integrity, whitespace and 54 relative documentation-link checks.
   Inspection and reopening make no model request; these tests do not establish
   new semantic or intended-device visual acceptance.

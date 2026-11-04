@@ -300,6 +300,23 @@ def test_saved_reviews_reject_linked_directories_and_artifacts(saved_job, tmp_pa
     assert view["status"] == "error"
 
 
+def test_saved_review_rejects_directory_redirect_even_within_output_root(
+    tmp_path, monkeypatch,
+):
+    from pathlib import Path
+
+    original = Path.resolve
+    path = tmp_path / "qwen-selected"
+    path.mkdir()
+    other = tmp_path / "qwen-another"
+    other.mkdir()
+    # A Windows junction need not report itself as a symbolic link.
+    monkeypatch.setattr(Path, "resolve", lambda self, *args, **kwargs:
+                        other if self == path else original(self, *args, **kwargs))
+    with pytest.raises(ValueError, match="not a local job directory"):
+        portal_qwen.saved_run_path(tmp_path, path.name)
+
+
 def test_cli_reopens_saved_abstention_without_creating_a_practice_case(
     saved_job, tmp_path, monkeypatch,
 ):
