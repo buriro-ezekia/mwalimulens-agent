@@ -11,7 +11,7 @@ The connectivity-off MCP rehearsal is recorded as PASS within that scope. The
 [source-release review](final-release-review-2026-11-03.md) records the subsequent
 owner-authorised source promotion, separately from model and classroom validation.
 
-## Before travel (while connected)
+## Before the offline rehearsal (while connected)
 
 Verify the local environment and required dependencies:
 
