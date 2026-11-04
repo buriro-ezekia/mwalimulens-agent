@@ -1,8 +1,10 @@
 # Semantic-failure triage
 
-**Evidence review:** 4 November 2026. This investigation uses saved reports and
-responses. No live model request was made, no historical output was replaced and
-no recorded grade was changed.
+**Evidence review:** 4 November 2026. The original investigation used saved
+reports and responses without live inference. The owner subsequently authorised
+the single-generation Windows validation, now recorded in the
+[dated observation](semantic-validation-2026-11-04.md). Historical outputs and
+recorded grades remain unchanged.
 
 The available evidence separates a valid response from a sound interpretation.
 The existing idempotency and opt-in outcome-schema fixes remain in place. This
@@ -96,11 +98,15 @@ request telemetry; the existing historical reports are not backfilled. See the
 [structured-workflow contract](structured-review-contract.md) for capture and
 submission boundaries.
 
-## Bounded validation plan
+## Completed bounded validation
 
-This proposed live validation awaits separate authorisation and must not run as
-part of this change. After reviewing the offline diagnosis and software checks,
-it covers one scenario and at most one generation:
+The owner authorised this plan after the offline diagnosis and software checks.
+The Windows run completed on 4 November 2026: one schema-valid abstention,
+**0/1** expected-candidate scenarios passed, exit **2**, and no submission,
+teacher decision or profile update. The [dated observation](semantic-validation-2026-11-04.md)
+records the exact source, inputs, timings, hashes and semantic-review limits.
+The planned command below is retained for provenance; it is not a request to
+repeat the run:
 
 ```powershell
 Remove-Item Env:MWALIMULENS_OLLAMA_KEEP_ALIVE -ErrorAction SilentlyContinue
@@ -116,11 +122,13 @@ at most one pending-candidate submission; it cannot record a teacher decision
 or profile note. A valid abstention still fails the existing expected-candidate
 scenario, and that grade must remain visible.
 
-Retain the exact commit, command, snapshot, proposal inputs and outputs, report,
-result and first-pass outcome. Review any proposed claim, uncertainty,
-counter-evidence and abstention rationale against the source records before
-making a semantic-quality claim. This single observation cannot establish
-four-scenario reliability. The plan was not executed as part of this change.
+The supplied archive retains the commit, command, snapshot, proposal inputs and
+output, report, result and first-pass outcome. Read-only review verified the
+saved schema and evidence alignment. The rationale remains under-justified for
+the policy's bounded-description task; structural validity does not resolve that
+semantic concern. This single observation cannot establish four-scenario
+reliability or a benefit from the opt-in schema. Further work begins with offline
+review of the interpretation and rubric, rather than another model run.
 
 ## Software verification
 

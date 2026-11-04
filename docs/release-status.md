@@ -92,6 +92,17 @@ earlier development stages. They are not the integrated UI baseline. Historical
 model failures and earlier engineering verification remain valid historical
 records; they must not be relabelled as current successes.
 
+## Subsequent development observation
+
+The separately authorised Windows validation on 4 November 2026 used
+`bf6550c4a3c1d151d4ebbbcbebfe988fa22a1265` and opt-in outcome v2. One request
+returned a valid abstention; the expected-candidate case remained **0/1**, exit
+**2**. Retrieval succeeded, with no submission, teacher decision or profile
+update. Read-only checks verified the captured schema, evidence and output
+hashes; semantic quality remains unverified. The
+[dated observation](semantic-validation-2026-11-04.md) records the full scope.
+This development result does not change the completed source-release sign-off.
+
 ## Documentation-change verification
 
 On 2 November 2026, the documentation change over `b61666d4` passed the full
