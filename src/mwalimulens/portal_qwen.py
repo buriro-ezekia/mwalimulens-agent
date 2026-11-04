@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -35,6 +36,35 @@ MODEL = "qwen2.5:3b"
 BASE_URL = "http://127.0.0.1:11434/v1"
 MODE = "structured_proposal_v1"
 MAX_ARTIFACT_BYTES = 2 * 1024 * 1024
+
+
+def saved_run_path(output_root: Path, run_id: str) -> Path:
+    """Resolve an immediate local job directory, never a browser-supplied path."""
+    root = output_root.expanduser().resolve()
+    _require(isinstance(run_id, str) and re.fullmatch(r"qwen-[A-Za-z0-9_-]+", run_id)
+             is not None, "Choose a saved Qwen review ID")
+    path = root / run_id
+    _require(not path.is_symlink() and path.is_dir() and path.resolve().parent == root,
+             "Saved review is not a local job directory")
+    return path
+
+
+def saved_reviews(output_root: Path) -> list[dict[str, str]]:
+    """List job labels without treating their metadata as validated outcomes."""
+    root = output_root.expanduser().resolve()
+    if not root.exists():
+        return []
+    rows = []
+    for path in sorted(root.glob("qwen-*"), reverse=True):
+        try:
+            saved_run_path(root, path.name)
+            manifest = path / "portal_job.json"
+            data = None if manifest.is_symlink() else _optional_object(manifest)
+            rows.append({"run_id": path.name, "status": str((data or {}).get("status", "unknown")),
+                         "updated_at": str((data or {}).get("updated_at", "—"))})
+        except (OSError, ValueError):
+            continue
+    return rows
 
 
 def _reject_constant(value: str) -> None:
@@ -73,6 +103,69 @@ def _view(status: str, stage: str, **values: Any) -> dict[str, Any]:
     }
 
 
+def _validate_saved_human_state(generation: dict[str, Any], state: dict[str, Any]) -> None:
+    """Accept only the unchanged result or one consistent simulated human decision."""
+    from mwalimulens.mcp_server.service import _resolve_final_claim
+
+    if state == generation:
+        return
+    pending = generation["pending_reviews"]
+    _require(len(pending) == 1, "An abstention cannot have a human decision")
+    calls = state.get("tool_calls")
+    _require(isinstance(calls, list) and len(calls) == len(generation["tool_calls"]) + 1,
+             "Saved review has unexpected later audit actions")
+    event = calls[-1]
+    _require(isinstance(event, dict) and event.get("tool_name") == "record_teacher_review"
+             and event.get("status") == "success" and event.get("error") is None,
+             "Saved review has no successful human decision audit")
+    inputs, output = event.get("inputs"), event.get("output")
+    _require(isinstance(inputs, dict) and isinstance(output, dict),
+             "Invalid saved human decision audit")
+    original = pending[0]
+    decision = inputs.get("decision")
+    reason = inputs.get("reason")
+    _require(decision in {"approve", "edit", "reject"}
+             and inputs.get("review_id") == original["review_id"]
+             and inputs.get("reviewer_id") == "simulated-teacher-not-authenticated"
+             and isinstance(reason, str) and bool(reason.strip()),
+             "Saved human decision does not match the simulated portal contract")
+    final = _resolve_final_claim(decision=decision, original_claim=original["claim"],
+                                edited_claim=inputs.get("edited_claim"))
+    review = output.get("teacher_review")
+    profile = output.get("profile_update")
+    _require(isinstance(review, dict) and isinstance(review.get("teacher_review_id"), str)
+             and bool(review["teacher_review_id"]), "Invalid saved teacher review")
+    timestamp = event.get("timestamp")
+    _require(isinstance(timestamp, str), "Missing human decision timestamp")
+    parsed = datetime.fromisoformat(timestamp)
+    _require(parsed.tzinfo is not None, "Human decision timestamp must include a timezone")
+    shared = {key: original[key] for key in (
+        "review_id", "learner_id", "competency_code", "supporting_evidence_ids",
+        "counter_evidence_ids",
+    )}
+    expected_review = {**shared, "teacher_review_id": review["teacher_review_id"],
+                       "reviewer_id": inputs["reviewer_id"], "decision": decision,
+                       "reason": reason, "original_claim": original["claim"],
+                       "final_claim": final, "reviewed_at": timestamp}
+    _require(review == expected_review, "Human decision fields differ from their audit inputs")
+    expected_profile = None
+    if decision != "reject":
+        _require(isinstance(profile, dict) and isinstance(profile.get("profile_update_id"), str)
+                 and bool(profile["profile_update_id"]), "Missing saved synthetic profile note")
+        expected_profile = {**shared, "profile_update_id": profile["profile_update_id"],
+                            "teacher_review_id": review["teacher_review_id"],
+                            "reviewer_id": inputs["reviewer_id"], "decision": decision,
+                            "claim": final, "recorded_at": timestamp}
+    _require(profile == expected_profile, "Synthetic profile note differs from the human decision")
+    statuses = {"approve": "approved_by_teacher", "edit": "edited_by_teacher",
+                "reject": "rejected_by_teacher"}
+    resolved = {**original, "status": statuses[decision],
+                "resolved_at": timestamp, "teacher_review_id": review["teacher_review_id"]}
+    _require(state == {"pending_reviews": [resolved], "teacher_reviews": [expected_review],
+                       "profile_updates": [expected_profile] if expected_profile else [],
+                       "tool_calls": calls}, "Saved state differs from its audited human decision")
+
+
 class QwenJob:
     """Own one bounded worker; terminal validation and its UI result are frozen once."""
 
@@ -101,6 +194,73 @@ class QwenJob:
             "--request-limit", "1", "--deadline-seconds", "210",
         ]
         self._persist(self._active)
+
+    @classmethod
+    def open_saved(cls, output_root: Path, run_id: str) -> QwenJob:
+        """Load a detached result without creating files, a thread or a process."""
+        job = cls.__new__(cls)
+        job.run_dir = saved_run_path(output_root, run_id)
+        job.state_path = job.run_dir / "state.json"
+        job._report_path = job.run_dir / "report.json"
+        job._result_path = job.run_dir / "result.json"
+        job._job_path = job.run_dir / "portal_job.json"
+        job._lock = threading.RLock()
+        job._stop = threading.Event()
+        job._started = job._closed = True
+        job._process = job._thread = None
+        job._terminal = None
+        job._active = _view("error", "error")
+        job._exit_code = None
+        job._command = []
+        try:
+            for name in ("portal_job.json", "state.json", "report.json", "result.json",
+                         "proposals.json", "evidence_snapshot.json", "report.progress.json"):
+                _require(not (job.run_dir / name).is_symlink(),
+                         "Saved review contains a linked artefact")
+            metadata = _read_object(job._job_path)
+            _require(metadata.get("artifact_version") == "portal_qwen_job_v1",
+                     "Unsupported saved job metadata")
+            _require(metadata.get("model") == MODEL and metadata.get("base_url") == BASE_URL
+                     and metadata.get("prewarm") is False and metadata.get("error") is None
+                     and metadata.get("worker_timeout_seconds") == WORKER_TIMEOUT_SECONDS,
+                     "Saved job settings differ from the portal contract")
+            _require(metadata.get("status") in {"candidate", "abstained"}
+                     and metadata.get("stage") == "complete"
+                     and metadata.get("worker_active") is False,
+                     "This saved attempt has no completed outcome to reopen; "
+                     "it cannot be resumed or attached to a worker")
+            state = _read_object(job.state_path)
+            report = _read_object(job._report_path)
+            # The report captures generation-time state; later human decisions are
+            # checked separately rather than changing or regrading that report.
+            call_count = len(report.get("audited_tool_names") or [])
+            calls = state.get("tool_calls")
+            _require(isinstance(calls, list), "Invalid saved MCP audit")
+            generation = {"pending_reviews": report.get("pending_reviews"),
+                          "teacher_reviews": [], "profile_updates": [],
+                          "tool_calls": calls[:call_count]}
+            view = job._completed(metadata.get("worker_exit_code"), state=generation)
+            from mwalimulens.domain import load_synthetic_dataset
+            from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR
+            from mwalimulens.mcp_server.service import _evidence_payload
+
+            dataset = load_synthetic_dataset(DEFAULT_DATA_DIR)
+            fictional = dataset.learners and all(learner.synthetic for learner in dataset.learners)
+            _require(bool(fictional)
+                     and view["evidence"] == [
+                         _evidence_payload(row) for row in dataset.competency_evidence(*TARGET)
+                     ], "Saved evidence differs from the current fictional fixture")
+            _validate_saved_human_state(generation, state)
+            _require(metadata.get("status") == view["status"]
+                     and metadata.get("request_count") == view["request_count"],
+                     "Saved job label differs from its verified outcome")
+            job._terminal = view
+        except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            # Do not read further artefacts after a rejected path or malformed bundle.
+            job._terminal = _view(
+                "error", "error", error=f"Saved review could not be verified: {exc}",
+            )
+        return job
 
     def _persist(self, view: dict[str, Any]) -> None:
         atomic_json(self._job_path, {
@@ -290,12 +450,13 @@ class QwenJob:
             thread.join(timeout=JOIN_TIMEOUT_SECONDS)
         self._set_terminal(self._error_view("The Qwen workflow was stopped.", stage="stopped"))
 
-    def _completed(self, exit_code: int) -> dict[str, Any]:
+    def _completed(self, exit_code: int, *, state: dict[str, Any] | None = None) -> dict[str, Any]:
         report = _read_object(self._report_path)
         result = _read_object(self._result_path)
         proposals = _read_object(self.run_dir / "proposals.json")
         saved = _read_object(self.run_dir / "evidence_snapshot.json")
-        state = _read_object(self.state_path)
+        if state is None:
+            state = _read_object(self.state_path)
         snapshot = EvidenceSnapshot.from_mcp(saved.get("payload"), TARGET)
         _require(snapshot.sha256 == saved.get("sha256"), "Saved evidence hash mismatch")
         metadata = decision_schema_metadata(OUTCOME_DECISION_SCHEMA_ID)

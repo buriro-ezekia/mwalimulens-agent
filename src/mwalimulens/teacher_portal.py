@@ -45,6 +45,7 @@ class Case:
     analysis_error: str = ""
     request_count: int = 0
     worker_active: bool = False
+    opened_as: str = "New case in this session"
 
 
 def create_case(root: Path, mode: str = "seeded") -> Case:
@@ -242,6 +243,8 @@ color:white;border-radius:12px;font-weight:750;font-size:16px;letter-spacing:-1p
 .brand-name span{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;
 font-weight:550;color:var(--muted);margin-top:5px}
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.toolbar form{margin:0}
+.case-identity{margin:0 0 20px;overflow-wrap:anywhere;font-size:13px}
+.case-identity .hint{margin:6px 0}
 .button,button{display:inline-flex;align-items:center;justify-content:center;gap:12px;
 min-height:44px;padding:10px 16px;border:1px solid #b9c8d4;border-radius:9px;
 background:white;color:var(--ink);font-weight:650;line-height:1.4;cursor:pointer;
@@ -460,6 +463,58 @@ def _mode_text(case: Case) -> str:
             else "Seeded fictional case; no MCP client or model inference")
 
 
+def _case_identity(case: Case) -> str:
+    label = {"seeded": "Practice case", "mcp": "Deterministic MCP case",
+             "qwen": "Local Qwen review"}[case.mode]
+    return (f'<div class="case-identity"><strong>{h(label)}</strong> · '
+            f'Case ID: <code>{h(case.run_dir.name)}</code>'
+            f'<p class="hint">{h(case.opened_as)}. '
+            '<a href="/saved">Saved Qwen reviews</a></p></div>')
+
+
+def open_qwen_case(root: Path, run_id: str) -> tuple[Case, Any]:
+    """Reopen local records without seeding a case or calling an MCP service."""
+    from mwalimulens.domain import load_synthetic_dataset
+    from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR
+    from mwalimulens.mcp_server.service import EducationToolService
+    from mwalimulens.mcp_server.state import JsonStateStore
+    from mwalimulens.portal_qwen import QwenJob
+
+    dataset = load_synthetic_dataset(DEFAULT_DATA_DIR)
+    if not dataset.learners or any(not learner.synthetic for learner in dataset.learners):
+        raise ValueError("Only fictional learner data is permitted")
+    job = QwenJob.open_saved(root, run_id)
+    state = JsonStateStore(job.state_path)
+    case = Case(state, EducationToolService(dataset, state), None, [], job.run_dir, "qwen",
+                opened_as="Saved review reopened; no model request was made")
+    return case, job
+
+
+def render_saved_reviews(portal: TeacherPortal) -> str:
+    from mwalimulens.portal_qwen import saved_reviews
+
+    disabled = ' disabled aria-disabled="true"' if portal._busy() else ""
+    rows = "".join(
+        f'<tr><td><code>{h(row["run_id"])}</code></td><td>{h(row["status"])}</td>'
+        f'<td>{h(row["updated_at"])}</td><td><form method="post" action="/case/open">'
+        f'<input type="hidden" name="csrf" value="{h(portal.token)}">'
+        f'<input type="hidden" name="run_id" value="{h(row["run_id"])}">'
+        f'<button type="submit"{disabled}>Open saved review</button></form></td></tr>'
+        for row in saved_reviews(portal.output_root)
+    )
+    return _document("MwalimuLens | Saved Qwen reviews", f'''
+<header class="topbar">{_brand()}<a class="button" href="/">Back to current case</a></header>
+<section class="card"><h1>Saved Qwen reviews</h1>
+<p>Open an existing local attempt without making another model request.
+Saved labels are checked against the complete records when opened.</p>
+<p class="hint">Only reviews under the current output folder are listed. Timestamps include
+their UTC offset. An unfinished attempt cannot be resumed here.</p>
+<div class="table-wrap"><table><caption>Local attempts</caption><thead><tr>
+<th>Case ID</th><th>Saved label</th><th>Last job update</th><th>Action</th></tr></thead>
+<tbody>{rows or '<tr><td colspan="4">No saved Qwen reviews in this output folder.</td></tr>'}
+</tbody></table></div></section>''')
+
+
 def _qwen_validation(case: Case) -> str:
     report = case.report or {}
     requests = report.get("model_requests") or []
@@ -536,7 +591,7 @@ def _noncandidate_portal(case: Case, token: str, *, toolbar: str,
 <div class="demo-notice"><p><strong>Demonstration environment:</strong>
 fictional learner evidence only. Reviewer identity is simulated, not authenticated.
 <span class="mode-line">{h(_mode_text(case))}.</span>
-</p></div>{notification}{problem}
+</p></div>{_case_identity(case)}{notification}{problem}
 <section class="case-strip" aria-label="Current learner and review status">
 <div class="learner"><span class="avatar" aria-hidden="true">A</span><div>
 <h2>Amani <span>(fictional)</span></h2><p>Mathematics · Fractions</p></div></div>
@@ -601,7 +656,7 @@ def render_portal(case: Case, token: str, *, message: str = "", error: str = "",
 <div class="demo-notice"><span class="notice-icon" aria-hidden="true">i</span>
 <p><strong class="notice-label">Demonstration environment:</strong> fictional learner evidence only.
 Reviewer identity is simulated, not authenticated.<span class="mode-line">{h(mode)}.</span></p>
-</div>{notification}{problem}
+</div>{_case_identity(case)}{notification}{problem}
 <section class="case-strip" aria-label="Current learner and review status">
 <div class="learner"><span class="avatar" aria-hidden="true">A</span><div>
 <h2>Amani <span>(fictional)</span></h2><p>Mathematics · Fractions</p></div></div>
@@ -673,6 +728,7 @@ def render_confirmation(case: Case, token: str, nonce: str, decision: str,
 <div class="eyebrow">Human review · confirmation</div><h1>Confirm your decision</h1>
 <p>Check the finding and your rationale before recording the decision.</p></div>
 <section class="card" aria-labelledby="confirmation-title">
+{_case_identity(case)}
 <span class="confirm-status">Not saved yet</span>
 <h2 id="confirmation-title">{h(label)} this finding?</h2>
 <dl class="review-details"><dt>Provisional finding</dt><dd>{h(case.candidate['claim'])}</dd>
@@ -785,6 +841,15 @@ class TeacherPortal:
         self.confirmations.clear()
         self.run_nonce = secrets.token_urlsafe(32)
 
+    def _open_saved(self, run_id: str) -> None:
+        replacement, job = open_qwen_case(self.output_root, run_id)
+        if self.qwen_job is not None:
+            self.qwen_job.close()
+        self.case, self.qwen_job = replacement, job
+        self.confirmations.clear()
+        self.run_nonce = secrets.token_urlsafe(32)
+        self._sync_qwen()
+
     def close(self) -> None:
         """Stop the owned worker when the local application is closed."""
         with self.lock:
@@ -881,17 +946,17 @@ def make_handler(portal: TeacherPortal):
                 self.send_response(204)
                 self.end_headers()
                 return
-            if path != "/":
+            if path not in {"/", "/saved"}:
                 self.send_error(404)
                 return
             with portal.lock:
                 portal._sync_qwen()
-                self._send(portal._page())
+                self._send(render_saved_reviews(portal) if path == "/saved" else portal._page())
 
         def do_POST(self) -> None:
             if not self._trusted():
                 return
-            if self.path not in {"/case/start", "/review/preview", "/review/submit"}:
+            if self.path not in {"/case/start", "/case/open", "/review/preview", "/review/submit"}:
                 self.send_error(404)
                 return
             fields = self._fields()
@@ -901,6 +966,14 @@ def make_handler(portal: TeacherPortal):
                 portal._sync_qwen()
                 if portal._busy():
                     self._bad("A local Qwen review is already running. Wait for its outcome.", 409)
+                    return
+                if self.path == "/case/open":
+                    try:
+                        portal._open_saved(fields.get("run_id", ""))
+                    except (OSError, ValueError) as exc:
+                        self._bad(f"Saved review could not be opened: {exc}", 422)
+                        return
+                    self._send(portal._page())
                     return
                 if self.path == "/case/start":
                     mode = fields.get("mode", "")
@@ -1020,7 +1093,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--port", type=int, default=0)
-    parser.add_argument("--initial-mode", choices=("seeded", "mcp"), default="seeded")
+    initial = parser.add_mutually_exclusive_group()
+    initial.add_argument("--initial-mode", choices=("seeded", "mcp"), default="seeded")
+    initial.add_argument("--open-qwen", metavar="CASE_ID",
+                         help="Reopen a saved Qwen review under --output-dir without inference.")
     parser.add_argument("--enable-qwen", action="store_true",
                         help="Enable explicit, bounded local Qwen requests in the browser.")
     parser.add_argument("--no-open", action="store_true")
@@ -1029,8 +1105,15 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("port must be between 0 and 65535")
     try:
         root = args.output_dir.expanduser().resolve()
-        portal = TeacherPortal(root, create_case(root, args.initial_mode),
-                               qwen_enabled=args.enable_qwen)
+        if args.open_qwen is not None:
+            case, job = open_qwen_case(root, args.open_qwen)
+            portal = TeacherPortal(root, case, qwen_enabled=args.enable_qwen)
+            portal.qwen_job = job
+            portal._sync_qwen()
+        else:
+            case = create_case(root, args.initial_mode)
+            case.opened_as = "Automatically opened at startup"
+            portal = TeacherPortal(root, case, qwen_enabled=args.enable_qwen)
         serve(portal, port=args.port, open_browser=not args.no_open)
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"Teacher workspace could not start: {exc}", file=sys.stderr)

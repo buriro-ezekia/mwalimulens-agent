@@ -154,6 +154,185 @@ def update(job, filename, change):
     atomic_json(path, payload)
 
 
+@pytest.fixture
+def saved_job(tmp_path, write_case, monkeypatch):
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("Reopening must never start inference or a worker")
+
+    monkeypatch.setattr(portal_qwen.subprocess, "Popen", forbidden)
+
+    def build(output=None):
+        job = portal_qwen.QwenJob(tmp_path)
+        job._exit_code = write_case(job, output)
+        job._set_terminal(job._completed(job._exit_code))
+        return job
+
+    return build
+
+
+def saved_bytes(root):
+    return {str(path.relative_to(root)): path.read_bytes()
+            for path in root.rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("output,status", [(candidate(), "candidate"),
+                                           (abstention(), "abstained")])
+def test_reopen_complete_result_is_read_only_and_never_restarts(
+    saved_job, tmp_path, output, status,
+):
+    from mwalimulens.teacher_portal import TeacherPortal, open_qwen_case
+
+    job = saved_job(output)
+    before = saved_bytes(tmp_path)
+    for _ in range(2):
+        case, reopened = open_qwen_case(tmp_path, job.run_dir.name)
+        portal = TeacherPortal(tmp_path, case)
+        portal.qwen_job = reopened
+        portal._sync_qwen()
+        assert case.analysis_status == status
+        html = portal._page()
+        assert job.run_dir.name in html and "no model request was made" in html
+        assert "Separate local-model validation" not in html
+        assert ("/review/preview" in html) == (status == "candidate")
+        reopened.start()
+        portal.close()
+    assert saved_bytes(tmp_path) == before
+
+
+@pytest.mark.parametrize("decision,notes", [("approve", 1), ("edit", 1), ("reject", 0)])
+def test_reopen_retains_audited_teacher_decision_without_duplicate_notes(
+    saved_job, tmp_path, decision, notes,
+):
+    from mwalimulens.teacher_portal import REVIEWER, TeacherPortal, open_qwen_case
+
+    job = saved_job()
+    service = EducationToolService(load_synthetic_dataset(DEFAULT_DATA_DIR),
+                                   JsonStateStore(job.state_path))
+    service.record_teacher_review(
+        job.snapshot()["candidate"]["review_id"], REVIEWER, decision,
+        "EV-008 leaves independent explanation uncertain.",
+        "Scores differ; independent explanation needs checking." if decision == "edit" else None,
+    )
+    before = saved_bytes(tmp_path)
+    case, reopened = open_qwen_case(tmp_path, job.run_dir.name)
+    portal = TeacherPortal(tmp_path, case)
+    portal.qwen_job = reopened
+    portal._sync_qwen()
+    assert case.analysis_status == "candidate", case.analysis_error
+    assert len(case.state.pending_reviews()) == 0
+    assert len(case.state.teacher_reviews()) == 1
+    assert len(case.state.profile_updates()) == notes
+    html = portal._page()
+    assert "Review recorded" in html and "/review/preview" not in html
+    portal.close()
+    assert saved_bytes(tmp_path) == before
+
+
+@pytest.mark.parametrize("filename,change", [
+    ("proposals.json", lambda data: data["attempts"][0].update(raw_output="{}")),
+    ("evidence_snapshot.json", lambda data: data.update(sha256="wrong")),
+    ("report.json", lambda data: data.update(model="different-model")),
+    ("portal_job.json", lambda data: data.update(status="abstained")),
+    ("portal_job.json", lambda data: data.update(status="running", stage="initial")),
+    ("portal_job.json", lambda data: data.update(worker_active=True)),
+    ("portal_job.json", lambda data: data.update(prewarm=True)),
+    ("state.json", lambda data: data.update(profile_updates=[{"claim": "unapproved"}])),
+])
+def test_reopen_inconsistent_records_never_expose_candidate(saved_job, tmp_path, filename, change):
+    job = saved_job()
+    update(job, filename, change)
+    before = saved_bytes(tmp_path)
+    reopened = portal_qwen.QwenJob.open_saved(tmp_path, job.run_dir.name)
+    assert reopened.snapshot()["status"] == "error"
+    assert reopened.snapshot()["candidate"] is None
+    reopened.close()
+    assert saved_bytes(tmp_path) == before
+
+
+@pytest.mark.parametrize("change", [
+    lambda data: data["profile_updates"][0].update(claim="Altered note"),
+    lambda data: data["teacher_reviews"][0].update(reason="Altered reason"),
+    lambda data: data["pending_reviews"][0].update(status="pending_teacher_review"),
+    lambda data: data["tool_calls"][-1]["inputs"].update(reviewer_id="someone-else"),
+])
+def test_reopen_rejects_inconsistent_human_records(saved_job, tmp_path, change):
+    from mwalimulens.teacher_portal import REVIEWER
+
+    job = saved_job()
+    service = EducationToolService(load_synthetic_dataset(DEFAULT_DATA_DIR),
+                                   JsonStateStore(job.state_path))
+    service.record_teacher_review(job.snapshot()["candidate"]["review_id"], REVIEWER,
+                                  "approve", "Retain uncertainty for further assessment.")
+    update(job, "state.json", change)
+    view = portal_qwen.QwenJob.open_saved(tmp_path, job.run_dir.name).snapshot()
+    assert view["status"] == "error"
+
+
+def test_reopen_missing_or_malformed_artifacts_are_read_only_errors(saved_job, tmp_path):
+    job = saved_job()
+    for path in (job.run_dir / "result.json", job.run_dir / "portal_job.json"):
+        path.unlink()
+        before = saved_bytes(tmp_path)
+        reopened = portal_qwen.QwenJob.open_saved(tmp_path, job.run_dir.name)
+        assert reopened.snapshot()["status"] == "error"
+        reopened.close()
+        assert saved_bytes(tmp_path) == before
+
+
+@pytest.mark.parametrize("run_id", ["../qwen-outside", "qwen-test/../../other", "case-test", ""])
+def test_saved_review_ids_cannot_select_arbitrary_paths(tmp_path, run_id):
+    with pytest.raises(ValueError):
+        portal_qwen.QwenJob.open_saved(tmp_path, run_id)
+
+
+def test_saved_reviews_reject_linked_directories_and_artifacts(saved_job, tmp_path):
+    job = saved_job()
+    link = tmp_path / "qwen-link"
+    link.symlink_to(job.run_dir, target_is_directory=True)
+    assert [row["run_id"] for row in portal_qwen.saved_reviews(tmp_path)] == [job.run_dir.name]
+    with pytest.raises(ValueError):
+        portal_qwen.QwenJob.open_saved(tmp_path, link.name)
+    report = job.run_dir / "report.json"
+    outside = tmp_path / "outside.json"
+    report.rename(outside)
+    report.symlink_to(outside)
+    view = portal_qwen.QwenJob.open_saved(tmp_path, job.run_dir.name).snapshot()
+    assert view["status"] == "error"
+
+
+def test_cli_reopens_saved_abstention_without_creating_a_practice_case(
+    saved_job, tmp_path, monkeypatch,
+):
+    from mwalimulens import teacher_portal
+
+    job = saved_job(abstention())
+    before = saved_bytes(tmp_path)
+    captured = []
+    monkeypatch.setattr(teacher_portal, "serve", lambda portal, **_kwargs: captured.append(portal))
+    assert teacher_portal.main([
+        "--output-dir", str(tmp_path), "--open-qwen", job.run_dir.name, "--no-open",
+    ]) == 0
+    assert captured[0].case.analysis_status == "abstained"
+    assert captured[0].case.run_dir == job.run_dir
+    assert captured[0].qwen_enabled is False
+    captured[0].close()
+    assert saved_bytes(tmp_path) == before
+
+
+def test_saved_review_cannot_be_reopened_against_changed_fixture(
+    saved_job, tmp_path, monkeypatch,
+):
+    from mwalimulens.mcp_server import service
+
+    job = saved_job(abstention())
+    original = service._evidence_payload
+    monkeypatch.setattr(service, "_evidence_payload", lambda row: {
+        **original(row), "observation": "Changed fictional fixture",
+    })
+    view = portal_qwen.QwenJob.open_saved(tmp_path, job.run_dir.name).snapshot()
+    assert view["status"] == "error" and "current fictional fixture" in view["error"]
+
+
 def test_constructor_reserves_only_unique_job_directory_not_worker_state(tmp_path):
     one, two = portal_qwen.QwenJob(tmp_path), portal_qwen.QwenJob(tmp_path)
     assert one.run_dir != two.run_dir

@@ -97,8 +97,9 @@ the portal integration and start it with:
 .\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --enable-qwen --output-dir 'D:\ML-runtime\portal'
 ```
 
-Startup still opens a practice case. Only selecting **Run local Qwen review**
-starts inference. The browser shows progress, then the actual candidate,
+Startup automatically opens a practice case; it does not mean you selected
+**New practice case**. The page identifies its mode and case ID. Only selecting
+**Run local Qwen review** starts inference. The browser shows progress, then the actual candidate,
 abstention reason or error. A valid candidate enters the same teacher confirmation
 flow. An abstention creates no pending candidate, decision or profile note; an
 error offers no decision controls. The Qwen path uses Education MCP and local
@@ -106,6 +107,19 @@ Ollama without the borrowed Filesystem MCP. See the
 [portal Qwen guide](docs/portal-qwen-integration.md) for prerequisites, limits and
 verification scope. Until this integration reaches a source release, use its
 development checkout for this mode.
+
+To return to an existing result, select **Saved Qwen reviews**, then **Open saved
+review** beside its case ID. This makes no model request. You can also open a saved
+review directly at startup, without creating a practice case:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --output-dir 'D:\ML-runtime\portal' --open-qwen qwen-m1292e06
+```
+
+The ID must name an existing job in that output folder. The portal checks its
+saved records before offering review controls and preserves any recorded teacher
+decision. An incomplete or inconsistent attempt opens with review disabled.
+Ollama and `--enable-qwen` are not needed to reopen a result.
 
 The interface uses local styles and system fonts rather than external assets.
 Offline operation still needs to be checked on the intended device after all
