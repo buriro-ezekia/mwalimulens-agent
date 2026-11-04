@@ -604,3 +604,18 @@ def test_cli_invalid_saved_id_does_not_fall_back_to_seeded(tmp_path, monkeypatch
     monkeypatch.setattr(teacher_portal, "serve", forbidden)
     assert teacher_portal.main(["--output-dir", str(tmp_path), "--open-qwen", ""]) == 2
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("path,extra", [
+    ("/demo/start", {"scenario": "candidate"}),
+    ("/demo/open", {"run_id": "demo-existing"}),
+])
+def test_demo_changes_blocked_while_owned_qwen_worker_is_active(harness, path, extra):
+    portal, port, factory = harness()
+    start(portal, port)
+    before = file_bytes(portal.output_root)
+    assert request(port, "POST", path, {"csrf": portal.token, **extra})[0] == 409
+    assert portal.qwen_job is factory.jobs[0]
+    html = request(port, path="/demos")[1]
+    assert all("disabled" in attrs for tag, attrs in Elements(html).elements if tag == "button")
+    assert file_bytes(portal.output_root) == before
