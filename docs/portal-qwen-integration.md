@@ -120,6 +120,17 @@ Use one portal instance per output folder; concurrent writers are unsupported.
 These are local consistency checks, not authenticated reviewer identity or proof
 of model reasoning quality. Linked job folders and artefacts are rejected.
 
+## Authored presentation examples
+
+The workspace also offers separate authored candidate and error demonstrations,
+through **Demonstration cases**, `--demo candidate` and `--demo error`. These
+examples make zero model requests and no MCP client calls. They retain their
+authored disclosure on confirmation and result pages and use separate `demo-*`
+records, reopened with `--open-demo`. They cannot be opened as actual Qwen results.
+See the [demonstration guide](workspace-demonstrations.md) for sample reasons,
+revised wording and expected counts. These checks demonstrate the application
+workflow and do not add live-model acceptance evidence.
+
 ## Verification scope
 
 Integration tests use mocked native Qwen responses with genuine Education MCP
@@ -145,6 +156,9 @@ Automated visual inspection was blocked by this session's browser policy. No
 desktop or narrow-window visual pass is claimed for this new path. An
 operator-supplied Windows abstention screenshot and matching job/report files are
 now recorded in the [portal observation](portal-observation-2026-11-04.md).
+The operator subsequently confirmed Windows reopening of that same saved
+abstention, with the correct case ID and zero decision/profile counts; the dated
+record identifies both reopening screenshots.
 Candidate, error and narrow-window acceptance for the Qwen path remain unverified
 on the intended device; earlier seeded and deterministic MCP rehearsals do not
 cover them. No additional inference is required to inspect or reopen saved files.

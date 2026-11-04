@@ -32,8 +32,8 @@ does not establish an educationally adequate reason; the
 A later technical-audit screenshot shows a seeded fictional case, with audit
 events at `08:54:21+00:00` (11:54:21 EAT), rather than the Qwen attempt above.
 The operator explicitly confirmed that they **did not select New practice case**.
-The application then created a seeded case automatically at startup. This makes
-a restart or another instance a possible explanation, but the supplied evidence
+At that version, the application automatically created a seeded case at startup.
+This makes a restart or another instance a possible explanation, but the supplied evidence
 does not establish how the browser reached the different case. No button click
 should be inferred from that screenshot.
 
@@ -41,6 +41,26 @@ The resulting functionality change adds visible case identity, a saved-review
 list and explicit reopening without inference. Default startup remains clearly
 labelled as an automatically opened practice case. `--open-qwen` instead opens
 the named saved job directly; see the [portal guide](portal-qwen-integration.md).
+
+## Windows saved-review reopening
+
+After the case-identity and reopening change, the operator supplied
+`image(20261104-100739).png` and `image(20261104-100831).png`. The first shows
+`qwen-m1292e06` in **Saved Qwen reviews**, labelled `abstained`. The second
+shows that same ID reopened, explicitly labelled **Saved review reopened; no
+model request was made**, with the original abstention reason, **0 pending /
+0 decisions / 0 profile notes** and no decision controls.
+
+These screenshots complete the operator-observed Windows saved-abstention
+reopening check. They show the saved result and its interface disclosure, not
+an independently captured network trace or another model generation. They do
+not establish live candidate or error behaviour, narrow-window acceptance, or
+visual acceptance of the subsequently added authored demonstrations.
+
+| Reopening screenshot | SHA-256 |
+| --- | --- |
+| `image(20261104-100739).png` | `83f03dbfee47de81b863c4cc1aefd911f1609a60f37f7ea9e7e5ee0b56734c96` |
+| `image(20261104-100831).png` | `144080ad83046a5955d582da42b38b05e33e1dfa7a4b0f418687f8be43b3f01a` |
 
 ## Evidence limits and identifiers
 

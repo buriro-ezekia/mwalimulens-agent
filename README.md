@@ -29,13 +29,14 @@ create one synthetic profile note after confirmation; Reject creates none. A
 pending finding does not update a learner profile, and the model cannot approve
 its own work.
 
-### Three workspace modes
+### Workspace modes
 
 | Path | What happens | Model inference |
 | --- | --- | --- |
 | Practice case | A seeded fictional finding opens directly in the teacher workspace. | None |
 | MCP evidence analysis | Deterministic orchestration calls the Education MCP and read-only Filesystem MCP servers, then prepares a finding for review. | No Qwen inference |
 | Local Qwen review, when enabled | The application retrieves Education MCP evidence and asks local Qwen2.5 3B for a structured candidate or abstention. | One bounded local generation per explicit action |
+| Authored demonstration | A clearly labelled candidate or simulated error supports presentation practice, including teacher confirmation and saved-case reopening. | None; these are not Qwen results |
 
 These paths serve different purposes. A successful practice case or deterministic
 MCP run does not establish the quality or reliability of a model's educational
@@ -120,6 +121,18 @@ The ID must name an existing job in that output folder. The portal checks its
 saved records before offering review controls and preserves any recorded teacher
 decision. An incomplete or inconsistent attempt opens with review disabled.
 Ollama and `--enable-qwen` are not needed to reopen a result.
+
+For an offline candidate demonstration, use:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --output-dir 'D:\ML-runtime\portal' --demo candidate
+```
+
+Select **Demonstration cases** to open an error example or return to a saved
+`demo-*` case. Every example retains its authored label through confirmation and
+reopening. These cases make no model or MCP client request and remain separate
+from actual Qwen records. The [demonstration guide](docs/workspace-demonstrations.md)
+includes reasons, revised wording and expected decision counts for a walkthrough.
 
 The interface uses local styles and system fonts rather than external assets.
 Offline operation still needs to be checked on the intended device after all

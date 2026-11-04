@@ -84,7 +84,7 @@ Use one portal instance per output folder.
 
 ## Complete a teacher review
 
-These steps apply to a pending candidate from any of the three modes:
+These steps apply to any pending candidate, including an authored demonstration:
 
 1. Read the evidence summary, chronological records and highlighted counter-evidence.
 2. Choose **Approve**, **Revise** or **Reject**.
@@ -93,8 +93,8 @@ These steps apply to a pending candidate from any of the three modes:
 5. Select **Confirm simulated decision** to record the outcome, or **Go back without saving**
    to return to the evidence without recording a decision or profile note.
 6. Inspect the updated status, synthetic profile-note count and expandable audit trail.
-7. Start a separate case using **New practice case**, **Run MCP evidence analysis**
-   or, when enabled, **Run local Qwen review**.
+7. Start a separate case using **New practice case**, **Run MCP evidence analysis**,
+   **Demonstration cases** or, when enabled, **Run local Qwen review**.
 
 Reject creates no profile note. Approve or Revise creates one synthetic profile note through
 the existing `EducationToolService.record_teacher_review` method. Repeated confirmation
@@ -153,6 +153,22 @@ The [4 November portal observation](portal-observation-2026-11-04.md) adds a
 Windows abstention screenshot and the matching job/report files. It does not
 establish candidate, error or narrow-window acceptance for the Qwen path.
 Implementation and regression tests make no live model request.
+
+## Authored demonstration cases
+
+Select **Demonstration cases** beneath the current case ID, or start directly
+with `--demo candidate` or `--demo error`. These examples use fictional evidence
+and direct local review-service actions, with no model inference or MCP client.
+The authored source remains explicit on evidence, confirmation and result pages.
+Candidate examples require a human reason and confirmation; error examples have
+no decision controls. Each case uses a separate `demo-*` folder and can be reopened
+with `--open-demo CASE_ID` or the saved demonstration list. Actual Qwen records
+remain in their own catalogue. See the [walkthrough](workspace-demonstrations.md)
+for complete PowerShell commands, sample reasons and expected counts.
+
+The operator's Windows saved-Qwen reopening screenshots are now recorded as
+passed in the [dated observation](portal-observation-2026-11-04.md). They do not
+verify the new authored demonstration screens.
 
 ## Educational usability and impact
 

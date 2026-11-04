@@ -12,7 +12,7 @@ MwalimuLens helps educators interpret longitudinal learning evidence while reser
 
 The teacher-facing [Learner Progress Review](teacher-workspace.md) provides an assessment trend, chronological evidence, supporting and contradictory observations, uncertainty, an explicit review question and a browser-based human decision workflow. Approve, revise and reject decisions require confirmation and are persisted with the local audit record.
 
-The application offers three workspace modes: a seeded fictional practice case,
+The application offers a seeded fictional practice case,
 a deterministic workflow using the custom Education MCP and read-only Filesystem
 MCP, and optional local Qwen review enabled with `--enable-qwen`. Only the last
 mode performs live inference. It displays progress and the actual candidate,
@@ -24,6 +24,12 @@ from the browser or with `--open-qwen`, without inference or changes to the save
 records. Default startup explicitly identifies the automatically opened practice
 case. Reopening checks the generation record and any later simulated teacher
 decision before offering controls.
+
+The [authored demonstration cases](workspace-demonstrations.md) provide a
+candidate entering teacher confirmation and an error with no review controls.
+These zero-inference examples keep separate `demo-*` records and explicit
+authored labels when reopened. They support presentation practice without
+fabricating Qwen results or repeating a completed live attempt.
 
 The integrated UI provides Summary, Evidence and Decision navigation, linked evidence records, separate assessment and practical-task score labels, a dedicated decision panel and narrow-screen presentation. Returning from confirmation without saving leaves the review and profile-note counts unchanged. The Qwen browser path selects the opt-in outcome-bound schema explicitly and uses the same human-confirmation flow for a validated candidate. An abstention or error offers no decision controls. The standalone workflow's default remains `review_decision_v1`.
 
@@ -49,6 +55,10 @@ The integrated UI baseline is `b61666d4b04074b9a538881f7e09401150f73f82`. The [r
   dependency integrity, whitespace and 54 relative documentation-link checks.
   Inspection and reopening make no model request; these tests do not establish
   new semantic or intended-device visual acceptance.
+- Authored demonstration coverage passed **940 tests**, Ruff, dependency integrity
+  and whitespace checks. The operator-confirmed Windows saved-abstention reopening
+  is recorded separately; a visual check of the new authored examples remains
+  outstanding. These examples make no model request.
 - The disconnected deterministic MCP browser rehearsal is operator-confirmed as passed on 3 November; [the dated record](offline-rehearsal-2026-11-03.md) separates observed outcomes from network/visual confirmation and notes the uncaptured laptop Git HEAD.
 - Teacher usability feedback and classroom impact have **not** been established.
 - Identity is simulated rather than authenticated; no real learner data, public write endpoint or multi-user school deployment is approved.
@@ -94,6 +104,14 @@ not evidence that model reasoning has improved.
 Rehearse the teacher interface and genuine MCP calls with connectivity deliberately disabled. Check local dependencies, files, CPU responsiveness and readability. Do not confuse a recorded fallback with a live model run.
 
 **Recorded status:** the operator-confirmed disconnected MCP workflow, cancellation and narrow-window usability passed on 3 November 2026. Practice decisions are also shown in screenshots. See the [rehearsal record](offline-rehearsal-2026-11-03.md) for exact coverage. This does not establish new model reliability, a verified fallback video or final release approval.
+
+### P1 — Demonstration readiness
+
+Provide clearly labelled authored examples for the candidate and error states,
+including confirmation, cancellation and saved-case reopening. The operator has
+confirmed reopening the actual saved Qwen abstention on Windows. The new authored
+examples have software regression coverage; their intended-device visual check
+remains separate from live-model reliability and classroom assessment.
 
 ### P1 — Classroom usability and suitability
 
