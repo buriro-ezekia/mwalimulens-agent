@@ -484,3 +484,123 @@ def test_cli_enables_qwen_without_starting_inference(tmp_path, monkeypatch, enab
     assert captured[0].qwen_enabled is enabled
     assert captured[0].qwen_job is None
     assert captured[0].case.mode == "seeded"
+    assert "Automatically opened at startup" in captured[0]._page()
+
+
+def test_saved_review_list_and_get_are_read_only(harness):
+    portal, port, factory = harness(enabled=False)
+    folder = portal.output_root / "qwen-existing"
+    folder.mkdir()
+    (folder / "portal_job.json").write_text(
+        '{"status":"<script>bad()</script>","updated_at":"2026-11-04T08:49:07+00:00"}',
+    )
+    before = file_bytes(portal.output_root)
+    status, html, _ = request(port, path="/saved")
+    assert status == 200 and "qwen-existing" in html
+    assert "<script>bad()</script>" not in html
+    assert "&lt;script&gt;" in html
+    assert "Open saved review" in html
+    assert portal.case.run_dir.name in request(port)[1]
+    assert factory.jobs == []
+    assert file_bytes(portal.output_root) == before
+
+
+@pytest.mark.parametrize("extra,status", [({}, 403), ({"csrf": "invalid"}, 403)])
+def test_saved_review_open_requires_session_token(harness, extra, status):
+    portal, port, factory = harness()
+    original = portal.case
+    assert request(port, "POST", "/case/open", {"run_id": "qwen-test", **extra})[0] == status
+    assert portal.case is original and factory.jobs == []
+
+
+def test_open_saved_review_invalidates_confirmation_and_launch_nonce(harness, monkeypatch):
+    portal, port, factory = harness(enabled=False)
+    status, html, _ = request(port, "POST", "/review/preview", {
+        "csrf": portal.token, "decision": "approve", "reason": "A fictional practice decision.",
+    })
+    assert status == 200
+    nonce = confirmation_nonce(html)
+    launch_nonce = portal.run_nonce
+    job = FakeQwenJob(portal.output_root, "saved")
+    job.candidate()
+    replacement = teacher_portal.Case(
+        job.state, job.service, None, [], job.run_dir, "qwen",
+        opened_as="Saved review reopened; no model request was made",
+    )
+    monkeypatch.setattr(teacher_portal, "open_qwen_case", lambda root, run_id: (replacement, job))
+    status, html, _ = request(port, "POST", "/case/open", {
+        "csrf": portal.token, "run_id": job.run_dir.name,
+    })
+    assert status == 200 and QWEN_CLAIM in html
+    assert job.run_dir.name in html and "no model request was made" in html
+    assert portal.run_nonce != launch_nonce
+    assert job.start_calls == 0 and factory.jobs == []
+    assert request(port, "POST", "/review/submit", {
+        "csrf": portal.token, "nonce": nonce,
+    })[0] == 409
+    assert counts(job.state) == (1, 0, 0)
+    # A reopened candidate still requires preview and explicit confirmation.
+    status, html, _ = request(port, "POST", "/review/preview", {
+        "csrf": portal.token, "decision": "reject",
+        "reason": "EV-008 leaves independent explanation uncertain.",
+    })
+    assert status == 200 and counts(job.state) == (1, 0, 0)
+    assert request(port, "POST", "/review/submit", {
+        "csrf": portal.token, "nonce": confirmation_nonce(html),
+    })[0] == 200
+    assert counts(job.state) == (0, 1, 0)
+
+
+def test_saved_open_is_blocked_during_owned_worker(harness):
+    portal, port, factory = harness()
+    start(portal, port)
+    before = file_bytes(portal.output_root)
+    assert request(port, "POST", "/case/open", {
+        "csrf": portal.token, "run_id": "qwen-other",
+    })[0] == 409
+    assert portal.qwen_job is factory.jobs[0]
+    assert file_bytes(portal.output_root) == before
+
+
+@pytest.mark.parametrize("run_id", ["../qwen-other", "qwen-missing"])
+def test_failed_saved_path_does_not_change_current_case(harness, run_id):
+    portal, port, factory = harness()
+    original = portal.case
+    before = file_bytes(portal.output_root)
+    assert request(port, "POST", "/case/open", {
+        "csrf": portal.token, "run_id": run_id,
+    })[0] == 422
+    assert portal.case is original and factory.jobs == []
+    assert file_bytes(portal.output_root) == before
+
+
+def test_unverifiable_saved_attempt_opens_error_without_fallback(harness, monkeypatch):
+    portal, port, factory = harness()
+    folder = portal.output_root / "qwen-incomplete"
+    folder.mkdir()
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("Rendering a rejected saved case must not read its unverified state")
+
+    for method in ("pending_reviews", "teacher_reviews", "profile_updates", "tool_calls"):
+        monkeypatch.setattr(JsonStateStore, method, forbidden)
+    before = file_bytes(portal.output_root)
+    status, html, _ = request(port, "POST", "/case/open", {
+        "csrf": portal.token, "run_id": folder.name,
+    })
+    assert status == 200 and "Saved review could not be verified" in html
+    assert folder.name in html and "no model request was made" in html
+    assert "Not verified" in html
+    assert "/review/preview" not in html
+    assert portal.case.candidate is None and factory.jobs == []
+    request(port)
+    assert file_bytes(portal.output_root) == before
+
+
+def test_cli_invalid_saved_id_does_not_fall_back_to_seeded(tmp_path, monkeypatch):
+    def forbidden(*_args, **_kwargs):
+        pytest.fail("An invalid explicit saved ID must not open another case")
+
+    monkeypatch.setattr(teacher_portal, "create_case", forbidden)
+    monkeypatch.setattr(teacher_portal, "serve", forbidden)
+    assert teacher_portal.main(["--output-dir", str(tmp_path), "--open-qwen", ""]) == 2
+    assert list(tmp_path.iterdir()) == []

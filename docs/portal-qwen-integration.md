@@ -20,6 +20,10 @@ Startup opens the seeded practice case without inference. Select **Run local Qwe
 review** to start a job. Without `--enable-qwen`, the portal offers its existing
 practice and deterministic MCP modes.
 
+The page shows the current mode, case ID and whether the case opened automatically
+at startup or was reopened from saved records. A practice case at startup does
+not establish that the user selected **New practice case**.
+
 The launch is an explicit POST protected by the session form token and a one-use
 nonce. Only one job per portal session can be active. Duplicate launches are rejected, and case
 changes and review actions are blocked while it runs. Progress is read through
@@ -85,6 +89,37 @@ See the [structured-workflow contract](structured-review-contract.md) for source
 validation, capture and submission rules, and the
 [manual semantic rubric](semantic-review-rubric.md) for reasoning assessment.
 
+### Reopen an existing result
+
+Select **Saved Qwen reviews**, then **Open saved review** beside the required ID.
+The list is restricted to immediate `qwen-*` folders under the current output
+root; its labels are saved metadata, not verified outcomes. Opening checks the
+complete records and does not generate a response or change any files. For a
+direct restart into the operator's existing case:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --output-dir 'D:\ML-runtime\portal' --open-qwen qwen-m1292e06
+```
+
+Replace the ID for another saved job. This option bypasses practice-case creation
+and cannot be combined with `--initial-mode`. Neither Ollama nor `--enable-qwen`
+is required. The portal requires an explicit choice rather than silently
+selecting a different saved attempt.
+
+Completed candidates and abstentions undergo the original proposal, schema,
+policy, hash and MCP-audit checks. Saved evidence must match the current fictional
+fixture. A later simulated teacher decision is checked against the generation
+record, human audit and profile-note consequence. A pending candidate still needs
+confirmation; a resolved candidate displays its existing decision without adding
+another note. Changing cases clears earlier confirmations and launch nonces.
+
+Missing, inconsistent, incompatible, interrupted or failed records open with an
+error and no review controls. They are retained on disk. Reopening cannot attach
+to or resume an old worker, and it makes no claim about provider-side cancellation.
+Use one portal instance per output folder; concurrent writers are unsupported.
+These are local consistency checks, not authenticated reviewer identity or proof
+of model reasoning quality. Linked job folders and artefacts are rejected.
+
 ## Verification scope
 
 Integration tests use mocked native Qwen responses with genuine Education MCP
@@ -108,9 +143,30 @@ worker is active, even if the attempt has an error outcome.
 
 Automated visual inspection was blocked by this session's browser policy. No
 desktop or narrow-window visual pass is claimed for this new path. An
-intended-device browser walkthrough remains outstanding under explicit inference
-bounds; earlier seeded and deterministic MCP rehearsals do not cover it.
+operator-supplied Windows abstention screenshot and matching job/report files are
+now recorded in the [portal observation](portal-observation-2026-11-04.md).
+Candidate, error and narrow-window acceptance for the Qwen path remain unverified
+on the intended device; earlier seeded and deterministic MCP rehearsals do not
+cover them. No additional inference is required to inspect or reopen saved files.
 The development pull request records the exact published head and hosted checks.
+
+Saved-review reopening and case identity subsequently passed **883 tests in
+35.51 s**, Ruff, dependency integrity and whitespace checks, with **54 relative
+documentation links** resolving. The 35 additional regression cases cover
+read-only reopening, candidates and abstentions, retained human decisions,
+inconsistent or missing records, fixture drift, path restrictions, form tokens,
+busy-worker rejection, stale confirmations and direct CLI reopening. These
+checks used no live model and establish no new visual acceptance result.
+Rejected saved records are not read again by the renderer; their counts are
+shown as unverified. Redirected directories are rejected even when their
+destination lies within the output root, covering Windows junction behaviour.
+
+Hosted build #135 stopped before tests when GitHub refused CircleCI's SSH
+checkout key. The public repository's CI now fetches the exact `CIRCLE_SHA1`
+over HTTPS; the Python, dependency, npm, pytest and Ruff gates remain in place.
+CircleCI's [configuration reference](https://circleci.com/docs/reference/configuration-reference/#checkout)
+documents why HTTPS checkout uses a custom command. The development pull request
+records subsequent hosted results separately from this infrastructure failure.
 
 Connecting the workflow to the interface does not resolve the recorded model
 reasoning limitations or establish classroom suitability. The

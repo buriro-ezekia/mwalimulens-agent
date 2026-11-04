@@ -63,6 +63,25 @@ describes execution limits, audit interpretation and verification requirements.
 This mode requires the development integration until it is included in a source
 release.
 
+### Reopen a saved Qwen review
+
+Every case shows its mode, case ID and opening context. Default startup creates
+a practice case automatically; this does not mean **New practice case** was selected.
+Select **Saved Qwen reviews**, then **Open saved review** to return to an existing
+job in the same output folder. Opening makes no model request and preserves its
+recorded outcome and any simulated teacher decision.
+
+For the operator's existing case, restart directly with:
+
+```powershell
+.\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --output-dir 'D:\ML-runtime\portal' --open-qwen qwen-m1292e06
+```
+
+This bypasses practice-case creation and needs neither Ollama nor `--enable-qwen`.
+The portal checks the full saved bundle before enabling review. Incomplete or
+inconsistent records open with review disabled; nothing is regenerated or repaired.
+Use one portal instance per output folder.
+
 ## Complete a teacher review
 
 These steps apply to a pending candidate from any of the three modes:
@@ -129,10 +148,11 @@ they are not pending checks for the already integrated UI. For future behaviour 
 the relevant browser checks on the intended device. The [final source-release review](final-release-review-2026-11-03.md)
 records the release scope; PR #31 records its integration state.
 
-Those completed observations cover the earlier seeded and deterministic modes. The new Qwen
-browser path still needs an intended-device walkthrough under separately agreed inference
-bounds, covering progress and each outcome. No live model request was made to implement or
-test this integration.
+Those completed observations cover the earlier seeded and deterministic modes.
+The [4 November portal observation](portal-observation-2026-11-04.md) adds a
+Windows abstention screenshot and the matching job/report files. It does not
+establish candidate, error or narrow-window acceptance for the Qwen path.
+Implementation and regression tests make no live model request.
 
 ## Educational usability and impact
 
@@ -151,8 +171,8 @@ the [dated record](offline-rehearsal-2026-11-03.md) identifies the screenshots, 
 narrow-window observations and their provenance limits. The owner authorised proceeding with
 the bounded source release; its [final review](final-release-review-2026-11-03.md) does not
 establish model or classroom validity.
-The Qwen browser walkthrough, consistent real Qwen judgement and practitioner feedback using
-fictional cases remain unestablished; any new inference
+The remaining Qwen browser outcomes, consistent real Qwen judgement and practitioner feedback
+using fictional cases remain unestablished; any new inference
 campaign requires separately authorised bounds. Before any real learner pilot, verified teacher
 authentication, role-based access, privacy safeguards, data retention and appropriate school
 approval are required.
