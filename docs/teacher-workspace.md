@@ -167,8 +167,12 @@ remain in their own catalogue. See the [walkthrough](workspace-demonstrations.md
 for complete PowerShell commands, sample reasons and expected counts.
 
 The operator's Windows saved-Qwen reopening screenshots are now recorded as
-passed in the [dated observation](portal-observation-2026-11-04.md). They do not
-verify the new authored demonstration screens.
+passed in the [dated observation](portal-observation-2026-11-04.md). Subsequent
+[authored desktop screenshots](portal-observation-2026-11-04.md#authored-demonstration-desktop-observations)
+show the catalogue, confirmed revision, error and saved-case reopening with the
+retained decision and note. Narrow-window acceptance for the authored screens
+remains pending; these examples do not verify actual Qwen candidate or error
+behaviour.
 
 ## Educational usability and impact
 

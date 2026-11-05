@@ -117,8 +117,14 @@ files, request guards, active-worker blocking and rejected records. Tests forbid
 model and MCP subprocesses. These checks establish local record consistency;
 reviewer identity remains simulated.
 
-No automated visual acceptance is included in these results. The remaining
-intended-device check covers the candidate, confirmation, error and saved-example
-screens at normal and narrow window widths. This needs no model generation and
-does not repeat the completed offline MCP rehearsal. Software checks do not
-resolve the model's semantic limitations.
+No automated visual acceptance is included in these results. Subsequent operator
+screenshots show the desktop catalogue, a confirmed candidate revision, the
+authored error and reopening with the retained reason, final wording and one
+synthetic profile note. The
+[observation record](portal-observation-2026-11-04.md#authored-demonstration-desktop-observations)
+identifies their scope and limits. The screenshots do not establish every
+intermediate confirmation view or a measured narrow-window layout.
+
+Narrow-window acceptance for these authored examples remains pending. It needs
+no model generation and does not repeat the completed offline MCP rehearsal.
+Software and desktop checks do not resolve the model's semantic limitations.

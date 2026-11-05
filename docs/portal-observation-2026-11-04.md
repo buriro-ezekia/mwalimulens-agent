@@ -62,6 +62,28 @@ visual acceptance of the subsequently added authored demonstrations.
 | `image(20261104-100739).png` | `83f03dbfee47de81b863c4cc1aefd911f1609a60f37f7ea9e7e5ee0b56734c96` |
 | `image(20261104-100831).png` | `144080ad83046a5955d582da42b38b05e33e1dfa7a4b0f418687f8be43b3f01a` |
 
+## Authored demonstration desktop observations
+
+Subsequent operator screenshots in the project conversation show the authored
+examples separately from the actual Qwen attempt:
+
+| Displayed state | Observed evidence |
+| --- | --- |
+| Demonstration catalogue | Separate candidate and error case IDs, authored scenario labels and saved-example actions. |
+| Confirmed candidate revision | Simulated teacher reason, final wording and one synthetic profile note; counts **0 awaiting / 1 decision / 1 note**. |
+| Reopened revised candidate | Reopened-example disclosure and the same case identity, with the reason, final wording and single note retained. |
+| Reopened authored error | Explicit simulated-service-error wording, counts **0 / 0 / 0** and no decision controls. |
+
+These screenshots establish the displayed desktop states. They do not establish
+every intermediate confirmation view, a measured narrow-window layout, byte-level
+verification of the saved bundles or an independently captured network trace.
+The screenshots' source HEAD and full local records were not supplied. No new
+inference is required to demonstrate or inspect these authored examples.
+
+Narrow-window acceptance for the authored screens remains pending. These
+observations add no actual Qwen candidate or provider-error result and do not
+establish practitioner feedback or educational semantic reliability.
+
 ## Evidence limits and identifiers
 
 The two supplied JSON files record the request and outcome. The full proposal,

@@ -1,6 +1,6 @@
 # MwalimuLens product development and validation roadmap
 
-- **Updated:** 4 November 2026
+- **Updated:** 5 November 2026
 - **Development branch:** `product-development`
 - **Original validated submission:** `6215b9efb79ffd022a835dabba386c5ccb8226e4`
 
@@ -57,8 +57,11 @@ The integrated UI baseline is `b61666d4b04074b9a538881f7e09401150f73f82`. The [r
   new semantic or intended-device visual acceptance.
 - Authored demonstration coverage passed **940 tests**, Ruff, dependency integrity
   and whitespace checks. The operator-confirmed Windows saved-abstention reopening
-  is recorded separately; a visual check of the new authored examples remains
-  outstanding. These examples make no model request.
+  is recorded separately. Subsequent desktop screenshots show the authored
+  catalogue, a confirmed revision, an error and saved-case reopening; the
+  [observation record](portal-observation-2026-11-04.md#authored-demonstration-desktop-observations)
+  distinguishes these states from the remaining narrow-window check. These
+  examples make no model request.
 - The disconnected deterministic MCP browser rehearsal is operator-confirmed as passed on 3 November; [the dated record](offline-rehearsal-2026-11-03.md) separates observed outcomes from network/visual confirmation and notes the uncaptured laptop Git HEAD.
 - Teacher usability feedback and classroom impact have **not** been established.
 - Identity is simulated rather than authenticated; no real learner data, public write endpoint or multi-user school deployment is approved.
@@ -110,8 +113,10 @@ Rehearse the teacher interface and genuine MCP calls with connectivity deliberat
 Provide clearly labelled authored examples for the candidate and error states,
 including confirmation, cancellation and saved-case reopening. The operator has
 confirmed reopening the actual saved Qwen abstention on Windows. The new authored
-examples have software regression coverage; their intended-device visual check
-remains separate from live-model reliability and classroom assessment.
+examples have software regression coverage and desktop screenshot observations
+of the revised result, error and saved reopening. Narrow-window acceptance for
+these examples remains pending. These observations remain separate from
+live-model reliability and classroom assessment.
 
 ### P1 — Classroom usability and suitability
 
