@@ -31,6 +31,9 @@ its own work.
 
 ### Workspace modes
 
+The modes below describe `product-development`. The released interface on `main`
+predates browser Qwen review, saved-Qwen reopening and authored demonstrations.
+
 | Path | What happens | Model inference |
 | --- | --- | --- |
 | Practice case | A seeded fictional finding opens directly in the teacher workspace. | None |
@@ -68,10 +71,12 @@ The commands below use PowerShell. A short checkout and short runtime directory
 are preferable on Windows, particularly when a workflow creates nested case and
 report folders.
 
-### Install the released source
+### Install the current workspace
+
+Use `product-development` for the modes and commands described in this README:
 
 ```powershell
-git clone --branch main https://github.com/buriro-ezekia/mwalimulens-agent.git D:\MwalimuLens
+git clone --branch product-development https://github.com/buriro-ezekia/mwalimulens-agent.git D:\MwalimuLens
 Set-Location 'D:\MwalimuLens'
 
 python -m venv .venv
@@ -81,8 +86,10 @@ npm.cmd ci --no-audit --no-fund
 
 Complete dependency installation while connected to the internet. Do not replace
 an existing checkout or discard local work merely to use the example path.
-Contributors can select `product-development` for ongoing development; the original
-challenge remains reproducible from the preserved `submission-final-2026-10-05` snapshot.
+
+For the released interface, select `--branch main` instead and follow that branch's
+README. The original challenge remains reproducible from the preserved
+`submission-final-2026-10-05` snapshot.
 
 ### Open the teacher workspace
 
@@ -97,8 +104,8 @@ window running while using the workspace; press **Ctrl+C** to stop it. The first
 page is a practice case and does not call Ollama. Select **Run MCP evidence
 analysis** to start a separate deterministic case using genuine MCP calls.
 
-To expose the optional **Run local Qwen review** action, use a checkout containing
-the portal integration and start it with:
+To expose the optional **Run local Qwen review** action in the development
+workspace, start it with:
 
 ```powershell
 .\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --enable-qwen --output-dir 'D:\ML-runtime\portal'
@@ -112,8 +119,7 @@ flow. An abstention creates no pending candidate, decision or profile note; an
 error offers no decision controls. The Qwen path uses Education MCP and local
 Ollama without the borrowed Filesystem MCP. See the
 [portal Qwen guide](docs/portal-qwen-integration.md) for prerequisites, limits and
-verification scope. Until this integration reaches a source release, use its
-development checkout for this mode.
+verification scope.
 
 To return to an existing result, select **Saved Qwen reviews**, then **Open saved
 review** beside its case ID. This makes no model request. You can also open a saved
