@@ -9,13 +9,15 @@ provisional finding. The teacher decides whether to retain, revise or reject it.
 
 The project began in the **Education — The Long View** track of the African Agentic
 AI Design Challenge, with longitudinal strength tracking as its central focus.
-Development continues as a local prototype using fictional learner records. It is
-not a validated school information system, and its reviewer identity is simulated
-rather than authenticated.
+Development continues as a single-user prototype using fictional learner records.
+The workspace can run locally or on a private server accessed through an SSH
+tunnel. It is not a validated school information system, and its reviewer identity
+is simulated rather than authenticated.
 
 The [source-release record](docs/release-status.md) identifies the released UI
-baseline, its verification evidence and release scope. Source releases use `main`; development
-continues on `product-development`. This is a synthetic-only local prototype release.
+baseline, its verification evidence and release scope. Source releases use `main`;
+development continues on `product-development`. The released baseline is a
+synthetic-only local prototype.
 
 ## What the workspace provides
 
@@ -40,7 +42,7 @@ predates browser Qwen review, saved-Qwen reopening and authored demonstrations.
 | MCP evidence analysis | Deterministic orchestration calls the Education MCP and read-only Filesystem MCP servers, then prepares a finding for review. | No Qwen inference |
 | Local Qwen review, when enabled | The application retrieves Education MCP evidence and asks local Qwen2.5 3B for a structured candidate or abstention. | One bounded local generation per explicit action |
 | Authored demonstration | A clearly labelled candidate or simulated error supports presentation practice, including teacher confirmation and saved-case reopening. | None; these are not Qwen results |
-| Hosted Bedrock review, via its separate CLI | The application retrieves Education MCP evidence, validates one hosted response and opens a valid candidate in the teacher workspace. | One bounded hosted request per explicit `--run`; credit coverage and the permitted region must be confirmed |
+| Hosted Bedrock review, via its separate CLI | The application retrieves Education MCP evidence, validates and saves one hosted outcome. A separate `--open` command opens the verified saved case; a valid candidate can then enter teacher review. | One bounded hosted request per explicit `--run`; `--open` makes no model request. Credit coverage and the permitted region must be confirmed before inference. |
 
 These paths serve different purposes. A successful practice case or deterministic
 MCP run does not establish the quality or reliability of a model's educational
@@ -112,10 +114,10 @@ workspace, start it with:
 .\.venv\Scripts\python.exe -m mwalimulens.teacher_portal --enable-qwen --output-dir 'D:\ML-runtime\portal'
 ```
 
-Startup automatically opens a practice case; it does not mean you selected
-**New practice case**. The page identifies its mode and case ID. Only selecting
-**Run local Qwen review** starts inference. The browser shows progress, then the actual candidate,
-abstention reason or error. A valid candidate enters the same teacher confirmation
+With this command, startup opens a practice case without inference. The page
+identifies its mode and case ID. Selecting **Run local Qwen review** starts a
+model attempt. The browser shows progress, then the actual candidate, abstention
+reason or error. A valid candidate enters the same teacher confirmation
 flow. An abstention creates no pending candidate, decision or profile note; an
 error offers no decision controls. The Qwen path uses Education MCP and local
 Ollama without the borrowed Filesystem MCP. See the
@@ -160,10 +162,23 @@ supplies a model finding nor records a teacher decision automatically.
 
 The [bounded Bedrock guide](docs/bedrock-review.md) documents one explicitly
 authorised hosted request, strict validation and the existing teacher confirmation
-workspace. Saved Bedrock cases reopen without inference and retain their provider
-identity. Offline tests use mocked provider responses; live model quality and
-educator moderation remain unverified. Confirm credit coverage and the permitted
-region before using the run command.
+workspace. It covers the optional dependencies, AWS credentials and region
+configuration. The `--run` command saves the attempt and exits; use `--open` to
+inspect a verified saved case without inference. Saved cases retain their provider
+identity, including abstentions and errors. Offline tests use mocked provider
+responses; live model quality and educator moderation remain unverified. Confirm
+credit coverage and the permitted region before using the run command.
+
+### Private application hosting
+
+The [private hosting guide](docs/application-hosting.md) describes running the
+workspace on a Linux CPU server through an SSH tunnel. Keep the application bound
+to `127.0.0.1` and follow the documented browser-port configuration when the tunnel
+uses a different local port. Keep saved cases in the persistent output directory
+so that reopening retains the original case and any recorded simulated decision.
+
+Application hosting does not enable Qwen or Bedrock inference, establish a verified
+teacher identity or make the workspace a public school service.
 
 ## Reviewing a case
 
@@ -377,10 +392,6 @@ Further guidance: [architecture](ARCHITECTURE.md), [evaluation](EVALS.md),
 [saved model-failure triage](docs/semantic-failure-triage.md),
 [request-sequence analysis](docs/request-sequence-optimisation.md) and
 [workflow timing](docs/workflow-timing.md).
-
-A [private application-hosting plan](docs/application-hosting.md) keeps the
-existing workspace behind an SSH tunnel on a Linux CPU server. No AWS resources
-have been provisioned by that preparation.
 
 ## Licence
 
