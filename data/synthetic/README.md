@@ -1,14 +1,16 @@
-# Synthetic challenge data
+# Synthetic learner data
 
 These fictional records support development and evaluation of MwalimuLens.
 
 The fixtures include conflicting observations, gaps and delayed entries that must
 remain visible when interpreting evidence across terms:
 
-- **L001 / MATH-FRACTIONS:** evidence across 2025–2026, with recorded assessment
-  scores of 0.61, 0.78, 0.84 and 0.87, two practical tasks and a conflicting
-  classroom observation. These values describe the assessed tasks; they do not
-  establish independent mastery or make the tasks directly comparable.
+- **L001 / MATH-FRACTIONS:** eight evidence records across five terms in
+  2025–2026: four assessments, two practical tasks and two classroom observations.
+  The recorded assessment scores are 0.61, 0.78, 0.84 and 0.87. These values
+  describe the assessed tasks; they do not establish independent mastery or make
+  the tasks directly comparable. The observations and practical-task records
+  retain differing accounts of how the learner explained fraction methods.
 - **EV-007:** a 2025-T3 assessment entered 26 days after the event, preserving late-entry
   provenance separately from event chronology.
 - **L001 attendance:** term summaries are available for 2025-T1 and 2025-T2; 2025-T3 has no
