@@ -114,6 +114,53 @@ def assert_case(page, counts: list[str], case_id: str | None = None) -> str:
     return actual
 
 
+def mute_recording_audio(request, captures, original: dict[str, bool]) -> None:
+    """Mute this scene's Windows audio and global channels, retaining exact states.
+
+    GetInputList covers other scenes as well. Their inactive microphones must
+    neither prevent a take nor have their configuration changed for this scene.
+    Read every relevant mute state before the first mutation so a failed read
+    leaves the original configuration intact.
+    """
+    names = {
+        item["sourceName"]
+        for item in captures
+        if item["sceneItemEnabled"] and "wasapi" in item.get("inputKind", "")
+    }
+    special = request("GetSpecialInputs")
+    names.update(
+        name
+        for key in ("desktop1", "desktop2", "mic1", "mic2", "mic3", "mic4")
+        if isinstance(name := special.get(key), str) and name
+    )
+    snapshot = {}
+    for name in sorted(names):
+        muted = request("GetInputMute", inputName=name).get("inputMuted")
+        if type(muted) is not bool:
+            raise RuntimeError(f"OBS did not report a valid mute state for {name!r}.")
+        snapshot[name] = muted
+    original.update(snapshot)
+    for name, muted in snapshot.items():
+        if not muted:
+            request("SetInputMute", inputName=name, inputMuted=True)
+            if request("GetInputMute", inputName=name).get("inputMuted") is not True:
+                raise RuntimeError(f"OBS did not mute {name!r}; recording has not started.")
+
+
+def restore_recording_audio(request, original: dict[str, bool]) -> list[str]:
+    """Restore only inputs this launcher needed to mute; try every restoration."""
+    failed = []
+    for name, muted in original.items():
+        if not muted:
+            try:
+                request("SetInputMute", inputName=name, inputMuted=False)
+                if request("GetInputMute", inputName=name).get("inputMuted") is not False:
+                    raise RuntimeError("Mute restoration was not confirmed.")
+            except Exception:
+                failed.append(name)
+    return failed
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:8081")
@@ -155,6 +202,7 @@ def main() -> None:
             source = "Hosted narration " + uuid.uuid4().hex
             source_created = False
             recording = False
+            audio_before: dict[str, bool] = {}
             try:
                 if request("GetCurrentProgramScene")["currentProgramSceneName"] != SCENE:
                     raise RuntimeError(f"Select the OBS scene {SCENE!r}.")
@@ -164,13 +212,6 @@ def main() -> None:
                     raise RuntimeError(
                         "Stop streaming before recording this private demonstration."
                     )
-                for item in request("GetInputList")["inputs"]:
-                    kind = item["inputKind"]
-                    if "wasapi" in kind:
-                        if not request("GetInputMute", inputName=item["inputName"])["inputMuted"]:
-                            raise RuntimeError(
-                                "Mute microphone and desktop audio for automated narration."
-                            )
                 captures = request("GetSceneItemList", sceneName=SCENE)["sceneItems"]
                 visible = [
                     item
@@ -186,6 +227,7 @@ def main() -> None:
                     "In OBS, select THIS automated Chrome window under Window Capture Properties."
                 )
                 print("Check readable framing; recording folder must be outside the repository.")
+                print("Active microphone/desktop inputs will be muted for this take and restored.")
                 print("Listen to the generated voice test before proceeding:", audio[0])
                 os.startfile(str(audio[0]))
                 if input("After playback ends and framing is correct, type RECORD: ") != "RECORD":
@@ -194,6 +236,8 @@ def main() -> None:
                     raise RuntimeError("OBS scene changed during preparation. Start again.")
                 if request("GetRecordStatus")["outputActive"]:
                     raise RuntimeError("Another recording started during preparation. Stop here.")
+                captures = request("GetSceneItemList", sceneName=SCENE)["sceneItems"]
+                mute_recording_audio(request, captures, audio_before)
                 request(
                     "CreateInput",
                     sceneName=SCENE,
@@ -279,6 +323,7 @@ def main() -> None:
                 if recording:
                     try:
                         request("StopRecord")
+                        recording = False
                     except Exception:
                         print(
                             "Check OBS and stop recording manually. Do not delete the saved case."
@@ -290,6 +335,16 @@ def main() -> None:
                         print(
                             "Remove the temporary Hosted narration source in this scene manually."
                         )
+                if not recording:
+                    failed = restore_recording_audio(request, audio_before)
+                    if failed:
+                        print("Restore these originally unmuted inputs in OBS:", ", ".join(failed))
+                elif any(not muted for muted in audio_before.values()):
+                    print(
+                        "Audio remains muted because stopping the recording was not confirmed. "
+                        "Stop OBS manually, then restore the originally unmuted inputs: "
+                        + ", ".join(name for name, muted in audio_before.items() if not muted)
+                    )
                 obs.close()
                 browser.close()
 

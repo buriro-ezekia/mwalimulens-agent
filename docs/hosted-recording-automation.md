@@ -5,8 +5,9 @@ existing private SSH tunnel. It uses the installed Windows English speech voice,
 not the previous narration asset or a paid speech service. It makes no model
 request. Keep the original submitted video and its recording launcher unchanged.
 
-Status: pure URL, case-identity and count checks are automated. Windows speech,
-Chrome capture, OBS audio and actual exported footage require owner acceptance.
+Status: URL, case-identity, counts and scoped audio mute/restoration checks are
+automated. Windows speech, Chrome capture, OBS audio and actual exported footage
+require owner acceptance.
 This is a prepared launcher, not evidence that a video has been captured.
 
 ## Prepare on the Windows laptop
@@ -24,7 +25,13 @@ An installed English voice is required. The launcher fails if Windows cannot
 select one. It does not install a voice or change the default voice.
 
 In OBS select **MwalimuLens Hosted Review**. Use one visible Window Capture source.
-Mute microphone and desktop audio for this narrated take; do not delete them.
+There is no need to mute inputs manually. After the RECORD prompt, the launcher
+temporarily mutes enabled Windows audio inputs in this scene and the global
+desktop/microphone channels, then restores their original states when the take
+stops. Inactive microphones in other scenes are not inspected or changed. Already
+muted inputs stay muted. The earlier version inspected every Windows audio input
+across all scenes and could refuse a take unnecessarily; this version fixes that
+overbroad check.
 In Settings choose 1920 x 1080 at 30 fps, a recording folder outside the repository,
 MKV and audio track 1. Under Tools > WebSocket Server Settings, enable the local
 server on port 4455 and retain authentication. Enter its password only at the
@@ -65,7 +72,11 @@ It prints the recording path on completion. Speech duration depends on the
 installed voice; the original 2:35 storyboard is not a measured duration here.
 If a failure occurs after confirmation, retain the decided case and partial
 recording. Do not edit state to reset it. Check OBS manually if its connection
-fails, and stop any remaining recording before another attempt.
+fails, and stop any remaining recording before another attempt. If the launcher
+cannot confirm that recording stopped, it leaves the affected audio muted and
+prints the originally unmuted input names. Restore those only after stopping
+the recording. A disconnected or forcibly terminated process cannot guarantee
+automatic restoration; follow any displayed recovery instructions.
 
 Watch the whole recording for correct window, readable disclosures, voice,
 matching screen actions and retained single note. Use File > Remux Recordings
