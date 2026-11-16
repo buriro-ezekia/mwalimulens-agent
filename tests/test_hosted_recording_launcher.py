@@ -2,10 +2,13 @@
 
 import importlib.util
 import json
+import threading
 import wave
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
+from urllib.error import URLError
 
 import pytest
 
@@ -225,15 +228,26 @@ class FakePage:
         self.confirmed = False
         self.reopened = False
         self.fail_preview = False
+        self.clicks = []
+        self.navigations = []
+        self.fail_navigation = False
+        self.url = "about:blank"
 
     def set_default_timeout(self, *args):
+        pass
+
+    def set_default_navigation_timeout(self, *args):
         pass
 
     def route(self, *args):
         pass
 
-    def goto(self, *args):
-        pass
+    def goto(self, url, **kwargs):
+        self.navigations.append((url, kwargs))
+        if self.fail_navigation:
+            raise TimeoutError("Simulated page timeout")
+        self.url = url
+        return SimpleNamespace(status=200)
 
     def bring_to_front(self):
         pass
@@ -253,6 +267,7 @@ class FakePage:
             return SimpleNamespace(filter=lambda **kwargs: self)
 
         def click():
+            self.clicks.append(name)
             if name == "Review decision":
                 if self.fail_preview:
                     raise RuntimeError("Simulated browser failure")
@@ -265,7 +280,9 @@ class FakePage:
                 assert self.confirmed is True
                 self.reopened = True
 
-        return SimpleNamespace(click=click, check=lambda: None)
+        return SimpleNamespace(
+            click=click, check=lambda: None, wait_for=lambda **kwargs: None, is_enabled=lambda: True
+        )
 
     def get_by_text(self, *args, **kwargs):
         assert self.preview is True
@@ -299,6 +316,7 @@ def fake_capture(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(launcher, "os", SimpleNamespace(name="nt", startfile=lambda path: None))
     monkeypatch.setattr(launcher, "make_audio", lambda root, **kwargs: [clip] * 6)
+    monkeypatch.setattr(launcher, "check_portal", lambda base: None)
     monkeypatch.setattr(launcher, "ObsController", lambda **kwargs: obs)
     monkeypatch.setattr(launcher.getpass, "getpass", lambda prompt: "test-only")
     monkeypatch.setattr("builtins.input", lambda prompt: "RECORD")
@@ -553,3 +571,165 @@ def test_voice_generation_failure_stops_before_browser_or_case_creation(fake_cap
         launcher.main()
     assert obs.calls == []
     assert page.confirmed is False
+
+
+@contextmanager
+def catalogue_server(status=200, body=None, headers=()):
+    payload = (
+        body
+        if body is not None
+        else (
+            b"<title>MwalimuLens | Demonstration cases</title>"
+            b"<h1>Demonstration cases</h1><button>New candidate demonstration</button>"
+        )
+    )
+    requests = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            requests.append(self.path)
+            self.send_response(status)
+            for name, value in headers:
+                self.send_header(name, value)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}", requests
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+
+
+def test_catalogue_probe_bypasses_proxy_and_makes_only_get(monkeypatch):
+    monkeypatch.setenv("http_proxy", "http://127.0.0.1:1")
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:1")
+    monkeypatch.setenv("no_proxy", "")
+    with catalogue_server() as (base, requests):
+        launcher.check_portal(base)
+        assert requests == ["/demos"]
+
+
+@pytest.mark.parametrize("status", [403, 500])
+def test_http_failure_reports_specific_status(status):
+    with catalogue_server(status=status) as (base, requests):
+        with pytest.raises(RuntimeError, match=f"HTTP {status}") as error:
+            launcher.check_portal(base)
+        if status == 403:
+            assert "--browser-port" in str(error.value)
+        assert requests == ["/demos"]
+
+
+def test_probe_does_not_follow_redirects():
+    with catalogue_server(status=302, headers=(("Location", "/elsewhere"),)) as (base, requests):
+        with pytest.raises(RuntimeError, match="HTTP 302"):
+            launcher.check_portal(base)
+        assert requests == ["/demos"]
+
+
+def test_probe_refuses_unrelated_application():
+    with catalogue_server(body=b"<h1>Another app</h1>") as (base, requests):
+        with pytest.raises(RuntimeError, match="did not return the MwalimuLens"):
+            launcher.check_portal(base)
+        assert requests == ["/demos"]
+
+
+def test_probe_timeout_has_tunnel_recovery_message(monkeypatch):
+    def open_url(*args, **kwargs):
+        assert kwargs["timeout"] == 5
+        raise URLError("timed out")
+
+    monkeypatch.setattr(launcher, "build_opener", lambda *args: SimpleNamespace(open=open_url))
+    with pytest.raises(RuntimeError, match="Reconnect the private SSH tunnel"):
+        launcher.check_portal("http://127.0.0.1:8081")
+
+
+def test_real_catalogue_probe_does_not_change_saved_state(tmp_path):
+    from mwalimulens import teacher_portal
+
+    case = teacher_portal.demonstration_case(tmp_path, scenario="candidate")
+    portal = teacher_portal.TeacherPortal(tmp_path, case)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), teacher_portal.make_handler(portal))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    thread.start()
+    try:
+        launcher.check_portal(f"http://127.0.0.1:{server.server_port}")
+        after = {
+            p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()
+        }
+        assert after == before
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+
+
+def test_browser_uses_dom_readiness_and_does_not_create_case_on_navigation_failure():
+    page = FakePage()
+    launcher.open_catalogue(page, "http://127.0.0.1:8081")
+    assert page.navigations == [
+        (
+            "http://127.0.0.1:8081/demos",
+            {
+                "wait_until": "domcontentloaded",
+                "timeout": 30000,
+            },
+        )
+    ]
+    assert page.clicks == []
+    page.fail_navigation = True
+    with pytest.raises(RuntimeError, match="No new case was created"):
+        launcher.open_catalogue(page, "http://127.0.0.1:8081")
+    assert page.clicks == []
+    assert len(page.navigations) == 2  # Exactly one GET per explicit invocation.
+
+
+def test_unreachable_portal_stops_before_speech_browser_or_obs(fake_capture, monkeypatch):
+    page, obs = fake_capture
+
+    def fail(base):
+        raise RuntimeError("Tunnel is disconnected")
+
+    monkeypatch.setattr(launcher, "check_portal", fail)
+    monkeypatch.setattr(
+        launcher, "make_audio", lambda *a, **k: pytest.fail("Speech must not start")
+    )
+    with pytest.raises(RuntimeError, match="Tunnel is disconnected"):
+        launcher.main()
+    assert page.clicks == []
+    assert page.navigations == []
+    assert obs.calls == []
+
+
+def test_browser_navigation_failure_does_not_submit_or_record(fake_capture):
+    page, obs = fake_capture
+    page.fail_navigation = True
+    with pytest.raises(RuntimeError, match="No new case was created"):
+        launcher.main()
+    assert page.clicks == []
+    assert obs.calls == []
+
+
+def test_playwright_error_is_actionable_and_not_retried(fake_capture, monkeypatch, capsys):
+    class BrowserFailure(Exception):
+        pass
+
+    BrowserFailure.__module__ = "playwright._impl._errors"
+
+    def fail():
+        raise BrowserFailure("Navigation failed after a submitted action")
+
+    monkeypatch.setattr(launcher, "main", fail)
+    with pytest.raises(SystemExit) as error:
+        launcher.cli()
+    assert error.value.code == 1
+    assert "Actions have not been retried" in capsys.readouterr().err

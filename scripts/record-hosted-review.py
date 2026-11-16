@@ -17,7 +17,9 @@ import tempfile
 import uuid
 import wave
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
+from urllib.request import HTTPRedirectHandler, ProxyHandler, build_opener
 
 from mwalimulens.recording_obs import ObsController
 
@@ -71,6 +73,71 @@ def local_url(value: str) -> str:
     ):
         raise ValueError("Use only http://127.0.0.1:PORT with no other URL components.")
     return value.rstrip("/")
+
+
+class NoPortalRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def check_portal(base: str) -> None:
+    """Bounded catalogue GET, with no proxy/redirect or case creation."""
+    base = local_url(base)
+    try:
+        opener = build_opener(ProxyHandler({}), NoPortalRedirect())
+        with opener.open(base + "/demos", timeout=5) as response:
+            if response.status != 200:
+                raise RuntimeError(f"Workspace catalogue returned HTTP {response.status}.")
+            limit = 4 * 1024 * 1024
+            data = response.read(limit + 1)
+            if len(data) > limit:
+                raise RuntimeError("Workspace catalogue exceeded the expected page size.")
+            text = data.decode("utf-8", errors="replace")
+            markers = (
+                "<title>MwalimuLens | Demonstration cases</title>",
+                "<h1>Demonstration cases</h1>",
+                "New candidate demonstration",
+            )
+            if not all(marker in text for marker in markers):
+                raise RuntimeError(
+                    f"{base} did not return the MwalimuLens demonstration catalogue."
+                )
+    except HTTPError as exc:
+        status = exc.code
+        exc.close()
+        hint = (
+            f"Check the remote workspace --browser-port {urlsplit(base).port} setting."
+            if status == 403
+            else "Check the remote workspace and server.log."
+        )
+        raise RuntimeError(f"Workspace catalogue returned HTTP {status}. {hint}") from None
+    except (URLError, OSError) as exc:
+        raise RuntimeError(
+            f"Cannot reach {base}/demos within the connection deadline. "
+            "Reconnect the private SSH tunnel and check the remote workspace is running. "
+            "No speech, browser case or recording has started."
+        ) from exc
+
+
+def open_catalogue(page, base: str) -> None:
+    """Wait for the actual catalogue, without waiting for a full load event."""
+    try:
+        response = page.goto(base + "/demos", wait_until="domcontentloaded", timeout=30000)
+        if response is None or response.status != 200 or page.url != base + "/demos":
+            raise RuntimeError("Unexpected catalogue response or redirect.")
+        page.get_by_role("heading", name="Demonstration cases", exact=True).wait_for(
+            state="visible",
+            timeout=30000,
+        )
+        button = page.get_by_role("button", name="New candidate demonstration", exact=True)
+        button.wait_for(state="visible", timeout=30000)
+        if not button.is_enabled():
+            raise RuntimeError("The workspace is busy; finish the existing operation first.")
+    except Exception as exc:
+        raise RuntimeError(
+            f"Browser could not open {base}/demos. Check the SSH tunnel and workspace. "
+            f"No new case was created. {str(exc).splitlines()[0]}"
+        ) from None
 
 
 def voice_inventory(root: Path, powershell: str) -> dict:
@@ -311,23 +378,28 @@ def main() -> None:
         if args.list_voices:
             print(json.dumps(voice_inventory(Path(temp), args.powershell), indent=2))
             return
+        print("Checking the private teacher workspace:", base)
+        check_portal(base)
         audio = make_audio(Path(temp), voice_name=args.voice, powershell=args.powershell)
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as pw:
             browser = pw.chromium.launch(
-                channel="chrome", headless=False, args=["--start-maximized"]
+                channel="chrome",
+                headless=False,
+                args=["--start-maximized", "--no-proxy-server"],
             )
             context = browser.new_context(no_viewport=True)
             page = context.new_page()
             page.set_default_timeout(12000)
+            page.set_default_navigation_timeout(30000)
             page.route(
                 "**/*",
                 lambda route: (
                     route.continue_() if route.request.url.startswith(base + "/") else route.abort()
                 ),
             )
-            page.goto(base + "/demos")
+            open_catalogue(page, base)
             print("Chrome is open. Existing case records have not been changed.")
             if not args.record:
                 print("Preflight only: no recording, case creation or confirmation.")
@@ -488,9 +560,23 @@ def main() -> None:
                 browser.close()
 
 
-if __name__ == "__main__":
+def cli() -> None:
     try:
         main()
     except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
         print(f"Recording launcher stopped: {exc}", file=sys.stderr)
         sys.exit(1)
+    except Exception as exc:
+        if not type(exc).__module__.startswith("playwright."):
+            raise
+        print(
+            "Browser automation stopped: " + str(exc).splitlines()[0] + ". "
+            "A submitted action may have been saved; inspect the current case before "
+            "starting another take. Actions have not been retried.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    cli()

@@ -14,6 +14,30 @@ This is a prepared launcher, not evidence that a video has been captured.
 
 Keep the SSH tunnel open at http://127.0.0.1:8081. Close other teacher-workspace
 tabs during capture because this prototype has one current case per server.
+The launcher first makes a five-second, no-proxy, no-redirect GET of `/demos` and
+checks the catalogue markers. Failure stops before speech, Chrome, case creation
+or OBS. HTTP 403 points to the remote browser-port setting; a connection timeout
+or refusal points to the SSH tunnel or remote workspace. An unrelated application
+on the local port is rejected. The probe does not create or change a saved case.
+
+An observed browser timeout waited for the full load event. The browser now uses
+DOMContentLoaded with a 30-second navigation deadline and then checks the exact
+catalogue heading and enabled candidate button. The isolated browser bypasses
+proxies. The portal catalogue has inline CSS and no external script/image
+dependencies; that timeout alone does not establish a resource-loading cause.
+Submitted form actions are never automatically retried after an uncertain error.
+
+To check the existing tunnel from Windows without starting a recording:
+
+```powershell
+curl.exe --noproxy '*' --connect-timeout 5 --max-time 10 -f -sS -o NUL -w 'HTTP %{http_code}\n' http://127.0.0.1:8081/demos
+```
+
+Expect HTTP 200. If it times out, restart the existing SSH tunnel and keep its
+window open. Use ServerAliveInterval=15 and ServerAliveCountMax=3 to detect stale
+SSH connections. See [private hosting](application-hosting.md) for the tunnel
+and saved-case recovery commands; do not provision another instance or reset cases.
+
 Install the optional recording and browser dependencies in the existing venv:
 
 ```powershell
