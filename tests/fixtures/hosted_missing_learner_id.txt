@@ -1,0 +1,23 @@
+```json
+{
+  "outcome": "candidate",
+  "candidate": {
+    "competency_code": "MATH-FRACTIONS",
+    "claim": "The learner has shown a pattern of increasing competence with fractions, evident in improved scores across assessments and the ability to explain solutions in practical tasks, though with occasional struggles to justify methods independently.",
+    "supporting_evidence_ids": [
+      "EV-001",
+      "EV-004",
+      "EV-007",
+      "EV-009",
+      "EV-011"
+    ],
+    "counter_evidence_ids": [
+      "EV-002",
+      "EV-008"
+    ],
+    "uncertainty": "The evidence is partially inconsistent, as the learner still requires support in justifying fraction concepts during open-ended tasks. Additionally, the latest evidence spans multiple terms, but the number of assessments and the time difference between assessments may affect interpretation.",
+    "suggested_teacher_question": "Could the learner benefit from targeted instruction or additional opportunities to justify fraction-related reasoning independently, to close the gap between procedural knowledge and conceptual understanding?"
+  },
+  "abstention_reason": null
+}
+```

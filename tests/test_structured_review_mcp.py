@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from fastmcp import Client
@@ -13,6 +14,7 @@ from fastmcp import Client
 from mwalimulens import structured_review
 from mwalimulens.agent.candidate_contract import (
     DECISION_POLICY_ID,
+    OUTCOME_DECISION_SCHEMA_ID,
     EvidenceSnapshot,
     review_messages,
 )
@@ -138,6 +140,59 @@ def test_repeated_invalid_proposal_does_not_write_candidate(setup_case, monkeypa
     assert result["proposal_status"] == "invalid_proposal"
     assert store.pending_reviews() == ()
     assert [x["tool_name"] for x in store.tool_calls()] == ["get_competency_evidence"]
+    assert_policy_metadata(args)
+
+
+@pytest.mark.parametrize("fenced", [True, False], ids=["as-pasted", "json-body-only"])
+def test_hosted_missing_learner_id_is_rejected_without_review_or_profile_write(
+    setup_case, monkeypatch, fenced,
+):
+    """Replay user-pasted hosted text, not a live Bedrock integration or model run.
+
+    The body-only diagnostic isolates missing learner_id from Markdown rejection.
+    Removing fences here is test preparation, never production response repair.
+    """
+    args, store = setup_case
+    fixture = Path(__file__).with_name("fixtures") / "hosted_missing_learner_id.txt"
+    pasted = fixture.read_text(encoding="utf-8")
+    raw = pasted if fenced else pasted.removeprefix("```json\n").removesuffix("```\n")
+    calls = []
+
+    class Replay:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __call__(self, messages, schema):
+            calls.append((messages, schema))
+            return raw
+
+    monkeypatch.setattr(structured_review, "OllamaJsonGenerator", Replay)
+    result = asyncio.run(structured_review.run_structured_case(
+        scenario_by_id("longitudinal-pattern"), **args,
+        execution_limits=ExecutionLimits(request_limit=1),
+        decision_schema_id=OUTCOME_DECISION_SCHEMA_ID,
+    ))
+    assert len(calls) == 1
+    assert result["status"] == "fail"
+    assert result["proposal_status"] == "invalid_proposal"
+    assert store.review_candidates() == store.pending_reviews() == ()
+    assert store.teacher_reviews() == store.profile_updates() == ()
+    assert [event["tool_name"] for event in store.tool_calls()] == [
+        "get_competency_evidence",
+    ]
+    report = json.loads(args["report_path"].read_text(encoding="utf-8"))
+    assert report["error"]["type"] == "ProposalRejected"
+    assert report["proposal_attempts"][0]["issues"] == [
+        "decision: json_invalid" if fenced else "candidate.learner_id: missing",
+    ]
+    assert not any(event["event"].startswith("submission_") for event in report["events"])
+    saved = json.loads((args["state_path"].parent / "proposals.json").read_text())
+    assert len(saved["attempts"]) == 1
+    assert saved["attempts"][0]["raw_output"] == raw
+    assert saved["attempts"][0]["raw_output_sha256"] == hashlib.sha256(
+        raw.encode("utf-8"),
+    ).hexdigest()
+    assert fixture.read_text(encoding="utf-8") == pasted
     assert_policy_metadata(args)
 
 
