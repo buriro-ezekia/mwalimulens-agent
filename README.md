@@ -378,6 +378,10 @@ Further guidance: [architecture](ARCHITECTURE.md), [evaluation](EVALS.md),
 [request-sequence analysis](docs/request-sequence-optimisation.md) and
 [workflow timing](docs/workflow-timing.md).
 
+A [private application-hosting plan](docs/application-hosting.md) keeps the
+existing workspace behind an SSH tunnel on a Linux CPU server. No AWS resources
+have been provisioned by that preparation.
+
 ## Licence
 
 MwalimuLens is licensed under the [Apache License 2.0](LICENSE).
