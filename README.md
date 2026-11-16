@@ -364,6 +364,16 @@ Further guidance: [architecture](ARCHITECTURE.md), [evaluation](EVALS.md),
 [request-sequence analysis](docs/request-sequence-optimisation.md) and
 [workflow timing](docs/workflow-timing.md).
 
+
+### Optional hosted Bedrock review
+
+The [bounded Bedrock guide](docs/bedrock-review.md) documents one explicitly
+authorised hosted request, strict validation and the existing teacher confirmation
+workspace. Saved Bedrock cases reopen without inference and retain their provider
+identity. Offline tests use mocked provider responses; live model quality and
+educator moderation remain unverified. Confirm credit coverage and the permitted
+region before using the run command.
+
 ## Licence
 
 MwalimuLens is licensed under the [Apache License 2.0](LICENSE).

@@ -457,6 +457,8 @@ Run local Qwen review</button></form>''' if qwen_enabled else ""
 
 
 def _mode_text(case: Case) -> str:
+    if case.mode == "bedrock":
+        return "Hosted Bedrock review; one bounded request; semantic quality unverified"
     if case.mode == "demo":
         return "Authored Qwen workflow demonstration; no model inference or MCP client calls"
     if case.mode == "qwen":
@@ -467,7 +469,8 @@ def _mode_text(case: Case) -> str:
 
 def _case_identity(case: Case) -> str:
     label = {"seeded": "Practice case", "mcp": "Deterministic MCP case",
-             "qwen": "Local Qwen review", "demo": "Authored demonstration"}[case.mode]
+             "qwen": "Local Qwen review", "demo": "Authored demonstration",
+             "bedrock": "Hosted Bedrock review"}[case.mode]
     disclosure = ("Authored example; not a Qwen result. " if case.mode == "demo" else "")
     return (f'<div class="case-identity"><strong>{h(label)}</strong> · '
             f'Case ID: <code>{h(case.run_dir.name)}</code>'
@@ -612,6 +615,12 @@ def _qwen_validation(case: Case) -> str:
     )
 
 
+def _bedrock_validation(case: Case) -> str:
+    return ('<h3>Hosted Bedrock observation</h3><p>One request; schema supplied as text. '
+            'Application-controlled MCP retrieval and submission. '
+            'Teacher identity is simulated. Educational quality remains unverified.</p>')
+
+
 def _noncandidate_portal(case: Case, token: str, *, toolbar: str,
                          message: str, error: str) -> str:
     running = case.analysis_status == "running"
@@ -621,6 +630,8 @@ def _noncandidate_portal(case: Case, token: str, *, toolbar: str,
     if case.mode == "demo":
         heading = ("Demonstration error" if case.stage != "saved_error" else
                    "Saved demonstration could not be verified")
+    if case.mode == "bedrock":
+        heading = "Bedrock abstention" if abstained else "Bedrock response unavailable or rejected"
     stages = {
         "queued": "Starting the local review", "retrieval": "Retrieving source evidence",
         "generation": "Waiting for the local model", "validation": "Checking the model response",
@@ -648,7 +659,8 @@ def _noncandidate_portal(case: Case, token: str, *, toolbar: str,
             if case.stage != "saved_error" else
             "Review is disabled because these saved demonstration records could not be verified."
         )
-    validation = (_demonstration_validation(case) if case.mode == "demo"
+    validation = (_bedrock_validation(case) if case.mode == "bedrock" else
+                  _demonstration_validation(case) if case.mode == "demo"
                   else _qwen_validation(case))
     try:
         if case.stage == "saved_error":
@@ -704,9 +716,9 @@ else 'Review the source records independently of the model outcome.'}</p>
 <h2 id="decision-title">Teacher's decision</h2><p class="hint">There is no completed candidate
 to approve, revise or reject. The model cannot approve its own candidate.</p>
 </section></aside></div>'''
-    title = "MwalimuLens | Demonstration case" if case.mode == "demo" else (
-        "MwalimuLens | Local Qwen review"
-    )
+    title = ("MwalimuLens | Hosted Bedrock review" if case.mode == "bedrock" else
+             "MwalimuLens | Demonstration case" if case.mode == "demo" else
+             "MwalimuLens | Local Qwen review")
     return _document(title, content,
                      refresh=running or case.worker_active)
 
@@ -731,7 +743,8 @@ def render_portal(case: Case, token: str, *, message: str = "", error: str = "",
     term_count = len({row["term_id"] for row in case.evidence})
     support = _evidence_links(current["supporting_evidence_ids"])
     counter = _evidence_links(current["counter_evidence_ids"], counter=True)
-    validation = (_demonstration_validation(case) if case.mode == "demo" else
+    validation = (_bedrock_validation(case) if case.mode == "bedrock" else
+                  _demonstration_validation(case) if case.mode == "demo" else
                   _qwen_validation(case) if case.mode == "qwen" else
                   '<h3>Separate local-model validation</h3>' + _model_validation())
     content = f'''<header class="topbar">{_brand()}
