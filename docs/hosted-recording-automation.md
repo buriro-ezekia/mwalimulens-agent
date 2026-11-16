@@ -1,7 +1,8 @@
 # Hosted review recording launcher
 
 This new launcher records the authored teacher-review sequence through the
-existing private SSH tunnel. It uses the installed Windows English speech voice,
+existing private SSH tunnel. It uses the installed Windows **Microsoft George**
+male UK English voice by default,
 not the previous narration asset or a paid speech service. It makes no model
 request. Keep the original submitted video and its recording launcher unchanged.
 
@@ -21,8 +22,22 @@ Install the optional recording and browser dependencies in the existing venv:
 ```
 
 Installed Google Chrome is used; no Playwright browser download is needed.
-An installed English voice is required. The launcher fails if Windows cannot
-select one. It does not install a voice or change the default voice.
+The operator confirmed Microsoft George is installed. The launcher selects that
+exact enabled voice; it fails before opening Chrome if the requested voice is
+unavailable. It does not install voices, silently choose a female voice, change
+the system default or use Runway. This is a free male-voice fallback, not an
+exact match for the earlier James narration.
+
+For another installed voice, pass its exact name, for example:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/record-hosted-review.py --record --voice 'Microsoft David Desktop'
+```
+
+Each screen stage still waits for the measured duration of its own WAV clip.
+Changing the voice therefore changes the recording duration without forcing
+the narration into the timing of the previous take. Listen to the sample before
+typing RECORD.
 
 In OBS select **MwalimuLens Hosted Review**. Use one visible Window Capture source.
 There is no need to mute inputs manually. After the RECORD prompt, the launcher

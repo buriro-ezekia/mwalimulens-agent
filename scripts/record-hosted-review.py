@@ -21,6 +21,7 @@ from urllib.parse import urlsplit
 from mwalimulens.recording_obs import ObsController
 
 SCENE = "MwalimuLens Hosted Review"
+DEFAULT_VOICE = "Microsoft George"
 REASON = (
     "Recorded assessment scores rise from 61% to 87% across four terms "
     "(EV-001, EV-004, EV-007, EV-009), but task comparability is not established. "
@@ -71,20 +72,22 @@ def local_url(value: str) -> str:
     return value.rstrip("/")
 
 
-def make_audio(root: Path) -> list[Path]:
+def make_audio(root: Path, voice_name: str = DEFAULT_VOICE) -> list[Path]:
     """Windows' installed voice; no paid speech service or old narration asset."""
     manifest = root / "speech.json"
     manifest.write_text(json.dumps(SPEECH), encoding="utf-8")
     script = root / "voice.ps1"
     script.write_text(
-        "param($Manifest, $Folder)\n"
+        "param($Manifest, $Folder, $VoiceName)\n"
         "$ErrorActionPreference='Stop'\n"
         "Add-Type -AssemblyName System.Speech\n"
         "$voice = New-Object System.Speech.Synthesis.SpeechSynthesizer\n"
         "try {\n"
-        " $voice.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::NotSet, "
-        "[System.Speech.Synthesis.VoiceAge]::NotSet, 0, "
-        "[System.Globalization.CultureInfo]::GetCultureInfo('en-GB'))\n"
+        " $installed = @($voice.GetInstalledVoices() | Where-Object { "
+        "$_.Enabled -and $_.VoiceInfo.Name -eq $VoiceName })\n"
+        " if ($installed.Count -eq 0) { "
+        "throw ('Voice is not installed or enabled: ' + $VoiceName) }\n"
+        " $voice.SelectVoice($VoiceName)\n"
         " $voice.Rate=-1\n"
         " $items=Get-Content -Raw -LiteralPath $Manifest | ConvertFrom-Json\n"
         " for($i=0; $i -lt $items.Count; $i++) {\n"
@@ -95,7 +98,15 @@ def make_audio(root: Path) -> list[Path]:
         encoding="utf-8",
     )
     subprocess.run(
-        ["powershell.exe", "-NoProfile", "-File", str(script), str(manifest), str(root)],
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-File",
+            str(script),
+            str(manifest),
+            str(root),
+            voice_name,
+        ],
         check=True,
         timeout=180,
     )
@@ -165,6 +176,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:8081")
     parser.add_argument(
+        "--voice",
+        default=DEFAULT_VOICE,
+        help="Exact installed Windows voice name (default: Microsoft George)",
+    )
+    parser.add_argument(
         "--record", action="store_true", help="Enable capture and simulated confirmation"
     )
     args = parser.parse_args()
@@ -174,7 +190,8 @@ def main() -> None:
     from playwright.sync_api import sync_playwright
 
     with tempfile.TemporaryDirectory(prefix="mwalimulens-voice-") as temp:
-        audio = make_audio(Path(temp))
+        print("Windows narration voice:", args.voice)
+        audio = make_audio(Path(temp), voice_name=args.voice)
         with sync_playwright() as pw:
             browser = pw.chromium.launch(
                 channel="chrome", headless=False, args=["--start-maximized"]

@@ -297,7 +297,7 @@ def fake_capture(monkeypatch, tmp_path):
         SimpleNamespace(sync_playwright=lambda: nullcontext(playwright)),
     )
     monkeypatch.setattr(launcher, "os", SimpleNamespace(name="nt", startfile=lambda path: None))
-    monkeypatch.setattr(launcher, "make_audio", lambda root: [clip] * 6)
+    monkeypatch.setattr(launcher, "make_audio", lambda root, **kwargs: [clip] * 6)
     monkeypatch.setattr(launcher, "ObsController", lambda **kwargs: obs)
     monkeypatch.setattr(launcher.getpass, "getpass", lambda prompt: "test-only")
     monkeypatch.setattr("builtins.input", lambda prompt: "RECORD")
@@ -358,3 +358,57 @@ def test_main_stop_failure_keeps_audio_muted_and_reports_recovery(fake_capture, 
     assert obs.muted["Desktop Audio"] is True
     assert obs.muted["Microphone"] is True
     assert "Audio remains muted" in capsys.readouterr().out
+
+
+def test_audio_generation_selects_exact_voice_with_no_hint_fallback(monkeypatch, tmp_path):
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append((args, kwargs))
+        script = Path(args[3]).read_text()
+        assert "$voice.SelectVoice($VoiceName)" in script
+        assert "SelectVoiceByHints" not in script
+        assert "$_.Enabled" in script
+        assert "finally { $voice.Dispose() }" in script
+
+    monkeypatch.setattr(launcher.subprocess, "run", run)
+    result = launcher.make_audio(tmp_path)
+    assert calls[0][0][-1] == "Microsoft George"
+    assert calls[0][1] == {"check": True, "timeout": 180}
+    assert len(result) == len(launcher.SPEECH)
+
+
+def test_voice_name_is_passed_as_data_not_powershell_source(monkeypatch, tmp_path):
+    name = 'A voice; $(not-a-command) "with quotes"'
+    calls = []
+    monkeypatch.setattr(launcher.subprocess, "run", lambda args, **kwargs: calls.append(args))
+    launcher.make_audio(tmp_path, voice_name=name)
+    assert calls[0][-1] == name
+    assert name not in (tmp_path / "voice.ps1").read_text()
+
+
+def test_cli_voice_reaches_synthesizer(fake_capture, monkeypatch):
+    selected = []
+    original = launcher.make_audio
+
+    def audio(root, **kwargs):
+        selected.append(kwargs["voice_name"])
+        return original(root, **kwargs)
+
+    monkeypatch.setattr(launcher, "make_audio", audio)
+    monkeypatch.setattr("sys.argv", [str(SCRIPT), "--record", "--voice", "Microsoft Mark"])
+    launcher.main()
+    assert selected == ["Microsoft Mark"]
+
+
+def test_voice_generation_failure_stops_before_browser_or_case_creation(fake_capture, monkeypatch):
+    page, obs = fake_capture
+
+    def audio(*args, **kwargs):
+        raise launcher.subprocess.CalledProcessError(1, "powershell.exe")
+
+    monkeypatch.setattr(launcher, "make_audio", audio)
+    with pytest.raises(launcher.subprocess.CalledProcessError):
+        launcher.main()
+    assert obs.calls == []
+    assert page.confirmed is False
