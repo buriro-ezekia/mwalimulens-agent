@@ -850,11 +850,22 @@ def render_confirmation(case: Case, token: str, nonce: str, decision: str,
 </section></div>'''
     return _document("MwalimuLens | Confirm review", content)
 
+def _browser_port(value: int | None) -> int | None:
+    if value is not None and (type(value) is not int or not 1 <= value <= 65535):
+        raise ValueError("browser port must be between 1 and 65535")
+    return value
+
+
+def _loopback_authority(port: int) -> str:
+    return "127.0.0.1" if port == 80 else f"127.0.0.1:{port}"
+
+
 class TeacherPortal:
     """Single-user local HTTP interface with a per-session CSRF token."""
 
     def __init__(self, output_root: Path, case: Case, *, qwen_enabled: bool = False,
-                 qwen_job_factory=None) -> None:
+                 qwen_job_factory=None, browser_port: int | None = None) -> None:
+        self.browser_port = _browser_port(browser_port)
         self.output_root = output_root
         self.case = case
         self.token = secrets.token_urlsafe(32)
@@ -977,16 +988,20 @@ def make_handler(portal: TeacherPortal):
 
         def _trusted(self) -> bool:
             address = f"127.0.0.1:{self.server.server_port}"
-            if self.headers.get("Host") != address:
+            allowed = {address, _loopback_authority(self.server.server_port)}
+            if portal.browser_port is not None:
+                allowed.add(_loopback_authority(portal.browser_port))
+            hosts = self.headers.get_all("Host", [])
+            if len(hosts) != 1 or hosts[0] not in allowed:
                 self.send_error(HTTPStatus.FORBIDDEN, "Invalid local host")
                 return False
             if self.command == "POST":
-                origin = self.headers.get("Origin")
-                if origin is not None and origin != f"http://{address}":
+                origins = self.headers.get_all("Origin", [])
+                if len(origins) > 1 or (origins and origins[0] != f"http://{hosts[0]}"):
                     self.send_error(HTTPStatus.FORBIDDEN, "Cross-origin request blocked")
                     return False
-                site = self.headers.get("Sec-Fetch-Site")
-                if site is not None and site not in {"same-origin", "none"}:
+                sites = self.headers.get_all("Sec-Fetch-Site", [])
+                if len(sites) > 1 or (sites and sites[0] not in {"same-origin", "none"}):
                     self.send_error(HTTPStatus.FORBIDDEN, "Cross-site request blocked")
                     return False
             return True
@@ -1200,6 +1215,9 @@ def serve(portal: TeacherPortal, *, port: int = 0,
         server.daemon_threads = True
         url = f"http://127.0.0.1:{server.server_port}/"
         print(f"MwalimuLens local teacher workspace: {url}", flush=True)
+        if portal.browser_port is not None:
+            browser_url = f"http://{_loopback_authority(portal.browser_port)}/"
+            print(f"Trusted browser address through SSH tunnel: {browser_url}", flush=True)
         print("Fictional data only. Reviewer identity is simulated; no public access.")
         print("Press Ctrl+C to stop the local application.")
         if open_browser:
@@ -1216,6 +1234,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--browser-port", type=int,
+                        help="Explicit browser port for an SSH tunnel; no network binding.")
     initial = parser.add_mutually_exclusive_group()
     initial.add_argument("--initial-mode", choices=("seeded", "mcp"), default="seeded")
     initial.add_argument("--open-qwen", metavar="CASE_ID",
@@ -1231,6 +1251,10 @@ def main(argv: list[str] | None = None) -> int:
     if not 0 <= args.port <= 65535:
         parser.error("port must be between 0 and 65535")
     try:
+        _browser_port(args.browser_port)
+    except ValueError as exc:
+        parser.error(str(exc))
+    try:
         root = args.output_dir.expanduser().resolve()
         if args.open_qwen is not None:
             case, job = open_qwen_case(root, args.open_qwen)
@@ -1244,6 +1268,7 @@ def main(argv: list[str] | None = None) -> int:
             case = create_case(root, args.initial_mode)
             case.opened_as = "Automatically opened at startup"
             portal = TeacherPortal(root, case, qwen_enabled=args.enable_qwen)
+        portal.browser_port = args.browser_port
         serve(portal, port=args.port, open_browser=not args.no_open)
     except (OSError, RuntimeError, ValueError) as exc:
         print(f"Teacher workspace could not start: {exc}", file=sys.stderr)

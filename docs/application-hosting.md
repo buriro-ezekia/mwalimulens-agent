@@ -13,8 +13,8 @@ for a private presentation; do not expose port 8080 to the internet or change
 the application to listen on all interfaces. This is a private demonstration,
 not a public service or classroom deployment.
 
-No AWS resource has been created by this preparation. Before provisioning,
-confirm the permitted region, EC2 credit eligibility and spending limit. An
+This guide does not provision AWS resources. Before provisioning, confirm the
+permitted region, EC2 credit eligibility and spending limit. An
 AWS login alone does not establish those facts. Select a supported Linux CPU
 instance and persistent storage with the organiser; model/GPU hosting is separate.
 
@@ -54,9 +54,82 @@ address. Keep this tunnel open while presenting:
 ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:8080:127.0.0.1:8080 -i "C:\Keys\YOUR-KEY.pem" SERVER_USER@SERVER_ADDRESS
 ```
 
-Visit `http://127.0.0.1:8080` on your laptop. If that local port is occupied,
-change the first `8080` in the forwarding specification to `8081` and visit
-`http://127.0.0.1:8081`. Leave the remote application port unchanged.
+Visit `http://127.0.0.1:8080` on your laptop. This same-port tunnel works with
+unchanged host validation: the browser sends `Host: 127.0.0.1:8080`, matching the
+application's remote listening port.
+
+### Use a different local port
+
+An SSH tunnel forwards HTTP headers unchanged. A browser opening local port 8081
+sends `Host: 127.0.0.1:8081`, even when SSH forwards the connection to remote port
+8080. Without explicit configuration, the workspace correctly refuses this as
+`403 Invalid local host`.
+
+If local port 8080 is occupied, configure the remote workspace with
+`--browser-port 8081` in addition to `--port 8080`. For an already-created case,
+use the recovery procedure below. For the first start only, the command is:
+
+```bash
+.venv/bin/python -m mwalimulens.teacher_portal --demo candidate --port 8080 --browser-port 8081 --no-open --output-dir "$HOME/mwalimulens-hosted-demo"
+```
+
+Then use this tunnel in the laptop's PowerShell window:
+
+```powershell
+ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:8081:127.0.0.1:8080 -i "C:\Keys\YOUR-KEY.pem" SERVER_USER@SERVER_ADDRESS
+```
+
+Visit `http://127.0.0.1:8081`. Keep the tunnel open; it normally prints no output.
+The browser-port option permits only that explicit IPv4 loopback host and port;
+it does not change the listener, accept arbitrary hosts or open a firewall port.
+When an Origin is supplied on a teacher preview or confirmation POST, it must
+match the Host used for that request. Existing form-token checks still apply. Use
+`127.0.0.1` in the browser URL, as shown.
+
+### Recover an existing 403 case without creating a new demonstration
+
+Keep the existing output directory and saved case records. In the remote SSH
+session, update the dedicated checkout and list the saved demonstrations:
+
+```bash
+cd "$HOME/mwalimulens-agent"
+git pull --ff-only origin product-development
+.venv/bin/python - <<'PYTHON'
+from pathlib import Path
+from mwalimulens.portal_demo import saved_demonstrations
+root = Path.home() / "mwalimulens-hosted-demo"
+for case in saved_demonstrations(root):
+    print(case["run_id"], case["scenario"], case["created_at"])
+PYTHON
+```
+
+The `demo-*` directory name is the case ID; its `portal_demo.json` manifest and
+`state.json` remain unchanged by listing or reopening. Choose the existing case
+whose identity and creation time match the demonstration to recover. If more than
+one exists, do not infer the intended case solely from alphabetical order.
+
+Replace the placeholder below with that existing `demo-*` case ID. Restart only
+the named application session, using `--open-demo` to preserve the original case
+and any recorded simulated decision:
+
+```bash
+ml_demo_id="demo-REPLACE_WITH_EXISTING_ID"
+if tmux has-session -t mwalimulens 2>/dev/null; then
+    tmux kill-session -t mwalimulens
+fi
+tmux new-session -d -s mwalimulens -c "$HOME/mwalimulens-agent" \
+  ".venv/bin/python -m mwalimulens.teacher_portal --open-demo $ml_demo_id --port 8080 --browser-port 8081 --no-open --output-dir $HOME/mwalimulens-hosted-demo >>$HOME/mwalimulens-hosted-demo/server.log 2>&1"
+
+curl --retry 8 --retry-connrefused --retry-delay 1 \
+  --max-time 5 --retry-max-time 20 \
+  -H 'Host: 127.0.0.1:8081' -fsS -o /dev/null -w 'HTTP %{http_code}\n' \
+  http://127.0.0.1:8080/
+```
+
+Expect `HTTP 200` after startup. Keep or recreate the matching 8081-to-8080 tunnel
+on the laptop, then refresh the browser. Reopening must show the same case ID and
+preserve its review state. This recovery requires no new candidate, teacher
+decision, model request, AWS instance or security-group rule.
 
 ## Acceptance and shutdown
 
@@ -78,6 +151,13 @@ operation plan. Bedrock-generated candidates require the existing bounded
 
 ## Verification status
 
-The commands use existing application arguments. The SSH tunnel and actual AWS
-server remain untested because no host, key, approved region or allocation limit
-has been supplied. This guide is deployment preparation, not a deployment result.
+The initial hosting guide was preparation rather than a deployment result. The
+operator subsequently reported a successful server-side `HTTP 200` and a browser
+`403 Invalid local host` through a different local tunnel port. The latter exposed
+the missing browser-port configuration in the original instructions.
+
+The application changes have separate automated host/Origin and confirmation-flow
+regressions. Actual recovery through the operator's AWS tunnel still requires the
+updated server process and an observed browser result; software tests alone do
+not establish that live deployment result. Credit eligibility, spending allowance
+and real-model quality remain separate matters.
