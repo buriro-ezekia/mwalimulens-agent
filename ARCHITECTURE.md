@@ -12,6 +12,9 @@ consequential interpretation and profile changes.
 | --- | --- | --- |
 | Seeded browser practice | Fictional fixtures and the existing service create a practice candidate; no MCP client or model request | Local Learner Progress Review |
 | Browser MCP analysis | Deterministic PydanticAI orchestration calls the custom Education MCP and sandboxed, read-only Filesystem MCP | Fresh pending candidate, evidence and audited calls in the workspace |
+| Browser local Qwen review, when enabled | Application-owned Education MCP retrieval, one local structured Qwen response and validated submission | Actual candidate, abstention or error in an isolated `qwen-*` case; verified saved cases reopen without inference |
+| Authored demonstration | A labelled fictional candidate or simulated error, with direct local service actions | Review and reopening practice without model inference or MCP client calls |
+| Hosted Bedrock review, separate CLI | Application-owned Education MCP retrieval, one explicitly authorised hosted response and the same decision validator | A separately labelled saved Bedrock case, with teacher controls only for a verified candidate |
 | Local model evaluation | Qwen through Ollama uses the legacy tool-calling path or the opt-in structured decision controller | Separate isolated reports and state, including failed attempts and abstentions |
 
 A candidate contains the claim, supporting evidence IDs, counter-evidence IDs,
@@ -19,9 +22,12 @@ uncertainty and a teacher question. The **HUMAN REVIEW GATE** offers
 **Approve / Edit / Reject**; the browser labels Edit as **Revise**. Previewing or
 returning without saving creates no teacher decision or profile note. Explicit
 confirmation invokes the human-only review service and records the audited result.
-Approve/Edit creates one synthetic note; Reject creates none. Separate model-run
-state is not automatically imported into the browser, and the browser's analysis
-button does not start Qwen.
+Approve/Edit creates one synthetic note; Reject creates none. The deterministic
+**Run MCP evidence analysis** action makes no model request. The separately enabled
+**Run local Qwen review** action starts one bounded local generation. Bedrock
+generation requires its explicit CLI command; reopening its verified saved case
+does not make a provider request. Arbitrary evaluation state is not automatically
+imported into the workspace.
 
 ## Boundary decisions
 
@@ -61,6 +67,8 @@ records concerning minors, are not required for demonstrating the workflow.
 8. Compact judge-facing interface and demo workflow.
 9. Responsive teacher workspace with a confirmed, simulated human-review workflow.
 10. Isolated repeatability and four-scenario evaluation, bounded execution and opt-in schemas.
+11. Browser local-Qwen jobs, identifiable saved reopening and labelled authored demonstrations.
+12. Optional one-request Bedrock adapter, retained provider artefacts and the existing teacher gate.
 
 ## Current status
 
@@ -91,8 +99,16 @@ The structured evaluation controller retrieves and hashes a complete evidence sn
 requests a model-authored candidate or abstention, validates it and submits at most once
 through MCP. `review_decision_v1` remains the default format schema;
 `review_decision_outcome_v2` is opt-in. Both retain runtime checks and the human-only gate.
+The browser Qwen mode explicitly selects the outcome-bound v2 schema. The optional
+[Bedrock adapter](docs/bedrock-review.md) also selects v2, supplies it as prompt
+text and uses the existing runtime validator. Its provider is not exposed through
+the local-Qwen button or saved-Qwen catalogue. The Bedrock loader verifies its
+original generation and any audited simulated human decision before opening the
+case. This integration has offline mocked-provider coverage; live API access,
+model quality and independent educator moderation remain unverified.
+
 Structural validity and application-enforced safety do not establish model judgement.
 
-See [development release status](docs/release-status.md) for the integrated commit,
+See the [historical source-release status](docs/release-status.md) for its integrated commit,
 verification provenance and remaining release gates. The original committed Qwen task
 and challenge demonstration do not establish current four-scenario reliability.

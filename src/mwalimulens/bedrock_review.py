@@ -19,15 +19,12 @@ from mwalimulens.agent.candidate_contract import (
     OUTCOME_DECISION_SCHEMA_ID,
     EvidenceSnapshot,
     decide_and_submit,
-    validate_decision,
 )
-from mwalimulens.agent.execution import atomic_json
+from mwalimulens.agent.execution import ExecutionLimits, atomic_json
+from mwalimulens.agent.open_weights_run import _pending_cancellation
 from mwalimulens.agent.orchestrator import build_agent_mcp_client
-from mwalimulens.domain import load_synthetic_dataset
 from mwalimulens.mcp_server.server import DEFAULT_DATA_DIR, PROJECT_ROOT
-from mwalimulens.mcp_server.service import EducationToolService
 from mwalimulens.mcp_server.state import JsonStateStore
-from mwalimulens.portal_qwen import _validate_saved_human_state
 
 MODEL = "qwen.qwen3-32b-v1:0"
 FILES = (
@@ -51,6 +48,7 @@ class BedrockGenerator:
         self.directory, self.region = directory, region
         self.transport, self.signer = transport, signer
         self.used = False
+        self.delivery = {"status": "not_started", "http_attempts": 0}
 
     def sign(self, url, body):
         # Optional dependency and credentials are resolved only for an authorised run.
@@ -96,13 +94,19 @@ class BedrockGenerator:
             f"https://bedrock-runtime.{self.region}.amazonaws.com/model/"
             f"{quote(MODEL, safe='')}/converse"
         )
-        headers = (self.signer or self.sign)(url, body)
         started = perf_counter()
         try:
+            headers = await asyncio.to_thread(self.signer or self.sign, url, body)
             async with httpx.AsyncClient(
                 transport=self.transport, trust_env=False, timeout=httpx.Timeout(180, connect=10)
             ) as client:
-                response = await client.post(url, content=body, headers=headers)
+                self.delivery.update(status="in_flight", http_attempts=1)
+                try:
+                    response = await client.post(url, content=body, headers=headers)
+                except BaseException:
+                    self.delivery["status"] = "unknown"
+                    raise
+                self.delivery["status"] = "returned"
             # Preserve HTTP body before status, stop-reason or decision validation.
             (self.directory / "response.txt").write_bytes(response.content)
             atomic_json(
@@ -141,57 +145,61 @@ class BedrockGenerator:
                     self.directory / "provider-metrics.json",
                     {
                         "seconds": perf_counter() - started,
-                        "remote_outcome": "unknown",
+                        "request_delivery": dict(self.delivery),
                     },
                 )
 
 
-async def run_case(directory: Path, region: str, *, generator=None):
+async def run_case(directory: Path, region: str, *, generator=None, deadline_seconds=210):
     """Retrieve through MCP, validate one response and submit only a complete candidate."""
+    ExecutionLimits(request_limit=1, deadline_seconds=deadline_seconds)
+    generator = generator or BedrockGenerator(directory, region)
     directory.mkdir(parents=True, exist_ok=False)
     state = JsonStateStore(directory / "state.json")
     events, attempts = [], []
     outcome: dict[str, Any] = {"status": "error"}
     error = None
-    generator = generator or BedrockGenerator(directory, region)
+    cancellation = None
+    termination = None
+    deadline_scope = None
     try:
-        async with build_agent_mcp_client(
-            data_dir=DEFAULT_DATA_DIR,
-            state_path=state.path,
-        ) as client:
-            await client.call_tool(
-                "get_competency_evidence",
-                {
-                    "learner_id": "L001",
-                    "competency_code": "MATH-FRACTIONS",
-                },
-            )
-            snapshot = EvidenceSnapshot.from_mcp(
-                state.tool_calls()[-1]["output"],
-                ("L001", "MATH-FRACTIONS"),
-            )
-            atomic_json(
-                directory / "evidence_snapshot.json",
-                {
-                    "sha256": snapshot.sha256,
-                    "payload": json.loads(snapshot.payload_json),
-                },
-            )
+        async with asyncio.timeout(deadline_seconds) as deadline_scope:
+            async with build_agent_mcp_client(
+                data_dir=DEFAULT_DATA_DIR,
+                state_path=state.path,
+            ) as client:
+                await client.call_tool(
+                    "get_competency_evidence",
+                    {
+                        "learner_id": "L001",
+                        "competency_code": "MATH-FRACTIONS",
+                    },
+                )
+                snapshot = EvidenceSnapshot.from_mcp(
+                    state.tool_calls()[-1]["output"],
+                    ("L001", "MATH-FRACTIONS"),
+                )
+                atomic_json(
+                    directory / "evidence_snapshot.json",
+                    {
+                        "sha256": snapshot.sha256,
+                        "payload": json.loads(snapshot.payload_json),
+                    },
+                )
 
-            async def generate(messages, schema):
-                item = {"messages": messages, "schema": schema, "raw_output": None}
-                attempts.append(item)
-                atomic_json(directory / "proposals.json", {"attempts": attempts})
-                text = await generator(messages, schema)
-                item["raw_output"] = text
-                atomic_json(directory / "proposals.json", {"attempts": attempts})
-                return text
+                async def generate(messages, schema):
+                    item = {"messages": messages, "schema": schema, "raw_output": None}
+                    attempts.append(item)
+                    atomic_json(directory / "proposals.json", {"attempts": attempts})
+                    text = await generator(messages, schema)
+                    item["raw_output"] = text
+                    atomic_json(directory / "proposals.json", {"attempts": attempts})
+                    return text
 
-            async def submit(arguments):
-                await client.call_tool("flag_pattern_for_review", arguments)
-                return state.tool_calls()[-1]["output"]
+                async def submit(arguments):
+                    await client.call_tool("flag_pattern_for_review", arguments)
+                    return state.tool_calls()[-1]["output"]
 
-            async with asyncio.timeout(210):
                 outcome = await decide_and_submit(
                     snapshot,
                     generate=generate,
@@ -200,9 +208,23 @@ async def run_case(directory: Path, region: str, *, generator=None):
                     request_limit=1,
                     decision_schema_id=OUTCOME_DECISION_SCHEMA_ID,
                 )
-    except Exception as exc:
-        # Provider exception strings may contain account identifiers. Retain type only.
+    except BaseException as exc:
+        cancellation = (
+            exc if isinstance(exc, asyncio.CancelledError) else _pending_cancellation(exc)
+        )
+        reason = (
+            "cancelled"
+            if cancellation is not None
+            else "deadline_exceeded"
+            if deadline_scope and deadline_scope.expired()
+            else "error"
+        )
+        termination = {"reason": reason, "outcome_before_interruption": outcome}
+        outcome = {"status": "error"}
         error = type(exc).__name__
+        events.append({"event": "workflow_interrupted", "reason": reason})
+        if cancellation is None and not isinstance(exc, Exception):
+            raise
     finally:
         generation = (
             json.loads(state.path.read_text(encoding="utf-8"))
@@ -214,6 +236,8 @@ async def run_case(directory: Path, region: str, *, generator=None):
                 "tool_calls": [],
             }
         )
+        if not state.path.exists():
+            atomic_json(state.path, generation)
         atomic_json(directory / "generation-state.json", generation)
         result = {
             "case_id": directory.name,
@@ -225,6 +249,18 @@ async def run_case(directory: Path, region: str, *, generator=None):
             "recorded_at": datetime.now(UTC).isoformat(),
             "outcome": outcome,
             "error_type": error,
+            "termination": termination,
+            "deadline_seconds": deadline_seconds,
+            "request_delivery": dict(
+                getattr(
+                    generator,
+                    "delivery",
+                    {
+                        "status": "not_started",
+                        "http_attempts": 0,
+                    },
+                )
+            ),
             "events": events,
             "request_limit": 1,
             "semantic_quality_verified": False,
@@ -244,81 +280,16 @@ async def run_case(directory: Path, region: str, *, generator=None):
                 "note": "Local consistency hashes, not signed provider provenance",
             },
         )
+    if cancellation is not None:
+        raise cancellation
     return result
 
 
 def open_case(directory: Path):
-    """Verify original generation and one audited teacher decision without inference."""
-    from mwalimulens.teacher_portal import Case
+    """Verify saved hosted artefacts before opening the teacher workspace."""
+    from mwalimulens.bedrock_saved import open_case as load_saved
 
-    directory = directory.resolve()
-    receipt = json.loads((directory / "receipt.json").read_text(encoding="utf-8"))
-    allowed = set(FILES) | {"provider-metrics.json"}
-    if (
-        receipt.get("case_id") != directory.name
-        or not {
-            "generation-state.json",
-            "result.json",
-        }.issubset(receipt["sha256"])
-        or not set(receipt["sha256"]).issubset(allowed)
-    ):
-        raise ValueError("Invalid Bedrock receipt")
-    for name, digest in receipt["sha256"].items():
-        path = directory / name
-        if path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-            raise ValueError("Saved Bedrock artefacts changed")
-    result = json.loads((directory / "result.json").read_text(encoding="utf-8"))
-    if result["case_id"] != directory.name or result["provider"] != "bedrock":
-        raise ValueError("Saved provider or case identity differs")
-    generation = json.loads((directory / "generation-state.json").read_text(encoding="utf-8"))
-    state = JsonStateStore(directory / "state.json")
-    if state.path.is_symlink():
-        raise ValueError("Linked state is not permitted")
-    current = (
-        json.loads(state.path.read_text(encoding="utf-8")) if state.path.exists() else generation
-    )
-    if current.get("tool_calls", [])[: len(generation["tool_calls"])] != generation["tool_calls"]:
-        raise ValueError("Original MCP audit changed")
-    _validate_saved_human_state(generation, current)
-    status = result["outcome"]["status"]
-    candidate = generation["pending_reviews"][0] if status == "submitted" else None
-    evidence = []
-    if "evidence_snapshot.json" in receipt["sha256"]:
-        payload = json.loads((directory / "evidence_snapshot.json").read_text(encoding="utf-8"))[
-            "payload"
-        ]
-        evidence = payload["evidence"]
-        if candidate:
-            attempts = json.loads((directory / "proposals.json").read_text(encoding="utf-8"))[
-                "attempts"
-            ]
-            decision = validate_decision(
-                attempts[0]["raw_output"],
-                EvidenceSnapshot.from_mcp(
-                    payload,
-                    ("L001", "MATH-FRACTIONS"),
-                ),
-            )
-            if decision.candidate is None or any(
-                candidate.get(k) != v for k, v in decision.candidate.model_dump().items()
-            ):
-                raise ValueError("Saved candidate differs from model proposal")
-    dataset = load_synthetic_dataset(DEFAULT_DATA_DIR)
-    return Case(
-        state,
-        EducationToolService(dataset, state),
-        candidate,
-        evidence,
-        directory,
-        "bedrock",
-        report=result,
-        analysis_status="candidate"
-        if candidate
-        else ("abstained" if status == "abstained" else "error"),
-        abstention_reason=result["outcome"].get("final_output", ""),
-        analysis_error=result.get("error_type") or "Response rejected by validation",
-        opened_as="Saved Bedrock case reopened; no model request was made",
-    )
+    return load_saved(directory)
 
 
 def main(argv=None):
@@ -342,7 +313,10 @@ def main(argv=None):
         return 0 if result["outcome"]["status"] == "submitted" else 2
     from mwalimulens.teacher_portal import TeacherPortal, serve
 
-    case = open_case(args.open)
+    try:
+        case = open_case(args.open)
+    except (OSError, ValueError):
+        parser.exit(2, "Saved Bedrock case could not be verified; no workspace was opened.\n")
     serve(TeacherPortal(case.run_dir.parent, case), open_browser=True)
     return 0
 

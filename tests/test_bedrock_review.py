@@ -211,7 +211,89 @@ def test_timeout_preserves_unknown_remote_outcome_without_retry(setup):
     assert len(calls) == 1
     assert result["error_type"] == "ReadTimeout"
     metrics = json.loads((setup / "provider-metrics.json").read_text())
-    assert metrics["remote_outcome"] == "unknown"
+    assert metrics["request_delivery"] == {"status": "unknown", "http_attempts": 1}
     case = bedrock.open_case(setup)
     assert case.candidate is None
     assert case.state.review_candidates() == case.state.profile_updates() == ()
+
+
+def test_signing_failure_records_zero_http_attempts(setup):
+    calls = []
+
+    def no_credentials(url, body):
+        raise ValueError("No external credentials")
+
+    generator = bedrock.BedrockGenerator(
+        setup,
+        "eu-north-1",
+        signer=no_credentials,
+        transport=httpx.MockTransport(lambda request: calls.append(request)),
+    )
+    result = asyncio.run(bedrock.run_case(setup, "eu-north-1", generator=generator))
+    assert calls == []
+    assert result["request_delivery"] == {"status": "not_started", "http_attempts": 0}
+    assert result["outcome"]["status"] == "error"
+    page = render_portal(bedrock.open_case(setup), "token")
+    assert "HTTP attempts: 0" in page
+    assert "One request;" not in page
+    assert "one bounded request" not in page
+
+
+def test_deadline_covers_mcp_startup_without_model_request(setup, monkeypatch):
+    class SlowClient:
+        async def __aenter__(self):
+            await asyncio.sleep(5)
+
+        async def __aexit__(self, *args):
+            return False
+
+    monkeypatch.setattr(bedrock, "build_agent_mcp_client", lambda **kw: SlowClient())
+    result = asyncio.run(bedrock.run_case(setup, "eu-north-1", deadline_seconds=0.01))
+    assert result["termination"]["reason"] == "deadline_exceeded"
+    assert result["outcome"]["status"] == "error"
+    assert result["request_delivery"]["http_attempts"] == 0
+    case = bedrock.open_case(setup)
+    assert case.state.profile_updates() == case.state.pending_reviews() == ()
+    assert case.candidate is None
+
+
+def test_cancelled_generation_is_saved_and_propagated(setup):
+    async def cancel(messages, schema):
+        raise asyncio.CancelledError()
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(bedrock.run_case(setup, "eu-north-1", generator=cancel))
+    result = json.loads((setup / "result.json").read_text())
+    assert result["termination"]["reason"] == "cancelled"
+    assert result["error_type"] is not None
+    assert result["outcome"]["status"] == "error"
+    assert bedrock.open_case(setup).candidate is None
+
+
+def test_teardown_error_does_not_report_success(setup, monkeypatch):
+    real_client_factory = bedrock.build_agent_mcp_client
+
+    class FailingExit:
+        async def __aenter__(self):
+            self.client = real_client_factory()
+            return await self.client.__aenter__()
+
+        async def __aexit__(self, *args):
+            await self.client.__aexit__(*args)
+            raise RuntimeError("Cleanup failed")
+
+    monkeypatch.setattr(bedrock, "build_agent_mcp_client", lambda **kw: FailingExit())
+    generator, calls = replay(setup, decision())
+    result = asyncio.run(bedrock.run_case(setup, "eu-north-1", generator=generator))
+    assert len(calls) == 1
+    assert result["outcome"]["status"] == "error"
+    assert result["termination"]["outcome_before_interruption"]["status"] == "submitted"
+    with pytest.raises(ValueError, match="Non-candidate outcome contains candidate actions"):
+        bedrock.open_case(setup)
+
+
+def test_cli_refuses_unverifiable_case_without_opening_workspace(tmp_path, capsys):
+    with pytest.raises(SystemExit) as exc:
+        bedrock.main(["--open", str(tmp_path / "missing")])
+    assert exc.value.code == 2
+    assert "no workspace was opened" in capsys.readouterr().err

@@ -13,8 +13,8 @@ Development continues as a local prototype using fictional learner records. It i
 not a validated school information system, and its reviewer identity is simulated
 rather than authenticated.
 
-The [source-release record](docs/release-status.md) identifies the integrated UI,
-verification evidence and release scope. Source releases use `main`; development
+The [source-release record](docs/release-status.md) identifies the released UI
+baseline, its verification evidence and release scope. Source releases use `main`; development
 continues on `product-development`. This is a synthetic-only local prototype release.
 
 ## What the workspace provides
@@ -40,6 +40,7 @@ predates browser Qwen review, saved-Qwen reopening and authored demonstrations.
 | MCP evidence analysis | Deterministic orchestration calls the Education MCP and read-only Filesystem MCP servers, then prepares a finding for review. | No Qwen inference |
 | Local Qwen review, when enabled | The application retrieves Education MCP evidence and asks local Qwen2.5 3B for a structured candidate or abstention. | One bounded local generation per explicit action |
 | Authored demonstration | A clearly labelled candidate or simulated error supports presentation practice, including teacher confirmation and saved-case reopening. | None; these are not Qwen results |
+| Hosted Bedrock review, via its separate CLI | The application retrieves Education MCP evidence, validates one hosted response and opens a valid candidate in the teacher workspace. | One bounded hosted request per explicit `--run`; credit coverage and the permitted region must be confirmed |
 
 These paths serve different purposes. A successful practice case or deterministic
 MCP run does not establish the quality or reliability of a model's educational
@@ -155,6 +156,15 @@ provenance, use the [single-session guide](docs/model-review-session.md). Its
 read-only verifier checks the same saved case after a human revision. It neither
 supplies a model finding nor records a teacher decision automatically.
 
+### Optional hosted Bedrock review
+
+The [bounded Bedrock guide](docs/bedrock-review.md) documents one explicitly
+authorised hosted request, strict validation and the existing teacher confirmation
+workspace. Saved Bedrock cases reopen without inference and retain their provider
+identity. Offline tests use mocked provider responses; live model quality and
+educator moderation remain unverified. Confirm credit coverage and the permitted
+region before using the run command.
+
 ## Reviewing a case
 
 For a case with a pending candidate, read the finding and its uncertainty before
@@ -187,7 +197,9 @@ by event chronology. The Education MCP service provides evidence retrieval and
 provisional-review operations, with a separate human-review method. Local JSON
 state records candidates, decisions, profile notes and tool activity.
 
-PydanticAI orchestrates model and tool interactions. FastMCP client tooling limits
+PydanticAI orchestrates the legacy model/tool and deterministic MCP paths.
+The structured local-Qwen and hosted-Bedrock paths keep evidence retrieval and
+validated submission under application control. FastMCP client tooling limits
 the model-visible tool set. The borrowed
 `@modelcontextprotocol/server-filesystem@2026.8.31` server provides read-only access
 to the reference material in `data/reference/`.
@@ -345,6 +357,8 @@ secure persistence, data minimisation and retention arrangements.
 | Location | Contents |
 | --- | --- |
 | `src/mwalimulens/teacher_portal.py` | Local teacher workspace and confirmation flow |
+| `src/mwalimulens/bedrock_review.py` | Optional bounded hosted review and CLI entry point |
+| `src/mwalimulens/bedrock_saved.py` | Saved hosted-request, evidence and review-state verification |
 | `src/mwalimulens/domain/` | Learner and longitudinal-evidence model |
 | `src/mwalimulens/mcp_server/` | Evidence service, review operations and audit state |
 | `src/mwalimulens/agent/` | Orchestration, retrieval, validation and Ollama integration |
@@ -363,16 +377,6 @@ Further guidance: [architecture](ARCHITECTURE.md), [evaluation](EVALS.md),
 [saved model-failure triage](docs/semantic-failure-triage.md),
 [request-sequence analysis](docs/request-sequence-optimisation.md) and
 [workflow timing](docs/workflow-timing.md).
-
-
-### Optional hosted Bedrock review
-
-The [bounded Bedrock guide](docs/bedrock-review.md) documents one explicitly
-authorised hosted request, strict validation and the existing teacher confirmation
-workspace. Saved Bedrock cases reopen without inference and retain their provider
-identity. Offline tests use mocked provider responses; live model quality and
-educator moderation remain unverified. Confirm credit coverage and the permitted
-region before using the run command.
 
 ## Licence
 
