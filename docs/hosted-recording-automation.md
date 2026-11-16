@@ -1,9 +1,8 @@
 # Hosted review recording launcher
 
 This new launcher records the authored teacher-review sequence through the
-existing private SSH tunnel. It uses the installed Windows **Microsoft George**
-male UK English voice by default,
-not the previous narration asset or a paid speech service. It makes no model
+existing private SSH tunnel. It selects a usable installed Windows English male
+voice, rather than the previous narration asset or a paid speech service. It makes no model
 request. Keep the original submitted video and its recording launcher unchanged.
 
 Status: URL, case-identity, counts and scoped audio mute/restoration checks are
@@ -22,11 +21,33 @@ Install the optional recording and browser dependencies in the existing venv:
 ```
 
 Installed Google Chrome is used; no Playwright browser download is needed.
-The operator confirmed Microsoft George is installed. The launcher selects that
-exact enabled voice; it fails before opening Chrome if the requested voice is
-unavailable. It does not install voices, silently choose a female voice, change
-the system default or use Runway. This is a free male-voice fallback, not an
-exact match for the earlier James narration.
+The earlier operator voice list showed names without Enabled flags. George
+appeared in that list but was unavailable in the launcher's speech process.
+The launcher now enumerates names and Enabled in the exact executable it uses
+for synthesis. Default `--voice auto` prefers an enabled UK English male voice,
+then available English male voices such as Microsoft David Desktop. If a
+candidate cannot produce a complete set of valid WAV clips, auto tries the next
+enabled English male voice. It reports the actual selected name and validates
+every clip before opening Chrome or creating a case. No female voice is
+automatically substituted, and a named `--voice` remains strict.
+
+Use the PowerShell executable from the current session to avoid host/runtime
+differences between an interactive voice list and synthesis:
+
+```powershell
+$hostedSpeechHost = (Get-Process -Id $PID).Path
+.\.venv\Scripts\python.exe scripts/record-hosted-review.py --record --voice auto --powershell $hostedSpeechHost
+```
+
+For a diagnostic list from that same process type, including Enabled flags:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/record-hosted-review.py --list-voices --powershell $hostedSpeechHost
+```
+
+Listing does not synthesise speech, open Chrome, create a case or start OBS.
+The launcher does not install voices, alter the registry, change system defaults
+or use Runway. This is a free male-voice fallback, not an exact James voice match.
 
 For another installed voice, pass its exact name, for example:
 

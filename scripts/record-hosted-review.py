@@ -12,6 +12,7 @@ import getpass
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import uuid
 import wave
@@ -21,7 +22,7 @@ from urllib.parse import urlsplit
 from mwalimulens.recording_obs import ObsController
 
 SCENE = "MwalimuLens Hosted Review"
-DEFAULT_VOICE = "Microsoft George"
+DEFAULT_VOICE = "auto"
 REASON = (
     "Recorded assessment scores rise from 61% to 87% across four terms "
     "(EV-001, EV-004, EV-007, EV-009), but task comparability is not established. "
@@ -72,8 +73,95 @@ def local_url(value: str) -> str:
     return value.rstrip("/")
 
 
-def make_audio(root: Path, voice_name: str = DEFAULT_VOICE) -> list[Path]:
-    """Windows' installed voice; no paid speech service or old narration asset."""
+def voice_inventory(root: Path, powershell: str) -> dict:
+    """Enumerate Enabled in the same executable used for synthesis."""
+    script = root / "voice-inventory.ps1"
+    script.write_text(
+        "$ErrorActionPreference='Stop'\n"
+        "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)\n"
+        "Add-Type -AssemblyName System.Speech\n"
+        "$synth = New-Object System.Speech.Synthesis.SpeechSynthesizer\n"
+        "try {\n"
+        " $voices = @($synth.GetInstalledVoices() | ForEach-Object {\n"
+        "  @{name=$_.VoiceInfo.Name; gender=$_.VoiceInfo.Gender.ToString(); "
+        "culture=$_.VoiceInfo.Culture.Name; enabled=$_.Enabled}\n"
+        " })\n"
+        " @{edition=$PSVersionTable.PSEdition; version=$PSVersionTable.PSVersion.ToString(); "
+        "is64bit=[Environment]::Is64BitProcess; voices=$voices} | "
+        "ConvertTo-Json -Depth 4 -Compress\n"
+        "} finally { $synth.Dispose() }\n",
+        encoding="utf-8",
+    )
+    try:
+        result = subprocess.run(
+            [powershell, "-NoProfile", "-File", str(script)],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+        )
+        inventory = json.loads(result.stdout.lstrip("\ufeff"))
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
+        detail = getattr(exc, "stderr", None) or str(exc)
+        raise RuntimeError(f"Could not enumerate voices with {powershell}: {detail}") from None
+    if not isinstance(inventory, dict) or not isinstance(inventory.get("voices"), list):
+        raise RuntimeError("The speech host returned an invalid voice inventory.")
+    for voice in inventory["voices"]:
+        if (
+            not isinstance(voice, dict)
+            or type(voice.get("enabled")) is not bool
+            or any(not isinstance(voice.get(key), str) for key in ("name", "gender", "culture"))
+        ):
+            raise RuntimeError("The speech host returned invalid voice information.")
+    return inventory
+
+
+def voice_candidates(inventory: dict, requested: str) -> list[str]:
+    voices = inventory["voices"]
+    enabled = [v for v in voices if v.get("enabled") is True and isinstance(v.get("name"), str)]
+    if requested.casefold() != "auto":
+        exact = [v["name"] for v in enabled if v["name"].casefold() == requested.casefold()]
+        if exact:
+            return exact[:1]
+        available = ", ".join(v["name"] for v in enabled) or "none"
+        raise RuntimeError(
+            f"{requested!r} is not enabled in this speech host. "
+            f"Enabled voices: {available}. Use --voice auto for an English male voice."
+        )
+    male = [
+        v
+        for v in enabled
+        if v.get("gender", "").casefold() == "male"
+        and (
+            v.get("culture", "").casefold() == "en"
+            or v.get("culture", "").casefold().startswith("en-")
+        )
+    ]
+    preferred = ["Microsoft George", "Microsoft David Desktop", "Microsoft David", "Microsoft Mark"]
+    male.sort(
+        key=lambda v: (
+            v.get("culture", "").casefold() != "en-gb",
+            preferred.index(v["name"]) if v["name"] in preferred else len(preferred),
+            v["name"].casefold(),
+        )
+    )
+    names = list(dict.fromkeys(v["name"] for v in male))
+    if not names:
+        raise RuntimeError(
+            "No enabled English male voice is available in this speech host. "
+            "Use --list-voices to inspect Enabled and --powershell for another host."
+        )
+    return names
+
+
+def make_audio(
+    root: Path, voice_name: str = DEFAULT_VOICE, powershell: str = "powershell.exe"
+) -> list[Path]:
+    """Choose a usable male voice before browser/OBS actions; never install voices."""
+    inventory = voice_inventory(root, powershell)
+    candidates = voice_candidates(inventory, voice_name)
+    print("Speech host:", powershell, inventory.get("edition"), inventory.get("version"))
     manifest = root / "speech.json"
     manifest.write_text(json.dumps(SPEECH), encoding="utf-8")
     script = root / "voice.ps1"
@@ -88,6 +176,8 @@ def make_audio(root: Path, voice_name: str = DEFAULT_VOICE) -> list[Path]:
         " if ($installed.Count -eq 0) { "
         "throw ('Voice is not installed or enabled: ' + $VoiceName) }\n"
         " $voice.SelectVoice($VoiceName)\n"
+        " $voice.Voice.Name | Set-Content -LiteralPath "
+        "(Join-Path $Folder 'selected-voice.txt') -Encoding UTF8\n"
         " $voice.Rate=-1\n"
         " $items=Get-Content -Raw -LiteralPath $Manifest | ConvertFrom-Json\n"
         " for($i=0; $i -lt $items.Count; $i++) {\n"
@@ -97,20 +187,46 @@ def make_audio(root: Path, voice_name: str = DEFAULT_VOICE) -> list[Path]:
         "} finally { $voice.Dispose() }\n",
         encoding="utf-8",
     )
-    subprocess.run(
-        [
-            "powershell.exe",
-            "-NoProfile",
-            "-File",
-            str(script),
-            str(manifest),
-            str(root),
-            voice_name,
-        ],
-        check=True,
-        timeout=180,
+    clips = [root / f"{i}.wav" for i in range(len(SPEECH))]
+    selected = root / "selected-voice.txt"
+    for candidate in candidates:
+        for path in [*clips, selected]:
+            path.unlink(missing_ok=True)
+        try:
+            subprocess.run(
+                [
+                    powershell,
+                    "-NoProfile",
+                    "-File",
+                    str(script),
+                    str(manifest),
+                    str(root),
+                    candidate,
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=180,
+            )
+            actual = selected.read_text(encoding="utf-8-sig").strip()
+            if actual.casefold() != candidate.casefold():
+                raise ValueError("Speech host selected a different voice.")
+            for clip in clips:
+                with wave.open(str(clip)) as audio:
+                    if audio.getnframes() <= 0 or audio.getframerate() <= 0:
+                        raise ValueError("Speech host produced an empty audio clip.")
+            print("Selected narration voice:", actual)
+            return clips
+        except (subprocess.CalledProcessError, OSError, EOFError, wave.Error, ValueError) as exc:
+            print(f"Voice {candidate!r} could not synthesise the narration.")
+            if voice_name.casefold() != "auto":
+                detail = getattr(exc, "stderr", None) or str(exc)
+                raise RuntimeError(f"Speech generation failed for {candidate}: {detail}") from None
+    raise RuntimeError(
+        "None of the enabled English male voices could produce valid audio. "
+        "No browser case or recording was started. Run --list-voices for diagnostics."
     )
-    return [root / f"{i}.wav" for i in range(len(SPEECH))]
 
 
 def assert_case(page, counts: list[str], case_id: str | None = None) -> str:
@@ -178,8 +294,12 @@ def main() -> None:
     parser.add_argument(
         "--voice",
         default=DEFAULT_VOICE,
-        help="Exact installed Windows voice name (default: Microsoft George)",
+        help="auto selects an enabled English male voice; or give an exact voice name",
     )
+    parser.add_argument(
+        "--powershell", default="powershell.exe", help="Speech host executable path"
+    )
+    parser.add_argument("--list-voices", action="store_true", help="List this host's Enabled flags")
     parser.add_argument(
         "--record", action="store_true", help="Enable capture and simulated confirmation"
     )
@@ -187,11 +307,13 @@ def main() -> None:
     base = local_url(args.url)
     if os.name != "nt":
         raise RuntimeError("Run this launcher on the Windows laptop, not on EC2.")
-    from playwright.sync_api import sync_playwright
-
     with tempfile.TemporaryDirectory(prefix="mwalimulens-voice-") as temp:
-        print("Windows narration voice:", args.voice)
-        audio = make_audio(Path(temp), voice_name=args.voice)
+        if args.list_voices:
+            print(json.dumps(voice_inventory(Path(temp), args.powershell), indent=2))
+            return
+        audio = make_audio(Path(temp), voice_name=args.voice, powershell=args.powershell)
+        from playwright.sync_api import sync_playwright
+
         with sync_playwright() as pw:
             browser = pw.chromium.launch(
                 channel="chrome", headless=False, args=["--start-maximized"]
@@ -367,4 +489,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as exc:
+        print(f"Recording launcher stopped: {exc}", file=sys.stderr)
+        sys.exit(1)

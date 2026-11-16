@@ -1,6 +1,7 @@
 """Preflight and mocked capture regressions, not Windows/OBS video acceptance."""
 
 import importlib.util
+import json
 import wave
 from contextlib import nullcontext
 from pathlib import Path
@@ -360,8 +361,31 @@ def test_main_stop_failure_keeps_audio_muted_and_reports_recovery(fake_capture, 
     assert "Audio remains muted" in capsys.readouterr().out
 
 
+def inventory_fixture():
+    return {
+        "edition": "Core",
+        "version": "7",
+        "voices": [
+            dict(name="Microsoft George", gender="Male", culture="en-GB", enabled=True),
+            dict(name="Microsoft David Desktop", gender="Male", culture="en-US", enabled=True),
+            dict(name="Microsoft Hazel", gender="Female", culture="en-GB", enabled=True),
+        ],
+    }
+
+
+def write_voice_clips(root, name):
+    (root / "selected-voice.txt").write_text(name, encoding="utf-8-sig")
+    for i in range(len(launcher.SPEECH)):
+        with wave.open(str(root / f"{i}.wav"), "wb") as audio:
+            audio.setnchannels(1)
+            audio.setsampwidth(2)
+            audio.setframerate(16000)
+            audio.writeframes(b"\1\0" * 16)
+
+
 def test_audio_generation_selects_exact_voice_with_no_hint_fallback(monkeypatch, tmp_path):
     calls = []
+    monkeypatch.setattr(launcher, "voice_inventory", lambda *args: inventory_fixture())
 
     def run(args, **kwargs):
         calls.append((args, kwargs))
@@ -370,21 +394,138 @@ def test_audio_generation_selects_exact_voice_with_no_hint_fallback(monkeypatch,
         assert "SelectVoiceByHints" not in script
         assert "$_.Enabled" in script
         assert "finally { $voice.Dispose() }" in script
+        write_voice_clips(tmp_path, args[-1])
 
     monkeypatch.setattr(launcher.subprocess, "run", run)
     result = launcher.make_audio(tmp_path)
     assert calls[0][0][-1] == "Microsoft George"
-    assert calls[0][1] == {"check": True, "timeout": 180}
+    assert calls[0][1]["check"] is True
+    assert calls[0][1]["timeout"] == 180
     assert len(result) == len(launcher.SPEECH)
 
 
 def test_voice_name_is_passed_as_data_not_powershell_source(monkeypatch, tmp_path):
     name = 'A voice; $(not-a-command) "with quotes"'
     calls = []
-    monkeypatch.setattr(launcher.subprocess, "run", lambda args, **kwargs: calls.append(args))
+    inventory = inventory_fixture()
+    inventory["voices"][0]["name"] = name
+    monkeypatch.setattr(launcher, "voice_inventory", lambda *args: inventory)
+
+    def run(args, **kwargs):
+        calls.append(args)
+        write_voice_clips(tmp_path, name)
+
+    monkeypatch.setattr(launcher.subprocess, "run", run)
     launcher.make_audio(tmp_path, voice_name=name)
     assert calls[0][-1] == name
     assert name not in (tmp_path / "voice.ps1").read_text()
+
+
+def test_disabled_george_is_not_chosen_over_usable_david():
+    inventory = inventory_fixture()
+    inventory["voices"][0]["enabled"] = False
+    assert launcher.voice_candidates(inventory, "auto") == ["Microsoft David Desktop"]
+    with pytest.raises(RuntimeError, match="not enabled"):
+        launcher.voice_candidates(inventory, "Microsoft George")
+
+
+def test_automatic_selection_never_substitutes_female_or_non_english_voice():
+    inventory = inventory_fixture()
+    inventory["voices"] = [
+        inventory["voices"][2],
+        dict(name="French", gender="Male", culture="fr-FR", enabled=True),
+    ]
+    with pytest.raises(RuntimeError, match="No enabled English male"):
+        launcher.voice_candidates(inventory, "auto")
+
+
+def test_same_custom_powershell_is_used_for_inventory_and_generation(monkeypatch, tmp_path):
+    calls = []
+    host = r"C:\Program Files\PowerShell\7\pwsh.exe"
+
+    def run(args, **kwargs):
+        calls.append(args)
+        if Path(args[3]).name == "voice-inventory.ps1":
+            return SimpleNamespace(stdout=json.dumps(inventory_fixture()))
+        write_voice_clips(tmp_path, args[-1])
+
+    monkeypatch.setattr(launcher.subprocess, "run", run)
+    launcher.make_audio(tmp_path, powershell=host)
+    assert [args[0] for args in calls] == [host, host]
+
+
+def test_auto_falls_back_after_synthesis_failure_without_mixing_clips(monkeypatch, tmp_path):
+    monkeypatch.setattr(launcher, "voice_inventory", lambda *args: inventory_fixture())
+    attempts = []
+
+    def run(args, **kwargs):
+        name = args[-1]
+        attempts.append(name)
+        if name == "Microsoft George":
+            (tmp_path / "0.wav").write_bytes(b"incomplete")
+            raise launcher.subprocess.CalledProcessError(1, args)
+        assert not (tmp_path / "0.wav").exists()
+        write_voice_clips(tmp_path, name)
+
+    monkeypatch.setattr(launcher.subprocess, "run", run)
+    clips = launcher.make_audio(tmp_path)
+    assert attempts == ["Microsoft George", "Microsoft David Desktop"]
+    assert len(clips) == 6
+
+
+def test_explicit_voice_does_not_fall_back_after_synthesis_failure(monkeypatch, tmp_path):
+    monkeypatch.setattr(launcher, "voice_inventory", lambda *args: inventory_fixture())
+    attempts = []
+
+    def run(args, **kwargs):
+        attempts.append(args[-1])
+        raise launcher.subprocess.CalledProcessError(1, args, stderr="Voice engine unavailable")
+
+    monkeypatch.setattr(launcher.subprocess, "run", run)
+    with pytest.raises(RuntimeError, match="Voice engine unavailable"):
+        launcher.make_audio(tmp_path, voice_name="Microsoft George")
+    assert attempts == ["Microsoft George"]
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"voices": ["bad"]},
+        {"voices": [dict(name="David", gender="Male", culture="en-US", enabled="false")]},
+    ],
+)
+def test_invalid_inventory_is_not_used(monkeypatch, tmp_path, data):
+    monkeypatch.setattr(
+        launcher.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout=json.dumps(data))
+    )
+    with pytest.raises(RuntimeError, match="invalid voice"):
+        launcher.voice_inventory(tmp_path, "powershell.exe")
+
+
+def test_empty_audio_is_not_accepted(monkeypatch, tmp_path):
+    monkeypatch.setattr(launcher, "voice_inventory", lambda *args: inventory_fixture())
+
+    def run(args, **kwargs):
+        write_voice_clips(tmp_path, args[-1])
+        with wave.open(str(tmp_path / "5.wav"), "wb") as audio:
+            audio.setnchannels(1)
+            audio.setsampwidth(2)
+            audio.setframerate(16000)
+
+    monkeypatch.setattr(launcher.subprocess, "run", run)
+    with pytest.raises(RuntimeError, match="empty audio"):
+        launcher.make_audio(tmp_path, voice_name="Microsoft George")
+
+
+def test_list_voices_does_not_synthesise_or_start_obs(fake_capture, monkeypatch, capsys):
+    page, obs = fake_capture
+    monkeypatch.setattr(launcher, "voice_inventory", lambda *args: inventory_fixture())
+    monkeypatch.setattr("sys.argv", [str(SCRIPT), "--list-voices", "--powershell", "pwsh.exe"])
+    monkeypatch.setattr(launcher, "make_audio", lambda *args, **kwargs: pytest.fail("No synthesis"))
+    launcher.main()
+    assert '"enabled": true' in capsys.readouterr().out
+    assert obs.calls == []
+    assert page.confirmed is False
 
 
 def test_cli_voice_reaches_synthesizer(fake_capture, monkeypatch):
