@@ -150,6 +150,11 @@ The interface uses local styles and system fonts rather than external assets.
 Offline operation still needs to be checked on the intended device after all
 required dependencies have been installed.
 
+For one genuine Qwen attempt with source, installed-model and saved-record
+provenance, use the [single-session guide](docs/model-review-session.md). Its
+read-only verifier checks the same saved case after a human revision. It neither
+supplies a model finding nor records a teacher decision automatically.
+
 ## Reviewing a case
 
 For a case with a pending candidate, read the finding and its uncertainty before
