@@ -458,7 +458,7 @@ Run local Qwen review</button></form>''' if qwen_enabled else ""
 
 def _mode_text(case: Case) -> str:
     if case.mode == "bedrock":
-        return "Hosted Bedrock review; one bounded request; semantic quality unverified"
+        return "Hosted Bedrock review; at most one request; semantic quality unverified"
     if case.mode == "demo":
         return "Authored Qwen workflow demonstration; no model inference or MCP client calls"
     if case.mode == "qwen":
@@ -616,7 +616,12 @@ def _qwen_validation(case: Case) -> str:
 
 
 def _bedrock_validation(case: Case) -> str:
-    return ('<h3>Hosted Bedrock observation</h3><p>One request; schema supplied as text. '
+    delivery = (case.report or {}).get('request_delivery', {})
+    count = delivery.get('http_attempts', 'unrecorded')
+    status = delivery.get('status', 'unrecorded')
+    return ('<h3>Hosted Bedrock observation</h3>'
+            f'<p>Request limit: 1; HTTP attempts: {h(count)}; delivery: {h(status)}.</p>'
+            '<p>Schema supplied as text. '
             'Application-controlled MCP retrieval and submission. '
             'Teacher identity is simulated. Educational quality remains unverified.</p>')
 

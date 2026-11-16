@@ -22,7 +22,7 @@ jobs:
       - run:
           name: Install project and test dependencies
           command: |
-            python -m pip install --disable-pip-version-check -e ".[dev]"
+            python -m pip install --disable-pip-version-check -e ".[dev,bedrock]"
             python -m pip check
       - run:
           name: Install pinned MCP runtime dependency

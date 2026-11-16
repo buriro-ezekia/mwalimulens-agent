@@ -100,6 +100,27 @@ Reject creates no profile note. Approve or Revise creates one synthetic profile 
 the existing `EducationToolService.record_teacher_review` method. Repeated confirmation
 submissions cannot create another decision. Each case has a separate local JSON state file.
 
+## Hosted Bedrock cases
+
+The separate [bounded Bedrock CLI](bedrock-review.md) can retrieve the fictional
+fractions evidence through Education MCP, send one explicitly authorised hosted
+request and submit only a complete validated candidate. It requires external AWS
+credentials, confirmed credit coverage and an approved region. The local-Qwen
+button does not select Bedrock or use AWS credentials.
+
+The CLI's `--open SAVED_CASE_DIRECTORY` path verifies the saved hosted records
+and opens the same workspace with a **Hosted Bedrock review** label. It makes no
+model request. A valid pending candidate uses the existing preview and explicit
+confirmation controls. An abstention, rejected response or error offers no
+teacher-decision form. After confirmation, reopening retains the same case
+identity and consistent decision reason. Approve or Revise retains one synthetic
+note and its final wording; Reject retains no note. Hosted cases
+are opened through their CLI, separately from **Saved Qwen reviews**.
+
+Offline tests use a mocked provider with real in-process MCP retrieval and
+submission, HTTP preview/confirmation and saved reopening. They do not establish
+that a live Bedrock run or qualified educator assessment has occurred.
+
 ## Boundaries and security
 
 The workspace is a **single-user demonstration**, not a production teacher portal.
@@ -116,7 +137,10 @@ The workspace is a **single-user demonstration**, not a production teacher porta
 - Qwen jobs require an explicit form submission with a session token and one-use nonce.
   The child uses only local `qwen2.5:3b` at `127.0.0.1:11434`; the browser cannot
   select a remote provider, another model or larger execution limits.
-- The browser never sends credentials or learner data to a cloud API.
+- The browser never sends credentials or learner data to a cloud API. Hosted
+  inference is a separate, explicitly authorised CLI action that sends only the
+  fictional evidence through the Bedrock adapter; opening a saved case is read-only
+  with respect to the provider.
 - The server does not serve arbitrary files or expose a public write endpoint. Local processes
   with access to the same computer are **not** treated as separate trusted users.
 - The local JSON store and simulated identity are **not sufficient for real school use**.

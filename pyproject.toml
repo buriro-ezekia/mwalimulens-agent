@@ -25,7 +25,7 @@ mwalimulens-challenge = "mwalimulens.challenge_run:main"
 mwalimulens-demo = "mwalimulens.demo_run:main"
 
 [project.optional-dependencies]
-bedrock = ["botocore>=1.35,<2"]
+bedrock = ["botocore[crt]>=1.41,<2"]
 record = [
   "obsws-python>=1.8,<2",
 ]
